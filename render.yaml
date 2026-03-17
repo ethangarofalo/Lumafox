@@ -1,0 +1,41 @@
+services:
+  - type: web
+    name: voice
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+
+    disk:
+      name: voice-data
+      mountPath: /var/data/voice
+      sizeGB: 1
+
+    envVars:
+      - key: ANTHROPIC_API_KEY
+        sync: false          # Set manually in Render dashboard
+
+      - key: JWT_SECRET
+        generateValue: true  # Render generates a random value automatically
+
+      - key: DEV_AUTH
+        value: "false"
+
+      - key: TOKEN_EXPIRY_HOURS
+        value: "72"
+
+      - key: VOICE_DATA_DIR
+        value: /var/data/voice
+
+      - key: ALLOWED_ORIGINS
+        sync: false          # Set to https://your-app.onrender.com after first deploy
+
+      # Stripe — uncomment and set manually when billing is ready
+      # - key: STRIPE_SECRET_KEY
+      #   sync: false
+      # - key: STRIPE_WEBHOOK_SECRET
+      #   sync: false
+      # - key: STRIPE_STARTER_PRICE_ID
+      #   sync: false
+      # - key: STRIPE_PRO_PRICE_ID
+      #   sync: false

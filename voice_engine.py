@@ -1,0 +1,701 @@
+"""
+Voice Engine — the core logic for voice teaching, writing, and analysis.
+
+This adapts POLIS's teach.py into a stateless, API-callable engine.
+Each request loads the profile, handles one interaction, and returns.
+Refinements persist in JSONL files, one per voice profile.
+"""
+
+import json
+import os
+import re
+import uuid
+from datetime import datetime
+from pathlib import Path
+from dataclasses import dataclass, field, asdict
+from typing import Optional
+
+_PROFILE_ID_RE = re.compile(r'^[0-9a-f]{8}$')
+
+# ── Paths ──
+
+DATA_DIR = Path(os.environ.get("VOICE_DATA_DIR", Path(__file__).parent / "data"))
+PROFILES_DIR = DATA_DIR / "profiles"
+STARTER_VOICES_DIR = DATA_DIR / "starters"
+
+
+def ensure_dirs():
+    """Create data directories if they don't exist."""
+    PROFILES_DIR.mkdir(parents=True, exist_ok=True)
+    STARTER_VOICES_DIR.mkdir(parents=True, exist_ok=True)
+
+
+# ── Voice Profile ──
+
+@dataclass
+class VoiceProfile:
+    """A user's voice profile — the core artifact of the platform."""
+    profile_id: str
+    owner_id: str
+    name: str
+    base_description: str = ""
+    created_at: str = ""
+    last_taught: str = ""
+    refinement_count: int = 0
+
+    def to_dict(self) -> dict:
+        return asdict(self)
+
+    @classmethod
+    def from_dict(cls, d: dict) -> "VoiceProfile":
+        return cls(**{k: v for k, v in d.items() if k in cls.__dataclass_fields__})
+
+
+def create_profile(owner_id: str, name: str, base_description: str = "") -> VoiceProfile:
+    """Create a new voice profile."""
+    ensure_dirs()
+    profile_id = str(uuid.uuid4())[:8]
+    now = datetime.now().isoformat()
+
+    profile = VoiceProfile(
+        profile_id=profile_id,
+        owner_id=owner_id,
+        name=name,
+        base_description=base_description,
+        created_at=now,
+        last_taught=now,
+        refinement_count=0,
+    )
+
+    # Save profile metadata
+    profile_dir = PROFILES_DIR / profile_id
+    profile_dir.mkdir(exist_ok=True)
+    (profile_dir / "profile.json").write_text(json.dumps(profile.to_dict(), indent=2))
+    # Create empty refinements file
+    (profile_dir / "refinements.jsonl").touch()
+    # Save base description
+    (profile_dir / "base.md").write_text(base_description)
+
+    return profile
+
+
+def load_profile(profile_id: str) -> Optional[VoiceProfile]:
+    """Load a profile by ID."""
+    if not _PROFILE_ID_RE.match(profile_id or ""):
+        return None
+    profile_path = PROFILES_DIR / profile_id / "profile.json"
+    if not profile_path.exists():
+        return None
+    data = json.loads(profile_path.read_text())
+    return VoiceProfile.from_dict(data)
+
+
+def update_profile_metadata(profile: VoiceProfile):
+    """Save updated profile metadata."""
+    profile_path = PROFILES_DIR / profile.profile_id / "profile.json"
+    profile_path.write_text(json.dumps(profile.to_dict(), indent=2))
+
+
+def list_profiles(owner_id: str) -> list[VoiceProfile]:
+    """List all profiles for an owner."""
+    profiles = []
+    if not PROFILES_DIR.exists():
+        return profiles
+    for profile_dir in PROFILES_DIR.iterdir():
+        if profile_dir.is_dir():
+            profile = load_profile(profile_dir.name)
+            if profile and profile.owner_id == owner_id:
+                profiles.append(profile)
+    return sorted(profiles, key=lambda p: p.created_at, reverse=True)
+
+
+def delete_profile(profile_id: str) -> bool:
+    """Delete a profile and all its data."""
+    import shutil
+    profile_dir = PROFILES_DIR / profile_id
+    if profile_dir.exists():
+        shutil.rmtree(profile_dir)
+        return True
+    return False
+
+
+# ── Refinements ──
+
+def load_refinements(profile_id: str) -> list[dict]:
+    """Load all refinements for a profile."""
+    path = PROFILES_DIR / profile_id / "refinements.jsonl"
+    if not path.exists():
+        return []
+    refinements = []
+    with open(path) as f:
+        for line in f:
+            line = line.strip()
+            if line:
+                refinements.append(json.loads(line))
+    return refinements
+
+
+def save_refinement(profile_id: str, refinement: dict):
+    """Append a refinement to the profile."""
+    path = PROFILES_DIR / profile_id / "refinements.jsonl"
+    with open(path, "a") as f:
+        f.write(json.dumps(refinement) + "\n")
+
+    # Update profile metadata
+    profile = load_profile(profile_id)
+    if profile:
+        profile.refinement_count += 1
+        profile.last_taught = datetime.now().isoformat()
+        update_profile_metadata(profile)
+
+
+def build_refinement_context(refinements: list[dict]) -> str:
+    """Build a prompt-ready summary of all refinements.
+
+    Adapted directly from POLIS teach.py — this is the proven format.
+    """
+    if not refinements:
+        return ""
+
+    sections = {
+        "correction": [],
+        "example": [],
+        "principle": [],
+        "voice_note": [],
+        "anti_pattern": [],
+    }
+
+    for r in refinements:
+        rtype = r.get("type", "correction")
+        content = r.get("content", "")
+        if rtype in sections:
+            sections[rtype].append(content)
+        else:
+            sections["correction"].append(content)
+
+    lines = ["\n\n## REFINEMENTS FROM THE TEACHER\n"]
+    lines.append("The following corrections, examples, and principles have been")
+    lines.append("taught by the voice's owner. These take PRECEDENCE over the")
+    lines.append("base description above.\n")
+
+    if sections["principle"]:
+        lines.append("### Core Principles")
+        for p in sections["principle"]:
+            lines.append(f"- {p}")
+        lines.append("")
+
+    if sections["correction"]:
+        lines.append("### Corrections")
+        for c in sections["correction"]:
+            lines.append(f"- {c}")
+        lines.append("")
+
+    if sections["example"]:
+        lines.append("### Examples of This Voice")
+        for e in sections["example"]:
+            lines.append(f"\n> {e}")
+        lines.append("")
+
+    if sections["voice_note"]:
+        lines.append("### Voice and Tone Notes")
+        for v in sections["voice_note"]:
+            lines.append(f"- {v}")
+        lines.append("")
+
+    if sections["anti_pattern"]:
+        lines.append("### What This Voice Would NEVER Do")
+        for a in sections["anti_pattern"]:
+            lines.append(f"- {a}")
+        lines.append("")
+
+    return "\n".join(lines)
+
+
+def get_full_voice_text(profile_id: str) -> str:
+    """Assemble the full voice prompt: base description + all refinements."""
+    profile = load_profile(profile_id)
+    if not profile:
+        return ""
+
+    base_path = PROFILES_DIR / profile_id / "base.md"
+    base_text = base_path.read_text() if base_path.exists() else ""
+    refinements = load_refinements(profile_id)
+    return base_text + build_refinement_context(refinements)
+
+
+# ── File Upload / Ingest ──
+
+UPLOADS_DIR = DATA_DIR / "uploads"
+
+
+def save_uploaded_file(profile_id: str, filename: str, content: bytes) -> Path:
+    """Save an uploaded file to the profile's uploads directory."""
+    # Prevent path traversal: take only the basename, reject hidden files
+    safe_name = Path(filename).name
+    if not safe_name or safe_name.startswith(".") or "/" in safe_name or "\\" in safe_name:
+        raise ValueError("Invalid filename")
+    upload_dir = PROFILES_DIR / profile_id / "uploads"
+    upload_dir.mkdir(parents=True, exist_ok=True)
+    path = upload_dir / safe_name
+    path.write_bytes(content)
+    return path
+
+
+def list_uploaded_files(profile_id: str) -> list[dict]:
+    """List all uploaded files for a profile."""
+    upload_dir = PROFILES_DIR / profile_id / "uploads"
+    if not upload_dir.exists():
+        return []
+    files = []
+    for f in sorted(upload_dir.iterdir()):
+        if f.is_file() and not f.name.startswith("."):
+            files.append({
+                "filename": f.name,
+                "size": f.stat().st_size,
+                "uploaded_at": datetime.fromtimestamp(f.stat().st_mtime).isoformat(),
+            })
+    return files
+
+
+def read_uploaded_text(profile_id: str, filename: str) -> str:
+    """Read text from an uploaded file. Supports .txt, .md, .html."""
+    path = PROFILES_DIR / profile_id / "uploads" / filename
+    if not path.exists():
+        return ""
+    return path.read_text(errors="replace")
+
+
+def ingest_writing_samples(profile_id: str, llm_call, max_examples: int = 5) -> list[dict]:
+    """Analyze all uploaded files and extract voice examples + principles.
+
+    Reads every file in the profile's uploads dir, sends them to the LLM
+    for analysis, and saves the resulting refinements automatically.
+    Returns the list of new refinements created.
+    """
+    upload_dir = PROFILES_DIR / profile_id / "uploads"
+    if not upload_dir.exists():
+        return []
+
+    # Gather all text
+    texts = []
+    for f in sorted(upload_dir.iterdir()):
+        if f.is_file() and f.suffix in (".txt", ".md", ".html", ".text"):
+            text = f.read_text(errors="replace").strip()
+            if text:
+                texts.append({"filename": f.name, "text": text[:5000]})  # cap per file
+
+    if not texts:
+        return []
+
+    combined = "\n\n---\n\n".join(
+        f"[From: {t['filename']}]\n{t['text']}" for t in texts
+    )
+
+    prompt = f"""You are a voice analyst. You have been given writing samples from a person
+who wants to teach an AI their voice. Your job is to extract concrete, specific refinements
+from these samples.
+
+For each sample, identify:
+
+1. EXAMPLES: Direct quotes (1-3 sentences) that exemplify this voice at its best.
+   These should be passages someone could point to and say "that's how I sound."
+   Extract {max_examples} of the strongest examples across all samples.
+
+2. PRINCIPLES: Core writing principles this voice follows. Not generic advice — specific
+   patterns you see repeated. "Sentences build through accumulation, not logical connectives"
+   is specific. "Write clearly" is not.
+
+3. ANTI-PATTERNS: Things this voice conspicuously avoids. Transitions it never uses,
+   structures it rejects, tones it stays away from.
+
+4. VOICE NOTES: Observations about rhythm, diction, stance, or movement that don't fit
+   the other categories but are distinctive.
+
+Output your analysis as a JSON array of objects, each with:
+  "type": one of "example", "principle", "anti_pattern", "voice_note"
+  "content": the refinement text
+
+Return ONLY the JSON array, no other text.
+
+WRITING SAMPLES:
+
+{combined}"""
+
+    raw = llm_call(prompt)
+
+    # Parse the response
+    new_refinements = []
+    try:
+        # Find JSON array in response
+        start = raw.find("[")
+        end = raw.rfind("]") + 1
+        if start >= 0 and end > start:
+            items = json.loads(raw[start:end])
+            for item in items:
+                if isinstance(item, dict) and "type" in item and "content" in item:
+                    rtype = item["type"]
+                    if rtype not in ("example", "principle", "anti_pattern", "voice_note"):
+                        rtype = "voice_note"
+                    refinement = {
+                        "type": rtype,
+                        "content": item["content"],
+                        "context": "Extracted from uploaded writing samples",
+                        "timestamp": datetime.now().isoformat(),
+                        "session": load_profile(profile_id).refinement_count if load_profile(profile_id) else 0,
+                    }
+                    save_refinement(profile_id, refinement)
+                    new_refinements.append(refinement)
+    except (json.JSONDecodeError, KeyError, TypeError):
+        # If parsing fails, save the raw analysis as a single voice note
+        refinement = {
+            "type": "voice_note",
+            "content": raw[:1000],
+            "context": "Raw analysis from uploaded writing samples",
+            "timestamp": datetime.now().isoformat(),
+            "session": 0,
+        }
+        save_refinement(profile_id, refinement)
+        new_refinements.append(refinement)
+
+    return new_refinements
+
+
+# ── Sample Analysis ──
+
+def analyze_samples(samples: list[str], llm_call) -> str:
+    """Analyze writing samples to generate a base voice description.
+
+    This is the 'Find Your Voice' entry point — the user pastes writing
+    they admire, and we identify the patterns.
+    """
+    combined = "\n\n---\n\n".join(samples)
+
+    prompt = f"""You are a master literary analyst and voice coach. The user has provided
+writing samples — either their own work or work they deeply admire. Your job is to
+identify the distinctive patterns of this voice with extreme precision.
+
+Analyze the following samples and produce a Voice Description that captures:
+
+1. **Rhythm and Syntax**: How do sentences move? Short and declarative? Long and
+   accumulating? Paratactic (joined by "and") or hypotactic (subordinate clauses)?
+   Do they build through repetition? Through variation?
+
+2. **Diction**: What kind of words does this voice reach for? Anglo-Saxon or Latinate?
+   Concrete or abstract? Technical or plain? What adjectives recur? What verbs?
+
+3. **Imagery and Metaphor**: How does this voice handle figurative language? Extended
+   metaphors sustained across passages, or quick comparisons? What domains do the
+   metaphors draw from — physical labor, nature, religion, the body, architecture?
+
+4. **Structure**: How do paragraphs move? How do pieces begin and end? Is there a
+   characteristic shape to the argument?
+
+5. **Stance**: What is this voice's relationship to its reader? Does it use "we," "one,"
+   "you," "I"? Is it warm or cool? Intimate or public? Does it contend, persuade,
+   confess, declare?
+
+6. **What This Voice Avoids**: What is conspicuously absent? No bullet points? No
+   hedging qualifiers? No transitional phrases? Identifying what the voice does NOT
+   do is as important as identifying what it does.
+
+Write the Voice Description as a practical guide that an AI could use to write in this
+voice. Be specific enough that someone who reads your description could distinguish
+this voice from any other.
+
+WRITING SAMPLES:
+
+{combined}
+
+VOICE DESCRIPTION:"""
+
+    return llm_call(prompt)
+
+
+# ── Teaching (Core Loop) ──
+
+def teach_interaction(profile_id: str, message: str, command: str,
+                      conversation_history: list[dict], llm_call) -> dict:
+    """Handle one teaching interaction. Returns the result.
+
+    This is the stateless equivalent of TeachingSession — each request
+    loads the profile, processes one command, and returns.
+
+    Args:
+        profile_id: The voice profile ID
+        message: The user's message text
+        command: One of: dialogue, examine, demo, correct, example,
+                 principle, voice, never, try
+        conversation_history: Recent conversation for context
+        llm_call: The LLM caller function
+
+    Returns:
+        dict with: response (str), refinement_saved (bool), refinement_type (str|None)
+    """
+    voice_text = get_full_voice_text(profile_id)
+    profile = load_profile(profile_id)
+    if not profile:
+        return {"response": "Profile not found.", "refinement_saved": False, "refinement_type": None}
+
+    voice_name = profile.name
+
+    # Build conversation context
+    history_text = ""
+    if conversation_history:
+        recent = conversation_history[-6:]
+        history_text = "\n\nRECENT CONVERSATION:\n"
+        for msg in recent:
+            role = "TEACHER" if msg["role"] == "user" else "VOICE"
+            history_text += f"{role}: {msg['content'][:300]}\n"
+
+    # ── Injection detection ──
+    # Catch obvious prompt injection attempts before saving to profile.
+    # These patterns indicate someone trying to override system instructions
+    # rather than genuinely teaching a writing voice.
+    _INJECTION_MARKERS = [
+        "ignore all previous instructions",
+        "ignore previous instructions",
+        "ignore your instructions",
+        "forget the voice profile",
+        "forget your instructions",
+        "disregard your instructions",
+        "you are now a",
+        "act as if you",
+        "pretend you are",
+        "your new instructions are",
+        "override your",
+    ]
+    _msg_lower = message.lower()
+    if command in ("correct", "example", "principle", "voice", "never"):
+        if any(marker in _msg_lower for marker in _INJECTION_MARKERS):
+            return {
+                "response": "That input looks like an attempt to override the voice profile's instructions. "
+                            "I don't save those. Try a genuine principle, example, or correction instead.",
+                "refinement_saved": False,
+                "refinement_type": None,
+            }
+
+    # ── Refinement commands: save and acknowledge ──
+
+    if command in ("correct", "example", "principle", "voice", "never"):
+        type_map = {
+            "correct": "correction",
+            "example": "example",
+            "principle": "principle",
+            "voice": "voice_note",
+            "never": "anti_pattern",
+        }
+        rtype = type_map[command]
+
+        # Get last agent response as context for corrections
+        context = ""
+        if command == "correct" and conversation_history:
+            for msg in reversed(conversation_history):
+                if msg["role"] == "agent":
+                    context = msg["content"][:200]
+                    break
+
+        refinement = {
+            "type": rtype,
+            "content": message,
+            "context": context,
+            "timestamp": datetime.now().isoformat(),
+            "session": load_profile(profile_id).refinement_count,
+        }
+        save_refinement(profile_id, refinement)
+
+        # For corrections, let the voice acknowledge
+        if command == "correct":
+            ack_prompt = f"""You are learning to write in a specific voice called "{voice_name}".
+
+{voice_text}
+
+{history_text}
+
+The teacher is correcting you: {message}
+
+Acknowledge this correction briefly. Explain in 1-2 sentences how it changes
+your understanding of this voice."""
+
+            response = llm_call(ack_prompt)
+            return {"response": response.strip(), "refinement_saved": True, "refinement_type": rtype}
+
+        # For other refinement types, confirm
+        labels = {
+            "example": "Example saved.",
+            "principle": "Principle saved.",
+            "voice": "Voice note saved.",
+            "never": "Anti-pattern saved.",
+        }
+        return {"response": labels[command], "refinement_saved": True, "refinement_type": rtype}
+
+    # ── Interactive commands: dialogue, examine, demo, try ──
+
+    if command == "examine":
+        prompt = f"""You are being tested on your ability to write in the voice called "{voice_name}".
+
+{voice_text}
+
+{history_text}
+
+A teacher who knows this voice deeply is testing whether you truly understand it.
+Answer with precision and depth. If you're uncertain, say so.
+
+TEACHER'S QUESTION: {message}
+
+Answer carefully."""
+
+    elif command == "demo" or command == "try":
+        prompt = f"""You are writing in the voice called "{voice_name}".
+
+{voice_text}
+
+{history_text}
+
+The teacher wants you to demonstrate this voice on the following topic.
+Write AS this voice — not about it, but from within it. Use its characteristic
+rhythm, its natural mode of expression, its particular way of seeing.
+
+TOPIC: {message}
+
+Write 2-3 paragraphs in this voice."""
+
+    else:  # dialogue (default)
+        prompt = f"""You are learning and embodying a voice called "{voice_name}".
+
+{voice_text}
+
+{history_text}
+
+The teacher — the owner of this voice — is engaging you in dialogue.
+Respond as this voice would ACTUALLY speak. Not a summary of the voice.
+Not a caricature. The way this specific person would think and express
+themselves if they were at their best.
+
+Be specific. If the voice has a characteristic way of phrasing things —
+a rhythm, particular words, a way of structuring thoughts — use it.
+
+TEACHER: {message}
+
+Respond in 2-4 paragraphs."""
+
+    response = llm_call(prompt)
+    return {"response": response.strip(), "refinement_saved": False, "refinement_type": None}
+
+
+# ── Writing Mode ──
+
+def write_with_voice(profile_id: str, instruction: str, llm_call,
+                     context: str = "", max_tokens: int = 2000) -> str:
+    """Generate text using a trained voice profile.
+
+    Args:
+        profile_id: The voice profile ID
+        instruction: What to write (e.g., "Draft a blog post about solitude")
+        llm_call: The LLM caller function
+        context: Optional context (e.g., an outline, notes, previous draft)
+
+    Returns:
+        The generated text in the profile's voice.
+    """
+    voice_text = get_full_voice_text(profile_id)
+    profile = load_profile(profile_id)
+    if not profile:
+        return "Profile not found."
+
+    context_block = ""
+    if context:
+        context_block = f"\n\nCONTEXT / NOTES PROVIDED:\n{context}\n"
+
+    prompt = f"""You are writing in a specific voice. Everything about how you write —
+your rhythm, your diction, your imagery, your structure, what you reach for and
+what you avoid — must match this voice exactly.
+
+THE VOICE:
+{voice_text}
+
+{context_block}
+
+INSTRUCTION: {instruction}
+
+Output ONLY the written text. Begin immediately — no preamble, no explanation,
+no commentary about the voice or these instructions. Do not acknowledge the task.
+Do not describe what you are doing. Simply produce the writing itself, as this
+voice would produce it, at its best. The output should be indistinguishable
+from the person's actual work."""
+
+    return llm_call(prompt).strip()
+
+
+# ── Analysis Mode ──
+
+def analyze_text(profile_id: str, text: str, llm_call) -> str:
+    """Analyze a piece of text against a voice profile.
+
+    Identifies where the voice breaks — where the writing lapses into
+    generic register or contradicts the profile's principles.
+    """
+    voice_text = get_full_voice_text(profile_id)
+    profile = load_profile(profile_id)
+    if not profile:
+        return "Profile not found."
+
+    prompt = f"""You are a voice analyst. You have deep knowledge of a specific writing voice
+and you are evaluating whether a piece of text matches it.
+
+THE VOICE (what the writing SHOULD sound like):
+{voice_text}
+
+THE TEXT (what was actually written):
+{text}
+
+Analyze the text against the voice profile. For each issue you find, be specific:
+
+1. **Voice Breaks**: Where does the writing lapse into generic AI register or
+   contradict the voice's principles? Quote the specific passage.
+
+2. **Anti-Pattern Violations**: Does the text use any patterns the voice has
+   been taught to avoid? Quote them.
+
+3. **Missed Opportunities**: Where could the voice's distinctive strengths
+   (particular imagery, rhythm, stance) have been deployed but weren't?
+
+4. **What Works**: What parts of the text DO match the voice well?
+
+Be specific and constructive. The goal is to help the writer bring the text
+closer to the voice, not to criticize for its own sake."""
+
+    return llm_call(prompt).strip()
+
+
+# ── Export ──
+
+def export_voice_profile(profile_id: str) -> str:
+    """Export a voice profile as a portable markdown document.
+
+    This is what the user can take to any AI tool — Claude Projects,
+    ChatGPT Custom GPTs, system prompts, etc.
+    """
+    profile = load_profile(profile_id)
+    if not profile:
+        return "Profile not found."
+
+    voice_text = get_full_voice_text(profile_id)
+    refinements = load_refinements(profile_id)
+
+    export = f"""# Voice Profile: {profile.name}
+
+*Exported {datetime.now().strftime('%Y-%m-%d')} | {len(refinements)} refinements*
+
+---
+
+## Instructions
+
+When writing in this voice, follow ALL of the guidance below. The refinements
+section contains corrections and principles taught by the voice's owner —
+these take precedence over everything else.
+
+---
+
+{voice_text}
+"""
+    return export

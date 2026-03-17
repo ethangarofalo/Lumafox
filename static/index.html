@@ -1,0 +1,1384 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Voice — Authoring Platform</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.9/babel.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0a0a0a;
+      --bg-surface: #141414;
+      --bg-elevated: #1c1c1c;
+      --bg-hover: #242424;
+      --border: #2a2a2a;
+      --border-light: #333;
+      --text: #e8e8e8;
+      --text-dim: #888;
+      --text-faint: #555;
+      --accent: #c8a46e;
+      --accent-dim: #8a7040;
+      --accent-glow: rgba(200, 164, 110, 0.12);
+      --red: #b35050;
+      --green: #5a8a5a;
+      --radius: 8px;
+      --radius-lg: 12px;
+      --font: 'Georgia', 'Times New Roman', serif;
+      --font-mono: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+      --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    }
+
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    /* ── Layout ── */
+    .app { display: flex; flex-direction: column; min-height: 100vh; }
+
+    .topbar {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 16px 32px;
+      border-bottom: 1px solid var(--border);
+      background: var(--bg-surface);
+    }
+    .topbar-logo {
+      font-size: 18px; letter-spacing: 0.15em; text-transform: uppercase;
+      color: var(--accent); font-weight: 400;
+    }
+    .topbar-nav { display: flex; gap: 8px; }
+    .topbar-btn {
+      background: none; border: 1px solid var(--border); color: var(--text-dim);
+      padding: 6px 16px; border-radius: var(--radius); cursor: pointer;
+      font-family: var(--font-sans); font-size: 13px; transition: all 0.15s;
+    }
+    .topbar-btn:hover { border-color: var(--accent-dim); color: var(--text); }
+    .topbar-btn.active { border-color: var(--accent); color: var(--accent); background: var(--accent-glow); }
+
+    .main { flex: 1; display: flex; overflow: hidden; }
+
+    /* ── Sidebar ── */
+    .sidebar {
+      width: 280px; border-right: 1px solid var(--border);
+      background: var(--bg-surface); display: flex; flex-direction: column;
+      flex-shrink: 0;
+    }
+    .sidebar-header {
+      padding: 20px; border-bottom: 1px solid var(--border);
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .sidebar-title { font-size: 13px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.1em; font-family: var(--font-sans); }
+    .sidebar-list { flex: 1; overflow-y: auto; padding: 8px; }
+
+    .profile-card {
+      padding: 14px 16px; border-radius: var(--radius); cursor: pointer;
+      transition: all 0.15s; margin-bottom: 4px;
+    }
+    .profile-card:hover { background: var(--bg-hover); }
+    .profile-card.active { background: var(--accent-glow); border-left: 2px solid var(--accent); }
+    .profile-card-name { font-size: 15px; color: var(--text); margin-bottom: 4px; }
+    .profile-card-meta { font-size: 12px; color: var(--text-dim); font-family: var(--font-sans); }
+
+    .new-profile-btn {
+      margin: 12px; padding: 10px; border: 1px dashed var(--border-light);
+      border-radius: var(--radius); background: none; color: var(--text-dim);
+      cursor: pointer; font-family: var(--font-sans); font-size: 13px;
+      text-align: center; transition: all 0.15s;
+    }
+    .new-profile-btn:hover { border-color: var(--accent-dim); color: var(--accent); }
+
+    /* ── Content Area ── */
+    .content { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+    /* ── Chat / Teach ── */
+    .chat-container { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+    .chat-messages { flex: 1; overflow-y: auto; padding: 24px 32px; }
+
+    .msg { margin-bottom: 24px; max-width: 720px; }
+    .msg.user .msg-content { color: var(--text); }
+    .msg.agent .msg-content { color: var(--text-dim); }
+    .msg-label {
+      font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em;
+      margin-bottom: 6px; font-family: var(--font-sans);
+    }
+    .msg.user .msg-label { color: var(--accent); }
+    .msg.agent .msg-label { color: var(--text-faint); }
+    .msg-content { font-size: 16px; line-height: 1.7; white-space: pre-wrap; }
+    .msg-badge {
+      display: inline-block; margin-top: 8px; padding: 2px 10px;
+      border-radius: 12px; font-size: 11px; font-family: var(--font-sans);
+      background: var(--accent-glow); color: var(--accent); border: 1px solid var(--accent-dim);
+    }
+
+    .chat-input-area {
+      border-top: 1px solid var(--border); padding: 16px 32px;
+      background: var(--bg-surface);
+    }
+    .chat-commands {
+      display: flex; gap: 6px; margin-bottom: 10px; flex-wrap: wrap;
+    }
+    .cmd-btn {
+      background: var(--bg-elevated); border: 1px solid var(--border);
+      color: var(--text-dim); padding: 4px 12px; border-radius: 14px;
+      font-size: 12px; cursor: pointer; font-family: var(--font-mono);
+      transition: all 0.15s;
+    }
+    .cmd-btn:hover { border-color: var(--accent-dim); color: var(--text); }
+    .cmd-btn.active { border-color: var(--accent); color: var(--accent); background: var(--accent-glow); }
+
+    .chat-input-row { display: flex; gap: 12px; align-items: flex-end; }
+    .chat-textarea {
+      flex: 1; background: var(--bg-elevated); border: 1px solid var(--border);
+      color: var(--text); padding: 12px 16px; border-radius: var(--radius);
+      font-family: var(--font); font-size: 15px; line-height: 1.5;
+      resize: none; min-height: 48px; max-height: 200px;
+      outline: none; transition: border-color 0.15s;
+    }
+    .chat-textarea:focus { border-color: var(--accent-dim); }
+    .chat-textarea::placeholder { color: var(--text-faint); }
+
+    .send-btn {
+      background: var(--accent); border: none; color: var(--bg);
+      padding: 12px 20px; border-radius: var(--radius); cursor: pointer;
+      font-family: var(--font-sans); font-size: 14px; font-weight: 600;
+      white-space: nowrap; transition: opacity 0.15s;
+    }
+    .send-btn:hover { opacity: 0.85; }
+    .send-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    /* ── Write Mode ── */
+    .write-container { flex: 1; display: flex; flex-direction: column; padding: 32px; overflow-y: auto; }
+    .write-section { max-width: 720px; width: 100%; margin: 0 auto; }
+    .write-label {
+      font-size: 12px; color: var(--text-dim); text-transform: uppercase;
+      letter-spacing: 0.1em; margin-bottom: 8px; font-family: var(--font-sans);
+    }
+    .write-textarea {
+      width: 100%; background: var(--bg-elevated); border: 1px solid var(--border);
+      color: var(--text); padding: 16px; border-radius: var(--radius);
+      font-family: var(--font); font-size: 15px; line-height: 1.7;
+      resize: vertical; outline: none; transition: border-color 0.15s;
+    }
+    .write-textarea:focus { border-color: var(--accent-dim); }
+    .write-textarea::placeholder { color: var(--text-faint); }
+
+    .write-output {
+      margin-top: 24px; padding: 24px; background: var(--bg-elevated);
+      border: 1px solid var(--border); border-radius: var(--radius-lg);
+      font-size: 16px; line-height: 1.8; white-space: pre-wrap;
+      min-height: 120px; color: var(--text);
+    }
+
+    .action-btn {
+      margin-top: 16px; padding: 10px 24px; background: var(--accent);
+      border: none; color: var(--bg); border-radius: var(--radius);
+      cursor: pointer; font-family: var(--font-sans); font-size: 14px;
+      font-weight: 600; transition: opacity 0.15s;
+    }
+    .action-btn:hover { opacity: 0.85; }
+    .action-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .action-btn.secondary {
+      background: none; border: 1px solid var(--border); color: var(--text-dim);
+    }
+    .action-btn.secondary:hover { border-color: var(--accent-dim); color: var(--text); }
+
+    /* ── Empty States ── */
+    .empty-state {
+      flex: 1; display: flex; flex-direction: column; align-items: center;
+      justify-content: center; color: var(--text-faint); text-align: center;
+      padding: 40px;
+    }
+    .empty-title { font-size: 20px; color: var(--text-dim); margin-bottom: 8px; }
+    .empty-sub { font-size: 14px; max-width: 400px; line-height: 1.6; }
+
+    /* ── Modal ── */
+    .modal-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.7);
+      display: flex; align-items: center; justify-content: center; z-index: 100;
+    }
+    .modal {
+      background: var(--bg-surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 32px; width: 480px; max-width: 90vw;
+    }
+    .modal-title { font-size: 18px; margin-bottom: 20px; color: var(--text); }
+    .modal-input {
+      width: 100%; background: var(--bg-elevated); border: 1px solid var(--border);
+      color: var(--text); padding: 10px 14px; border-radius: var(--radius);
+      font-family: var(--font); font-size: 15px; outline: none; margin-bottom: 12px;
+    }
+    .modal-input:focus { border-color: var(--accent-dim); }
+    .modal-input::placeholder { color: var(--text-faint); }
+    .modal-actions { display: flex; gap: 12px; justify-content: flex-end; margin-top: 20px; }
+
+    /* ── Profile Header ── */
+    .profile-header {
+      padding: 16px 32px; border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+      background: var(--bg-surface);
+    }
+    .profile-header-name { font-size: 16px; color: var(--text); }
+    .profile-header-meta { font-size: 12px; color: var(--text-dim); font-family: var(--font-sans); margin-left: 12px; }
+    .profile-header-actions { display: flex; gap: 8px; }
+    .header-action {
+      background: none; border: 1px solid var(--border); color: var(--text-dim);
+      padding: 4px 12px; border-radius: var(--radius); cursor: pointer;
+      font-family: var(--font-sans); font-size: 12px; transition: all 0.15s;
+    }
+    .header-action:hover { border-color: var(--accent-dim); color: var(--text); }
+    .header-action.danger:hover { border-color: var(--red); color: var(--red); }
+
+    /* ── Export View ── */
+    .export-view {
+      flex: 1; padding: 32px; overflow-y: auto;
+    }
+    .export-content {
+      max-width: 720px; margin: 0 auto; background: var(--bg-elevated);
+      border: 1px solid var(--border); border-radius: var(--radius-lg);
+      padding: 32px; font-size: 14px; line-height: 1.7;
+      font-family: var(--font-mono); white-space: pre-wrap; color: var(--text-dim);
+    }
+
+    /* ── Loading ── */
+    .loading-dot { display: inline-block; animation: pulse 1.4s infinite; }
+    .loading-dot:nth-child(2) { animation-delay: 0.2s; }
+    .loading-dot:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes pulse { 0%, 80%, 100% { opacity: 0.3; } 40% { opacity: 1; } }
+
+    /* ── Scrollbar ── */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--border-light); }
+
+    /* ── Find Voice ── */
+    .find-voice { flex: 1; padding: 32px; overflow-y: auto; }
+    .find-voice-inner { max-width: 720px; margin: 0 auto; }
+    .sample-entry { margin-bottom: 16px; }
+    .sample-label { font-size: 12px; color: var(--text-dim); font-family: var(--font-sans); margin-bottom: 4px; }
+    .remove-sample {
+      background: none; border: none; color: var(--text-faint); cursor: pointer;
+      font-size: 12px; margin-left: 8px; font-family: var(--font-sans);
+    }
+    .remove-sample:hover { color: var(--red); }
+
+    /* ── Auth ── */
+    .auth-page {
+      min-height: 100vh; display: flex; align-items: center; justify-content: center;
+      background: var(--bg);
+    }
+    .auth-card {
+      width: 400px; max-width: 90vw; padding: 40px;
+      background: var(--bg-surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+    }
+    .auth-logo {
+      font-size: 24px; letter-spacing: 0.15em; text-transform: uppercase;
+      color: var(--accent); text-align: center; margin-bottom: 8px;
+    }
+    .auth-sub {
+      text-align: center; color: var(--text-dim); font-size: 14px;
+      margin-bottom: 32px; font-family: var(--font-sans);
+    }
+    .auth-input {
+      width: 100%; background: var(--bg-elevated); border: 1px solid var(--border);
+      color: var(--text); padding: 12px 16px; border-radius: var(--radius);
+      font-family: var(--font-sans); font-size: 14px; outline: none;
+      margin-bottom: 12px; transition: border-color 0.15s;
+    }
+    .auth-input:focus { border-color: var(--accent-dim); }
+    .auth-input::placeholder { color: var(--text-faint); }
+    .auth-submit {
+      width: 100%; padding: 12px; background: var(--accent); border: none;
+      color: var(--bg); border-radius: var(--radius); cursor: pointer;
+      font-family: var(--font-sans); font-size: 14px; font-weight: 600;
+      margin-top: 8px; transition: opacity 0.15s;
+    }
+    .auth-submit:hover { opacity: 0.85; }
+    .auth-submit:disabled { opacity: 0.4; cursor: not-allowed; }
+    .auth-switch {
+      text-align: center; margin-top: 20px; font-size: 13px;
+      color: var(--text-dim); font-family: var(--font-sans);
+    }
+    .auth-switch a {
+      color: var(--accent); cursor: pointer; text-decoration: none;
+    }
+    .auth-switch a:hover { text-decoration: underline; }
+    .auth-error {
+      background: rgba(179, 80, 80, 0.15); border: 1px solid var(--red);
+      color: var(--red); padding: 8px 12px; border-radius: var(--radius);
+      font-size: 13px; margin-bottom: 12px; font-family: var(--font-sans);
+    }
+    .user-badge {
+      font-size: 12px; color: var(--text-dim); font-family: var(--font-sans);
+      display: flex; align-items: center; gap: 12px;
+    }
+    .logout-btn {
+      background: none; border: none; color: var(--text-faint); cursor: pointer;
+      font-family: var(--font-sans); font-size: 12px; padding: 0;
+    }
+    .logout-btn:hover { color: var(--text); }
+
+    /* ── Toast ── */
+    .toast-stack {
+      position: fixed; bottom: 24px; right: 24px; z-index: 1000;
+      display: flex; flex-direction: column; gap: 8px; pointer-events: none;
+    }
+    .toast {
+      padding: 12px 18px; border-radius: var(--radius);
+      font-family: var(--font-sans); font-size: 13px;
+      background: var(--bg-elevated); border: 1px solid var(--border);
+      color: var(--text); pointer-events: auto;
+      animation: toastIn 0.2s ease; max-width: 360px; line-height: 1.4;
+    }
+    .toast.success { border-color: var(--green); }
+    .toast.error { border-color: var(--red); color: var(--red); }
+    .toast.info { border-color: var(--accent-dim); }
+    @keyframes toastIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* ── Confirm modal ── */
+    .confirm-title { font-size: 16px; color: var(--text); margin-bottom: 10px; }
+    .confirm-body { font-size: 14px; color: var(--text-dim); font-family: var(--font-sans); line-height: 1.5; margin-bottom: 24px; }
+
+    /* ── Command guide ── */
+    .cmd-guide {
+      margin-bottom: 10px; padding: 12px 16px; background: var(--bg-elevated);
+      border: 1px solid var(--border); border-radius: var(--radius);
+      font-family: var(--font-sans); font-size: 12px; color: var(--text-dim);
+      line-height: 1.6;
+    }
+    .cmd-guide strong { color: var(--text); }
+    .cmd-guide-toggle {
+      background: none; border: none; color: var(--text-faint); font-family: var(--font-sans);
+      font-size: 11px; cursor: pointer; padding: 0; margin-bottom: 8px;
+      text-decoration: underline;
+    }
+    .cmd-guide-toggle:hover { color: var(--text-dim); }
+
+    /* ── Onboarding steps ── */
+    .onboarding-steps {
+      margin-top: 32px; display: flex; gap: 16px; flex-wrap: wrap; justify-content: center;
+    }
+    .onboarding-step {
+      width: 180px; padding: 20px 16px; background: var(--bg-surface);
+      border: 1px solid var(--border); border-radius: var(--radius-lg);
+      text-align: center;
+    }
+    .onboarding-step-num {
+      font-size: 11px; color: var(--accent); font-family: var(--font-sans);
+      text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 8px;
+    }
+    .onboarding-step-title { font-size: 14px; color: var(--text); margin-bottom: 6px; }
+    .onboarding-step-desc { font-size: 12px; color: var(--text-dim); font-family: var(--font-sans); line-height: 1.5; }
+  </style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel">
+const { useState, useEffect, useRef, useCallback } = React;
+
+const API = window.location.origin;
+
+// ── Toast system ──
+let _toastListeners = [];
+function pushToast(msg, type = "info", duration = 3500) {
+  const id = Date.now() + Math.random();
+  _toastListeners.forEach(fn => fn({ id, msg, type }));
+  setTimeout(() => _toastListeners.forEach(fn => fn({ id, remove: true })), duration);
+}
+function toast(msg) { pushToast(msg, "info"); }
+function toastSuccess(msg) { pushToast(msg, "success"); }
+function toastError(msg) { pushToast(msg, "error", 5000); }
+
+function ToastStack() {
+  const [toasts, setToasts] = useState([]);
+  useEffect(() => {
+    const fn = (t) => {
+      if (t.remove) setToasts(prev => prev.filter(x => x.id !== t.id));
+      else setToasts(prev => [...prev.slice(-4), t]);
+    };
+    _toastListeners.push(fn);
+    return () => { _toastListeners = _toastListeners.filter(x => x !== fn); };
+  }, []);
+  if (!toasts.length) return null;
+  return (
+    <div className="toast-stack">
+      {toasts.map(t => (
+        <div key={t.id} className={`toast ${t.type}`}>{t.msg}</div>
+      ))}
+    </div>
+  );
+}
+
+async function copyText(text) {
+  try {
+    await navigator.clipboard.writeText(text);
+    toastSuccess("Copied to clipboard");
+  } catch {
+    toastError("Could not copy — try selecting and copying manually");
+  }
+}
+
+// ── Confirm Modal ──
+function ConfirmModal({ title, body, confirmLabel = "Delete", onConfirm, onCancel }) {
+  return (
+    <div className="modal-overlay" onClick={onCancel}>
+      <div className="modal" onClick={e => e.stopPropagation()} style={{ width: 400 }}>
+        <div className="confirm-title">{title}</div>
+        <div className="confirm-body">{body}</div>
+        <div className="modal-actions">
+          <button className="action-btn secondary" onClick={onCancel}>Cancel</button>
+          <button
+            className="action-btn"
+            style={{ background: "var(--red)", borderColor: "var(--red)" }}
+            onClick={onConfirm}
+          >
+            {confirmLabel}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Token management ──
+function getToken() { return localStorage.getItem("voice_token"); }
+function setToken(t) { localStorage.setItem("voice_token", t); }
+function clearToken() { localStorage.removeItem("voice_token"); }
+function getUser() { try { return JSON.parse(localStorage.getItem("voice_user")); } catch { return null; } }
+function setUser(u) { localStorage.setItem("voice_user", JSON.stringify(u)); }
+function clearUser() { localStorage.removeItem("voice_user"); }
+
+// ── API helpers ──
+async function api(path, opts = {}) {
+  const token = getToken();
+  const headers = { "Content-Type": "application/json", ...opts.headers };
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+  const res = await fetch(`${API}${path}`, { headers, ...opts });
+  if (res.status === 401) {
+    clearToken(); clearUser();
+    window.location.reload();
+    throw new Error("Session expired");
+  }
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: res.statusText }));
+    throw new Error(err.detail || "API error");
+  }
+  return res.json();
+}
+
+// ── Loading dots ──
+function LoadingDots() {
+  return (
+    <span>
+      <span className="loading-dot">.</span>
+      <span className="loading-dot">.</span>
+      <span className="loading-dot">.</span>
+    </span>
+  );
+}
+
+// ── Create Profile Modal ──
+function CreateProfileModal({ onClose, onCreate, prefillDesc = "" }) {
+  const [name, setName] = useState("");
+  const [desc, setDesc] = useState(prefillDesc);
+  const [loading, setLoading] = useState(false);
+  const ref = useRef(null);
+
+  useEffect(() => { ref.current?.focus(); }, []);
+
+  const handleCreate = async () => {
+    if (!name.trim()) return;
+    setLoading(true);
+    try {
+      const profile = await api("/profiles", {
+        method: "POST",
+        body: JSON.stringify({ name: name.trim(), base_description: desc.trim() }),
+      });
+      onCreate(profile);
+    } catch (e) {
+      toastError(e.message);
+    }
+    setLoading(false);
+  };
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal" onClick={e => e.stopPropagation()}>
+        <div className="modal-title">New Voice Profile</div>
+        <input
+          ref={ref} className="modal-input" placeholder="Name this voice"
+          value={name} onChange={e => setName(e.target.value)}
+          onKeyDown={e => e.key === "Enter" && !e.shiftKey && handleCreate()}
+        />
+        <textarea
+          className="modal-input" rows={4} style={{ resize: "vertical", fontFamily: "var(--font)" }}
+          placeholder="Describe this voice (optional — you can build it through teaching instead)"
+          value={desc} onChange={e => setDesc(e.target.value)}
+        />
+        <div className="modal-actions">
+          <button className="action-btn secondary" onClick={onClose}>Cancel</button>
+          <button className="action-btn" onClick={handleCreate} disabled={loading || !name.trim()}>
+            {loading ? "Creating..." : "Create"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Find Voice Modal ──
+function FindVoiceModal({ onClose, onResult }) {
+  const [samples, setSamples] = useState(["", ""]);
+  const [loading, setLoading] = useState(false);
+
+  const updateSample = (i, val) => {
+    const next = [...samples];
+    next[i] = val;
+    setSamples(next);
+  };
+  const addSample = () => setSamples([...samples, ""]);
+  const removeSample = (i) => setSamples(samples.filter((_, j) => j !== i));
+
+  const handleAnalyze = async () => {
+    const filled = samples.filter(s => s.trim().length > 20);
+    if (filled.length < 1) { toastError("Provide at least one substantial writing sample."); return; }
+    setLoading(true);
+    try {
+      const result = await api("/analyze-samples", {
+        method: "POST",
+        body: JSON.stringify({ samples: filled }),
+      });
+      onResult(result.voice_description);
+    } catch (e) { toastError(e.message); }
+    setLoading(false);
+  };
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal" onClick={e => e.stopPropagation()} style={{ width: 600 }}>
+        <div className="modal-title">Find Your Voice</div>
+        <p style={{ color: "var(--text-dim)", fontSize: 14, marginBottom: 20, fontFamily: "var(--font-sans)" }}>
+          Paste writing you admire — your own or others'. We'll identify the patterns and build a starter voice profile.
+        </p>
+        {samples.map((s, i) => (
+          <div key={i} className="sample-entry">
+            <div className="sample-label">
+              Sample {i + 1}
+              {samples.length > 1 && <button className="remove-sample" onClick={() => removeSample(i)}>remove</button>}
+            </div>
+            <textarea
+              className="modal-input" rows={4} style={{ resize: "vertical", fontFamily: "var(--font)" }}
+              placeholder="Paste a writing sample..."
+              value={s} onChange={e => updateSample(i, e.target.value)}
+            />
+          </div>
+        ))}
+        {samples.length < 5 && (
+          <button className="action-btn secondary" style={{ marginBottom: 16, fontSize: 12 }} onClick={addSample}>
+            + Add sample
+          </button>
+        )}
+        <div className="modal-actions">
+          <button className="action-btn secondary" onClick={onClose}>Cancel</button>
+          <button className="action-btn" onClick={handleAnalyze} disabled={loading}>
+            {loading ? <span>Analyzing<LoadingDots /></span> : "Analyze Samples"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
+const COMMAND_GUIDE = [
+  { key: "dialogue", label: "dialogue", desc: "Talk openly — ask questions, explore, or just converse with the voice." },
+  { key: "principle", label: "principle", desc: "State a rule that governs this voice. Saved and always applied." },
+  { key: "never", label: "never", desc: "Name something this voice must never do. A hard prohibition." },
+  { key: "example", label: "example", desc: "Paste a sentence or paragraph that shows the voice at its best." },
+  { key: "voice", label: "voice", desc: "Describe a tone, texture, or quality — harder to pin down than a rule." },
+  { key: "correct", label: "correct", desc: "Point out a mistake in something the voice just wrote." },
+  { key: "demo", label: "demo", desc: "Ask the voice to write something so you can see it in action." },
+  { key: "examine", label: "examine", desc: "Paste text and ask the voice to analyze it against your style." },
+];
+
+// ── Teach View (Chat) ──
+function TeachView({ profileId, onRefinementSaved }) {
+  const [messages, setMessages] = useState([]);
+  const [input, setInput] = useState("");
+  const [command, setCommand] = useState("dialogue");
+  const [loading, setLoading] = useState(false);
+  const [showGuide, setShowGuide] = useState(false);
+  const messagesEnd = useRef(null);
+  const textareaRef = useRef(null);
+
+  const commands = COMMAND_GUIDE;
+
+  useEffect(() => { messagesEnd.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
+  useEffect(() => { setMessages([]); }, [profileId]);
+
+  const send = async () => {
+    if (!input.trim() || loading) return;
+    const text = input.trim();
+    setInput("");
+    setMessages(prev => [...prev, { role: "user", content: text, command }]);
+    setLoading(true);
+
+    try {
+      const history = messages.slice(-6).map(m => ({ role: m.role === "user" ? "user" : "agent", content: m.content }));
+      const result = await api(`/profiles/${profileId}/teach`, {
+        method: "POST",
+        body: JSON.stringify({ message: text, command, conversation_history: history }),
+      });
+      const saved = result.refinement_saved ? result.refinement_type : null;
+      setMessages(prev => [...prev, {
+        role: "agent", content: result.response,
+        refinement: saved, count: result.refinement_count,
+      }]);
+      if (saved) {
+        toastSuccess(`${saved} saved — ${result.refinement_count} total refinements`);
+        onRefinementSaved && onRefinementSaved(result.refinement_count);
+      }
+    } catch (e) {
+      setMessages(prev => [...prev, { role: "agent", content: `Error: ${e.message}` }]);
+      toastError(e.message);
+    }
+    setLoading(false);
+    setTimeout(() => textareaRef.current?.focus(), 50);
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); }
+  };
+
+  // Auto-resize textarea
+  const handleInput = (e) => {
+    setInput(e.target.value);
+    e.target.style.height = "auto";
+    e.target.style.height = Math.min(e.target.scrollHeight, 200) + "px";
+  };
+
+  return (
+    <div className="chat-container">
+      <div className="chat-messages">
+        {messages.length === 0 && (
+          <div style={{ padding: "40px 0", maxWidth: 600 }}>
+            <div style={{ color: "var(--text-dim)", marginBottom: 16, fontSize: 15 }}>
+              Teach this voice by telling it what makes your writing yours.
+            </div>
+            <div style={{ color: "var(--text-faint)", fontSize: 14, lineHeight: 1.7, fontFamily: "var(--font-sans)" }}>
+              Start with a <strong style={{ color: "var(--text-dim)" }}>/principle</strong> ("Sentences should be short and declarative"),
+              a <strong style={{ color: "var(--text-dim)" }}>/never</strong> ("Never use 'however' or transitional machinery"),
+              or an <strong style={{ color: "var(--text-dim)" }}>/example</strong> (paste a sentence you love).
+              Use <strong style={{ color: "var(--text-dim)" }}>/demo</strong> any time to see the voice in action.
+            </div>
+          </div>
+        )}
+        {messages.map((m, i) => (
+          <div key={i} className={`msg ${m.role}`}>
+            <div className="msg-label">
+              {m.role === "user" ? (m.command ? `/${m.command}` : "you") : "voice"}
+            </div>
+            <div className="msg-content">{m.content}</div>
+            {m.refinement && <span className="msg-badge">{m.refinement} saved · {m.count} total</span>}
+          </div>
+        ))}
+        {loading && (
+          <div className="msg agent">
+            <div className="msg-label">voice</div>
+            <div className="msg-content" style={{ color: "var(--text-faint)" }}><LoadingDots /></div>
+          </div>
+        )}
+        <div ref={messagesEnd} />
+      </div>
+
+      <div className="chat-input-area">
+        <div>
+          <button className="cmd-guide-toggle" onClick={() => setShowGuide(g => !g)}>
+            {showGuide ? "hide command guide" : "what do these commands mean?"}
+          </button>
+          {showGuide && (
+            <div className="cmd-guide">
+              {COMMAND_GUIDE.map(c => (
+                <div key={c.key} style={{ marginBottom: 4 }}>
+                  <strong>/{c.label}</strong> — {c.desc}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+        <div className="chat-commands">
+          {commands.map(c => (
+            <button
+              key={c.key}
+              className={`cmd-btn ${command === c.key ? "active" : ""}`}
+              onClick={() => setCommand(c.key)}
+              title={c.desc}
+            >
+              /{c.label}
+            </button>
+          ))}
+        </div>
+        <div className="chat-input-row">
+          <textarea
+            ref={textareaRef}
+            className="chat-textarea" rows={1}
+            placeholder={command === "dialogue" ? "Talk to this voice..." : `/${command}: describe what you're teaching...`}
+            value={input} onChange={handleInput} onKeyDown={handleKeyDown}
+          />
+          <button className="send-btn" onClick={send} disabled={loading || !input.trim()}>
+            Send
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
+// ── Write View ──
+function WriteView({ profileId, profileName }) {
+  const [instruction, setInstruction] = useState("");
+  const [context, setContext] = useState("");
+  const [output, setOutput] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [showContext, setShowContext] = useState(false);
+
+  useEffect(() => { setOutput(""); setInstruction(""); setContext(""); }, [profileId]);
+
+  const generate = async () => {
+    if (!instruction.trim() || loading) return;
+    setLoading(true);
+    setOutput("");
+    try {
+      const result = await api(`/profiles/${profileId}/write`, {
+        method: "POST",
+        body: JSON.stringify({ instruction: instruction.trim(), context: context.trim() }),
+      });
+      setOutput(result.text);
+    } catch (e) { setOutput(`Error: ${e.message}`); toastError(e.message); }
+    setLoading(false);
+  };
+
+  return (
+    <div className="write-container">
+      <div className="write-section">
+        <div className="write-label">What should this voice write?</div>
+        <textarea
+          className="write-textarea" rows={3}
+          placeholder="e.g., 'An opening paragraph about why most modern writing is lifeless.'"
+          value={instruction} onChange={e => setInstruction(e.target.value)}
+        />
+
+        {!showContext ? (
+          <button
+            className="action-btn secondary" style={{ marginTop: 12, fontSize: 12 }}
+            onClick={() => setShowContext(true)}
+          >
+            + Add context or notes
+          </button>
+        ) : (
+          <>
+            <div className="write-label" style={{ marginTop: 20 }}>Context / Notes</div>
+            <textarea
+              className="write-textarea" rows={4}
+              placeholder="Optional: an outline, notes, previous draft, or audience description"
+              value={context} onChange={e => setContext(e.target.value)}
+            />
+          </>
+        )}
+
+        <button className="action-btn" style={{ marginTop: 16 }} onClick={generate} disabled={loading || !instruction.trim()}>
+          {loading ? <span>Writing<LoadingDots /></span> : `Write as ${profileName}`}
+        </button>
+
+        {output && (
+          <>
+            <div className="write-label" style={{ marginTop: 32 }}>Output</div>
+            <div className="write-output">{output}</div>
+            <button
+              className="action-btn secondary" style={{ marginTop: 12 }}
+              onClick={() => copyText(output)}
+            >
+              Copy to clipboard
+            </button>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+
+// ── Analyze View ──
+function AnalyzeView({ profileId, profileName }) {
+  const [text, setText] = useState("");
+  const [analysis, setAnalysis] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => { setAnalysis(""); setText(""); }, [profileId]);
+
+  const analyze = async () => {
+    if (!text.trim() || loading) return;
+    setLoading(true);
+    setAnalysis("");
+    try {
+      const result = await api(`/profiles/${profileId}/analyze`, {
+        method: "POST",
+        body: JSON.stringify({ text: text.trim() }),
+      });
+      setAnalysis(result.analysis);
+    } catch (e) { setAnalysis(`Error: ${e.message}`); toastError(e.message); }
+    setLoading(false);
+  };
+
+  return (
+    <div className="write-container">
+      <div className="write-section">
+        <div className="write-label">Paste text to analyze against this voice</div>
+        <textarea
+          className="write-textarea" rows={8}
+          placeholder="Paste any text — an email, blog post, draft — and we'll show where it breaks from your voice."
+          value={text} onChange={e => setText(e.target.value)}
+        />
+        <button className="action-btn" style={{ marginTop: 16 }} onClick={analyze} disabled={loading || !text.trim()}>
+          {loading ? <span>Analyzing<LoadingDots /></span> : `Analyze against ${profileName}`}
+        </button>
+        {analysis && (
+          <>
+            <div className="write-label" style={{ marginTop: 32 }}>Analysis</div>
+            <div className="write-output">{analysis}</div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+
+// ── Export View ──
+function ExportView({ profileId }) {
+  const [markdown, setMarkdown] = useState("");
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    setLoading(true);
+    api(`/profiles/${profileId}/export`)
+      .then(r => setMarkdown(r.markdown))
+      .catch(e => setMarkdown(`Error: ${e.message}`))
+      .finally(() => setLoading(false));
+  }, [profileId]);
+
+  return (
+    <div className="export-view">
+      <div style={{ maxWidth: 720, margin: "0 auto" }}>
+        <div className="write-label">Portable Voice Profile</div>
+        <p style={{ color: "var(--text-dim)", fontSize: 14, marginBottom: 16, fontFamily: "var(--font-sans)" }}>
+          Copy this to any AI tool — Claude Projects, ChatGPT, system prompts. Your voice goes where you go.
+        </p>
+        {loading ? (
+          <div style={{ color: "var(--text-faint)", padding: 40 }}>Loading<LoadingDots /></div>
+        ) : (
+          <>
+            <div className="export-content">{markdown}</div>
+            <button
+              className="action-btn" style={{ marginTop: 16 }}
+              onClick={() => copyText(markdown)}
+            >
+              Copy to clipboard
+            </button>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+
+// ── Upload View (Bring Your Voice) ──
+function UploadView({ profileId }) {
+  const [files, setFiles] = useState([]);
+  const [uploading, setUploading] = useState(false);
+  const [ingesting, setIngesting] = useState(false);
+  const [result, setResult] = useState(null);
+  const fileInput = useRef(null);
+
+  const loadFiles = async () => {
+    try {
+      const r = await api(`/profiles/${profileId}/uploads`);
+      setFiles(r.files);
+    } catch (e) { console.error(e); }
+  };
+
+  useEffect(() => { loadFiles(); setResult(null); }, [profileId]);
+
+  const handleUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const token = getToken();
+      const res = await fetch(`${API}/profiles/${profileId}/upload`, {
+        method: "POST",
+        headers: token ? { "Authorization": `Bearer ${token}` } : {},
+        body: formData,
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ detail: "Upload failed" }));
+        throw new Error(err.detail);
+      }
+      await loadFiles();
+      toastSuccess("File uploaded");
+    } catch (err) { toastError(err.message); }
+    setUploading(false);
+    if (fileInput.current) fileInput.current.value = "";
+  };
+
+  const handleIngest = async () => {
+    if (files.length === 0) { toastError("Upload some writing first."); return; }
+    setIngesting(true);
+    setResult(null);
+    try {
+      const r = await api(`/profiles/${profileId}/ingest`, { method: "POST" });
+      setResult(r);
+      toastSuccess(`Extracted ${r.new_refinements} refinements from your writing`);
+    } catch (err) { toastError(err.message); }
+    setIngesting(false);
+  };
+
+  return (
+    <div className="write-container">
+      <div className="write-section">
+        <div className="write-label">Bring Your Voice</div>
+        <p style={{ color: "var(--text-dim)", fontSize: 14, marginBottom: 20, fontFamily: "var(--font-sans)" }}>
+          Upload your writing — essays, blog posts, emails, anything that sounds like you.
+          Then hit "Analyze" and the system will extract examples, principles, and patterns automatically.
+        </p>
+
+        <div style={{ display: "flex", gap: 12, alignItems: "center", marginBottom: 20 }}>
+          <input
+            ref={fileInput} type="file" accept=".txt,.md,.html,.text"
+            onChange={handleUpload} style={{ display: "none" }}
+          />
+          <button className="action-btn" onClick={() => fileInput.current?.click()} disabled={uploading}>
+            {uploading ? "Uploading..." : "Upload File"}
+          </button>
+          <span style={{ fontSize: 12, color: "var(--text-faint)", fontFamily: "var(--font-sans)" }}>
+            .txt, .md, .html — up to 500KB
+          </span>
+        </div>
+
+        {files.length > 0 && (
+          <div style={{ marginBottom: 20 }}>
+            <div className="write-label">Uploaded Files ({files.length})</div>
+            {files.map((f, i) => (
+              <div key={i} style={{
+                padding: "8px 12px", background: "var(--bg-elevated)", border: "1px solid var(--border)",
+                borderRadius: "var(--radius)", marginBottom: 4, display: "flex", justifyContent: "space-between",
+                fontFamily: "var(--font-sans)", fontSize: 13,
+              }}>
+                <span style={{ color: "var(--text)" }}>{f.filename}</span>
+                <span style={{ color: "var(--text-faint)" }}>{(f.size / 1024).toFixed(1)} KB</span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {files.length > 0 && (
+          <button className="action-btn" onClick={handleIngest} disabled={ingesting}>
+            {ingesting ? <span>Analyzing your writing<LoadingDots /></span> : "Analyze & Extract Voice"}
+          </button>
+        )}
+
+        {result && (
+          <div style={{ marginTop: 24 }}>
+            <div className="write-label">Extracted {result.new_refinements} refinements</div>
+            <div className="write-output">
+              {result.refinements.map((r, i) => (
+                `[${r.type}] ${r.content}`
+              )).join("\n\n")}
+            </div>
+            <div style={{ marginTop: 8, fontSize: 12, color: "var(--text-dim)", fontFamily: "var(--font-sans)" }}>
+              Total refinements on this profile: {result.total_refinements}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+
+// ── Plan Badge (sidebar) ──
+function PlanBadge() {
+  const [plan, setPlan] = useState(null);
+
+  useEffect(() => {
+    api("/billing/plan").then(r => setPlan(r)).catch(() => {});
+  }, []);
+
+  if (!plan) return null;
+
+  const upgrade = async (target) => {
+    try {
+      const r = await api("/billing/checkout", {
+        method: "POST",
+        body: JSON.stringify({ plan: target }),
+      });
+      window.location.href = r.checkout_url;
+    } catch (e) {
+      if (e.message.includes("not configured")) {
+        toastError("Billing not configured yet. Set STRIPE_SECRET_KEY to enable subscriptions.");
+      } else { toastError(e.message); }
+    }
+  };
+
+  const manage = async () => {
+    try {
+      const r = await api("/billing/portal", { method: "POST" });
+      window.location.href = r.portal_url;
+    } catch (e) { toastError(e.message); }
+  };
+
+  return (
+    <div style={{ padding: "12px 16px", borderTop: "1px solid var(--border)", marginTop: "auto" }}>
+      <div style={{ fontSize: 11, color: "var(--text-faint)", fontFamily: "var(--font-sans)", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 6 }}>
+        Plan
+      </div>
+      <div style={{ fontSize: 14, color: plan.plan === "free" ? "var(--text-dim)" : "var(--accent)", fontFamily: "var(--font-sans)", marginBottom: 8 }}>
+        {plan.plan.charAt(0).toUpperCase() + plan.plan.slice(1)}
+        <span style={{ fontSize: 11, color: "var(--text-faint)", marginLeft: 8 }}>
+          {plan.limits.profiles === 999 ? "∞" : plan.limits.profiles} profile{plan.limits.profiles !== 1 ? "s" : ""}
+        </span>
+      </div>
+      {plan.plan === "free" && (
+        <button
+          className="new-profile-btn" style={{ margin: 0, fontSize: 12, borderColor: "var(--accent-dim)", color: "var(--accent)" }}
+          onClick={() => upgrade("starter")}
+        >
+          Upgrade
+        </button>
+      )}
+      {plan.plan !== "free" && (
+        <button
+          className="new-profile-btn" style={{ margin: 0, fontSize: 11 }}
+          onClick={manage}
+        >
+          Manage subscription
+        </button>
+      )}
+    </div>
+  );
+}
+
+
+// ── Auth Page ──
+function AuthPage({ onAuth }) {
+  const [isLogin, setIsLogin] = useState(true);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [name, setName] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+  const emailRef = useRef(null);
+
+  useEffect(() => { emailRef.current?.focus(); }, [isLogin]);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!email.trim() || !password) return;
+    setError("");
+    setLoading(true);
+
+    try {
+      const endpoint = isLogin ? "/auth/login" : "/auth/register";
+      const body = isLogin
+        ? { email: email.trim(), password }
+        : { email: email.trim(), password, name: name.trim() };
+
+      const res = await fetch(`${API}${endpoint}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ detail: "Something went wrong" }));
+        throw new Error(err.detail);
+      }
+
+      const data = await res.json();
+      setToken(data.token);
+      setUser(data.user);
+      onAuth(data.user);
+    } catch (err) {
+      setError(err.message);
+    }
+    setLoading(false);
+  };
+
+  return (
+    <div className="auth-page">
+      <div className="auth-card">
+        <div className="auth-logo">Voice</div>
+        <div className="auth-sub">
+          {isLogin ? "Sign in to your account" : "Create your account"}
+        </div>
+        <form onSubmit={handleSubmit}>
+          {error && <div className="auth-error">{error}</div>}
+          {!isLogin && (
+            <input
+              className="auth-input" type="text" placeholder="Your name"
+              value={name} onChange={e => setName(e.target.value)}
+            />
+          )}
+          <input
+            ref={emailRef}
+            className="auth-input" type="email" placeholder="Email"
+            value={email} onChange={e => setEmail(e.target.value)} required
+          />
+          <input
+            className="auth-input" type="password" placeholder="Password"
+            value={password} onChange={e => setPassword(e.target.value)}
+            minLength={6} required
+          />
+          <button className="auth-submit" type="submit" disabled={loading}>
+            {loading ? "..." : isLogin ? "Sign In" : "Create Account"}
+          </button>
+        </form>
+        <div className="auth-switch">
+          {isLogin ? (
+            <>No account? <a onClick={() => { setIsLogin(false); setError(""); }}>Create one</a></>
+          ) : (
+            <>Already have an account? <a onClick={() => { setIsLogin(true); setError(""); }}>Sign in</a></>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
+// ── Main App ──
+function App() {
+  const [user, setUserState] = useState(getUser);
+  const [profiles, setProfiles] = useState([]);
+  const [activeProfile, setActiveProfile] = useState(null);
+  const [mode, setMode] = useState("teach"); // teach, write, analyze, export
+  const [showCreate, setShowCreate] = useState(false);
+  const [showFind, setShowFind] = useState(false);
+  const [pendingDesc, setPendingDesc] = useState("");
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [loaded, setLoaded] = useState(false);
+
+  const handleAuth = (u) => setUserState(u);
+  const handleLogout = () => {
+    clearToken(); clearUser();
+    setUserState(null);
+    setProfiles([]);
+    setActiveProfile(null);
+  };
+
+  const loadProfiles = useCallback(async () => {
+    if (!user) { setLoaded(true); return; }
+    try {
+      const list = await api("/profiles");
+      setProfiles(list);
+      if (!activeProfile && list.length > 0) setActiveProfile(list[0]);
+    } catch (e) { console.error("Failed to load profiles:", e); }
+    setLoaded(true);
+  }, [user]);
+
+  useEffect(() => { loadProfiles(); }, [loadProfiles]);
+
+  const handleCreate = (profile) => {
+    setProfiles(prev => [profile, ...prev]);
+    setActiveProfile(profile);
+    setShowCreate(false);
+    setMode("teach");
+  };
+
+  const handleRefinementSaved = (count) => {
+    setActiveProfile(prev => prev ? { ...prev, refinement_count: count } : prev);
+    setProfiles(prev => prev.map(p =>
+      p.profile_id === activeProfile?.profile_id ? { ...p, refinement_count: count } : p
+    ));
+  };
+
+  const handleFindResult = (description) => {
+    setShowFind(false);
+    setPendingDesc(description);
+    setShowCreate(true);
+  };
+
+  const handleDelete = () => {
+    if (!activeProfile) return;
+    setConfirmDelete(true);
+  };
+
+  const confirmDeleteProfile = async () => {
+    setConfirmDelete(false);
+    if (!activeProfile) return;
+    const name = activeProfile.name;
+    try {
+      await api(`/profiles/${activeProfile.profile_id}`, { method: "DELETE" });
+      const remaining = profiles.filter(p => p.profile_id !== activeProfile.profile_id);
+      setProfiles(remaining);
+      setActiveProfile(remaining[0] || null);
+      toastSuccess(`"${name}" deleted`);
+    } catch (e) { toastError(e.message); }
+  };
+
+  if (!user) return <AuthPage onAuth={handleAuth} />;
+
+  if (!loaded) {
+    return (
+      <div className="app">
+        <div className="empty-state">
+          <div style={{ color: "var(--text-dim)" }}>Loading<LoadingDots /></div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="app">
+      {/* Top bar */}
+      <div className="topbar">
+        <div className="topbar-logo">Voice</div>
+        <div style={{ display: "flex", alignItems: "center", gap: 24 }}>
+          {activeProfile && (
+            <div className="topbar-nav">
+              <button className={`topbar-btn ${mode === "teach" ? "active" : ""}`} onClick={() => setMode("teach")}>Teach</button>
+              <button className={`topbar-btn ${mode === "write" ? "active" : ""}`} onClick={() => setMode("write")}>Write</button>
+              <button className={`topbar-btn ${mode === "analyze" ? "active" : ""}`} onClick={() => setMode("analyze")}>Analyze</button>
+              <button className={`topbar-btn ${mode === "upload" ? "active" : ""}`} onClick={() => setMode("upload")}>Upload</button>
+              <button className={`topbar-btn ${mode === "export" ? "active" : ""}`} onClick={() => setMode("export")}>Export</button>
+            </div>
+          )}
+          <div className="user-badge">
+            <span>{user.name || user.email}</span>
+            <button className="logout-btn" onClick={handleLogout}>Sign out</button>
+          </div>
+        </div>
+      </div>
+
+      <div className="main">
+        {/* Sidebar */}
+        <div className="sidebar">
+          <div className="sidebar-header">
+            <div className="sidebar-title">Voices</div>
+          </div>
+          <div className="sidebar-list">
+            {profiles.map(p => (
+              <div
+                key={p.profile_id}
+                className={`profile-card ${activeProfile?.profile_id === p.profile_id ? "active" : ""}`}
+                onClick={() => { setActiveProfile(p); setMode("teach"); }}
+              >
+                <div className="profile-card-name">{p.name}</div>
+                <div className="profile-card-meta">{p.refinement_count} refinements</div>
+              </div>
+            ))}
+          </div>
+          <button className="new-profile-btn" onClick={() => setShowCreate(true)}>
+            + New Voice
+          </button>
+          <button className="new-profile-btn" style={{ marginTop: 0 }} onClick={() => setShowFind(true)}>
+            Find Your Voice
+          </button>
+          <PlanBadge />
+        </div>
+
+        {/* Content */}
+        <div className="content">
+          {activeProfile ? (
+            <>
+              <div className="profile-header">
+                <div style={{ display: "flex", alignItems: "baseline" }}>
+                  <div className="profile-header-name">{activeProfile.name}</div>
+                  <div className="profile-header-meta">{activeProfile.refinement_count} refinements</div>
+                </div>
+                <div className="profile-header-actions">
+                  <button className="header-action danger" onClick={handleDelete}>Delete</button>
+                </div>
+              </div>
+
+              {mode === "teach" && <TeachView profileId={activeProfile.profile_id} onRefinementSaved={handleRefinementSaved} />}
+              {mode === "write" && <WriteView profileId={activeProfile.profile_id} profileName={activeProfile.name} />}
+              {mode === "analyze" && <AnalyzeView profileId={activeProfile.profile_id} profileName={activeProfile.name} />}
+              {mode === "upload" && <UploadView profileId={activeProfile.profile_id} />}
+              {mode === "export" && <ExportView profileId={activeProfile.profile_id} />}
+            </>
+          ) : (
+            <div className="empty-state">
+              <div className="empty-title">No voice yet</div>
+              <div className="empty-sub">
+                Every writer has a voice. Most never articulate it precisely enough to teach it to anyone — or anything. Start here.
+              </div>
+              <div className="onboarding-steps">
+                <div className="onboarding-step">
+                  <div className="onboarding-step-num">Step 1</div>
+                  <div className="onboarding-step-title">Create a profile</div>
+                  <div className="onboarding-step-desc">Name this voice and describe it, or leave it blank and build through teaching.</div>
+                </div>
+                <div className="onboarding-step">
+                  <div className="onboarding-step-num">Step 2</div>
+                  <div className="onboarding-step-title">Teach it</div>
+                  <div className="onboarding-step-desc">Give it principles, examples, and hard rules. Correct it when it goes wrong.</div>
+                </div>
+                <div className="onboarding-step">
+                  <div className="onboarding-step-num">Step 3</div>
+                  <div className="onboarding-step-title">Use it</div>
+                  <div className="onboarding-step-desc">Write with it, analyze your drafts against it, or export it to any AI tool.</div>
+                </div>
+              </div>
+              <div style={{ display: "flex", gap: 12, marginTop: 32 }}>
+                <button className="action-btn" onClick={() => setShowCreate(true)}>
+                  Create Your First Voice
+                </button>
+                <button className="action-btn secondary" onClick={() => setShowFind(true)}>
+                  Find Your Voice
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Modals */}
+      {showCreate && (
+        <CreateProfileModal
+          onClose={() => { setShowCreate(false); setPendingDesc(""); }}
+          onCreate={handleCreate}
+          prefillDesc={pendingDesc}
+        />
+      )}
+      {showFind && <FindVoiceModal onClose={() => setShowFind(false)} onResult={handleFindResult} />}
+      {confirmDelete && activeProfile && (
+        <ConfirmModal
+          title={`Delete "${activeProfile.name}"?`}
+          body="This will permanently delete the voice profile and all its refinements. This cannot be undone."
+          confirmLabel="Delete Profile"
+          onConfirm={confirmDeleteProfile}
+          onCancel={() => setConfirmDelete(false)}
+        />
+      )}
+      <ToastStack />
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+</body>
+</html>

@@ -1,0 +1,791 @@
+eros paper/Tom Pangle --4/3/19--3:37 PM		
+	
+	
+	
+	
+	
+	
+1
+	
+	
+	
+ 
+Socrates’ Erotic Education   
+1
+Plato’s Socrates—the Socrates to whom I’ll refer throughout this paper— is famous for 
+saying something he never quite says, that he “knows he knows nothing.” He’s less well 
+known for a claim that he makes or alludes to in at least five of Plato’s 35 dialogues (Sym 
+177d; Theages 128b, 130d-e; Phaedrus 257a; Lysis 204b-c, 205a, 210e; Theaetetus 
+150b-151d), that he has knowledge of one thing only: the “erotic things.”  As he puts it in 
+the Symposium: “I assert that I have knowledge of nothing…but the erotic things” (177d).  
+And in the Theages he goes further: “Surely I always say,” he says, “that I happen to 
+know nothing, so to speak, except one small subject: the erotic things.  But in this 
+subject,” he adds, “I am wondrously clever beyond any human being who has ever lived 
+or is now living” (128b).  And as for Eros being a “small subject,” Plato devotes two long 
+dialogues to it (the Symposium and Phaedrus), he uses a form of the word Eros as the 
+title of a third (the Lovers), and it’s an important sub-theme in many others, including the 
+Republic, Laws, Gorgias, Charmides, and Alcibiades I.  
+In this paper, I will give a rough sketch of three things: (1) how Socrates came to 
+study Eros (the Greek word for love or the god of love), (2) what he learned from this 
+study, and (3) how the study transformed him from an immature natural scientist into the 
+mature Socrates, the political philosopher we encounter in the Apology and most of the 
+Platonic dialogues.  The story of how Socrates became a political philosopher—his 
+famous "turn" or “turns” that led him to the political things—is told in a fragmentary and 
+ I’m indebted to Robert Goldberg for his helpful criticisms of an earlier version of this 
+1
+paper.
+
+eros paper/Tom Pangle --4/3/19--3:37 PM		
+	
+	
+	
+	
+	
+	
+2
+	
+	
+	
+ 
+playful manner over the course of several dialogues: the Phaedo, Parmenides, 
+Symposium, and Apology.  I will connect a few of the fragments in an unorthodox way in 
+an effort to show that Plato presents a coherent account of Socrates’ own education.  At 
+many points my own understanding of the issues is inadequate, and so for that reason, 
+among others, what I say will be very crude.  And it’ll be a while until Eros itself 
+becomes part of the story.   
+(1) We hear about the earliest stages of Socrates’ theoretical life in the Phaedo, where 
+Socrates, on the day of his death, discusses what he was like when young—meaning, I 
+think, still a teenager.   Let me do some reading and paraphrasing of the Phaedo and offer 
+a few interpretive suggestions along the way.  At 96a ff. he gives a brief intellectual 
+autobiography. It starts like this: “For…as a young man I was wondrously desirous 
+of that wisdom they call 'inquiry concerning nature.'  This wisdom seemed to me 
+splendid (ὑπερήφανος)—to know the causes of each thing, why each thing comes to 
+be, and why it perishes, and why it is.” Socrates apparently traces the wondrousness of 
+his desire for the wisdom of natural science to the fact that it seemed to him splendid to 
+know the causes of each thing.  That is, he was drawn to philosophy at least partly by the 
+seeming nobility of the wisdom it seeks.  One might say that he was, to this extent, under 
+the spell of the noble or the beautiful—it’s the same word in Greek (τὸ καλόν) —which 
+isn’t to say that the only reason he sought wisdom was its seeming nobility.—Notice, by 
+the way, that he doesn't say that the desire for such wisdom ever left him.  And in the 
+Theaetetus and elsewhere, Plato shows us that he in fact maintained an interest in 
+
+eros paper/Tom Pangle --4/3/19--3:37 PM		
+	
+	
+	
+	
+	
+	
+3
+	
+	
+	
+ 
+scientific knowledge—astronomy and the like—until the end of his life (Tht 145c-d).  
+Whether his desire remained “wondrous” is a subject I’ll return to.  Notice too that at this 
+stage he seemed to think it might be possible "to know the causes of each thing," i.e., to 
+acquire comprehensive knowledge of the whole.   
+2
+	
+(1.a) Two things are striking about Socrates’ first list of the questions he sought to 
+answer.  To begin with, the sequence is peculiar: he desired to know, he says, why each 
+thing comes into being, why it perishes, and why it is.  He ignores the natural order of the 
+topics and puts perishing in the middle—the position of greatest importance in Platonic 
+lists with odd numbers of items.  Why does he do this?  Perhaps it’s merely because 
+perishing—death—happens to be the subject of the conversation in the Phaedo.  But 
+perhaps it’s also because death was the subject most on the young Socrates’ mind.  In 
+other words, concern about death as well as concern for nobility may have been among 
+the things that first drew Socrates to natural science or philosophy.  As we’ll see later, the 
+two concerns are linked.  Second, Socrates’ questions presuppose that everything does in 
+fact perish.  He doesn't ask whether some things perish and others don't; instead, he takes 
+for granted that everything perishes—except the material elements (96b)  and the 
+3
+mindless elemental forces (99b-d) that he first considers as causes—and asks why?  One 
+implication is that Socrates, at this time, did not take seriously the possibility of immortal 
+ ὑπερήφανος—which can mean either “magnificent/splendid” or "overweening" (with 
+2
+implications of hubris/impiety)—is a key term in Alcibiades’ praise and indictment of 
+Socrates in the Symposium.  (217e, 219c). 
+ But cf. 96b5: “brain.”
+3
+
+eros paper/Tom Pangle --4/3/19--3:37 PM		
+	
+	
+	
+	
+	
+	
+4
+	
+	
+	
+ 
+gods or immortal souls.  He was apparently a dogmatic atheist, a sophisticated kid who 
+rejected religious claims out of hand.   
+	
+(1.b) But this, of course, doesn't mean that he was unaware of such claims.  He 
+began, he says, by investigating questions like why living beings (96b1) and human 
+thoughtfulness (96b4) and knowledge (96b8) come into being, and then he turned to 
+investigating why they perish (96b8).  Without explanation, he couples this second 
+investigation—of perishing—with his investigation of “the things that happen concerning 
+heaven and earth” (96b).  Perhaps the connection is this: In the Apology Socrates says 
+that those who investigate the things aloft and under the earth—and investigating matters 
+“concerning…the earth” might well entail investigating what’s under it—are held “not to 
+believe in gods” (18b-c).  Maybe he thought that by giving a completely natural account 
+of why we (and our minds or souls) must perish—an account based on material and 
+efficient causation—he'd refute the pious account of the heavenly gods and of Hades, the 
+supposed realm of the dead.  If so, prudence might very well have kept Plato’s Socrates 
+from explaining the connection in the Phaedo.  In any case, his efforts to find such an 
+account failed, for reasons I’ll come back to soon.  But there's no sign that this failure 
+immediately led him to take religious claims more seriously.  
+	
+(1.c) Around this time, however, he did become interested in a kind of god, or at 
+least in something I’d call godlike.  He says: “Once, though, I heard somebody reading 
+from a book he said was by Anaxagoras and which said that it is in fact Mind that 
+orders and causes all things.  Now I was pleased with this sort of cause…And I 
+considered that if this is the case, then Mind...would order all things…in just the 
+
+eros paper/Tom Pangle --4/3/19--3:37 PM		
+	
+	
+	
+	
+	
+	
+5
+	
+	
+	
+ 
+way that was best.  So if somebody should want to discover the cause concerning 
+each thing—in what way it comes into being or perishes or is—he’d have to 
+discover…in what way it’s best for it either to be or to suffer or to do anything 
+whatsoever....  And if [Anaxagoras] could make these things evident to me, I was 
+prepared to cease longing for any other kind of cause” (97b-98a).   If Anaxagoras 
+could show that the world was ruled by a godlike mind that arranged everything for the 
+best—meaning, as Socrates goes on to say, best both for each thing and for the common 
+good of all things (98a-b)—Socrates’ only partly theoretical longings or “hopes,” as he 
+also refers to them (98b), would be satisfied.  That is, he’s hoping, in part, to be shown 
+that it's good for him that he must die.  It's noteworthy that Socrates doesn't seem to 
+entertain the possibility that the ruling mind might grant him immortality: Hades and the 
+like still strike him as nonsense.  Nevertheless, his hopes or “wondrous hope” (98b7), as 
+he also calls it—recalling his “wondrous desire” for the wisdom sought by natural 
+science (96a6)—has what could be called a religious cast.  To put it loosely, he hoped that 
+Anaxagorean Mind would be the answer to his unuttered prayers.    
+4
+	
+	
+(1.c.2) Unfortunately, his hopes were dashed.  Anaxagoras, he says, didn’t 
+really treat Mind as a cause at all, but instead spoke of “air and ether and water” and 
+other things of that kind (98b-c).  Yet since, as Socrates admits, he read Anaxagoras very 
+quickly—not very closely—his criticisms are perhaps unfair.  And understood differently, 
+ Notice the doubling of terms at 97d4: ἄριστον καὶ τὸ βέλτιστον.  I’ll discuss the 
+4
+significance of this later. 
+
+eros paper/Tom Pangle --4/3/19--3:37 PM		
+	
+	
+	
+	
+	
+	
+6
+	
+	
+	
+ 
+the view that Mind is the cause—or rather a cause—of all things might be quite sensible.  
+It is, I think, the mature Socrates' own view.   
+In any case, Socrates was dissatisfied with earlier approaches to causality—the 
+effort to explain everything either in terms of material elements and blind forces or in 
+terms of a ruling mind.  He was dissatisfied with material and efficient causality in part 
+because it couldn't account for human thought or knowledge; it couldn’t even explain 
+how one and one make two: Is it through a pair of ones being put together that two comes 
+into being? Or is it the opposite, the splitting of a one that causes two to come into being 
+(96e-97b)?  Or is neither a sufficient cause?  Perhaps two’s coming into being is caused 
+partly by a mind thinking of two ones together, as a whole—a “two.”  And to apply this 
+more generally, Socrates was dissatisfied with material and efficient causality in part 
+because, in trying to understand things as nothing more than compounds of their most 
+basic elements, or as temporary combinations of elements brought together and then 
+separated by elemental forces or motions, it proved unable to account for wholes: bones, 
+for example, or dogs, or human beings—or more broadly, for what has been called noetic 
+heterogeneity.  Moreover, Socrates expresses doubt that natural scientists will ever find 
+the most basic elements, forces, and motions that, unlike their compounds, are 
+“deathless” and known to be deathless.  To use his words, he doubts that they’ll ever find 
+the “stronger and more deathless Atlas” they’re looking for (99c3-4).  And how could 
+they?  How could they ever be certain, for example, that the most basic elements didn’t 
+come into being out of something else, or perhaps out of nothing, and might one day 
+transmute into something else or simply perish?  To turn now to ruling mind, perhaps he 
+
+eros paper/Tom Pangle --4/3/19--3:37 PM		
+	
+	
+	
+	
+	
+	
+7
+	
+	
+	
+ 
+was dissatisfied with it, in part, because it couldn’t explain why it’s good for us that we 
+must die.  Also, by speaking, on the one hand, of what’s best for each and, on the other, of 
+“the common good of all,” he invites us to wonder whether the two always coincide.  In 
+the Phaedo, the mature Socrates quietly points to one aspect of the problem: doing what 
+serves the so-called common good may sometimes be “more just” and “nobler” for the 
+individual (cf. 98e3-4: “better…and more just” with 99a2-3: “more just…and nobler”).  
+But whether it’s also “better” for the individual isn’t clear.  I’ll return to this subject later.  
+For now, back to the young Socrates.   
+	
+His early longings and hopes were disappointed.  His failure, in particular, to 
+learn from another or to discover for himself an argument for ruling mind left him feeling 
+“robbed— ἐστερήθην,” as if, because his pursuit of wisdom was noble, he were owed that 
+kind of account of causality (99c8).  But even though his longings and wondrous hope 
+were disappointed, there was a compensating gain in self-knowledge, including a greater 
+awareness—though not, I think, complete awareness—of what his longings and hopes 
+were.  But whatever the compensations, Socrates’ early investigations led to what I’ll call 
+the first crisis in his theoretical life—a crisis concerning causality.  
+He began to resolve this crisis, he tells us in the Phaedo, by his turn to the 
+“ideas.”  What he means by the “ideas” or “forms” goes far beyond the scope of this talk.  
+But let me offer this much as a brief, crude, and unsupported summary: Socrates 
+recognized that “to be” always means to be something, to be a kind of thing, to belong to 
+a class of things.  And the class-character or idea of each being is a cause of that being—
+a cause of its being what it is (a dog, say, and not a cat).  But the ideas are not the 
+
+eros paper/Tom Pangle --4/3/19--3:37 PM		
+	
+	
+	
+	
+	
+	
+8
+	
+	
+	
+ 
+complete cause of any being.  (The “idea” of the dog, for example, doesn’t produce the 
+“matter” of the dog, or cause some pre-existing matter to fly together and take the shape 
+of a dog.)  To half-borrow language from the Republic (cf. 516c), the ideas are “a cause”
+—a necessary but not a sufficient cause—of the perceptible beings—the beings we see, 
+hear, and touch.  And while Socrates’ turn to the ideas, or discovery of formal causes, was 
+a great advance in his understanding, it was accompanied by a recognition that 
+comprehensive knowledge of the whole would forever be beyond the reach of natural 
+science, in part, but only in part, because of something I mentioned earlier—that natural 
+science can never be certain whether “matter” came into being or might one day perish.    
+5
+(2) We hear about Socrates' turn to the ideas in the Phaedo, and we see him after he's 
+made the turn in the Parmenides, set during the quadrennial Great Panathenaea at a time 
+when, the dialogue’s narrator says, Socrates was still "exceedingly young"(σφόδρα 
+νέον) (127c). Scholars somehow know that the Great Panathenaea was once held in 450 
+BC, when Socrates was 19, and this—or perhaps 454, when Socrates was a mere 15—is, 
+I think, the dramatic date of the dialogue.  (By 446 Socrates was 23, and while that’s 
+young, it isn’t "exceedingly young.") 
+	
+(2.a) In the Parmenides, Socrates is presented as believing in separate ideas—
+eternal, self-subsisting beings, separate from the perceptible beings or thoughts, speeches, 
+and actions that somehow participate in them (130b; but cf. 132b).  He’s confident that 
+there are separate ideas of justice, nobility, and goodness; he wavers on whether there are 
+separate ideas of human being, fire, and water; and he's inclined to think that it's 
+ Among other things, Socrates’ approach still can’t explain thought, and perhaps can’t 
+5
+explain the precise relation of form and matter.
+
+eros paper/Tom Pangle --4/3/19--3:37 PM		
+	
+	
+	
+	
+	
+	
+9
+	
+	
+	
+ 
+ridiculous to hold that there are separate ideas of lowly things like hair, mud, and dirt 
+(130b-d).  To say the least, this is consistent with the possibility that Socrates continues to 
+be drawn to wisdom partly by its nobility or splendor.  Parmenides, recognizing that 
+Socrates is under the spell of the noble, chides him gently, telling him that he isn't yet 
+really a philosopher (however much he may think he is).  "Socrates," he says, "you are 
+still young”—notice that he doesn’t say "exceedingly young,” implying, perhaps, that it’s 
+time for him to grow up—“Socrates, you are still young and philosophy has not yet laid 
+hold of you as I think it one day will.  You will one day despise none of these things.  But 
+now, because of your youth, you still pay regard to the opinions of human beings" (130e; 
+cf. 135c).  In particular, says Parmenides, Socrates hasn't yet undergone enough training 
+in argument to be able to mark off the boundaries (ὁρίζεσθαι) of the noble, the just, and 
+the good (135c).  I think he means in part that the noble and the just, as Socrates 
+understands them, improperly bleed into his understanding of the good.  And as for 
+"training in argument," he means training in a kind of dialectic: he tells Socrates to 
+practice taking a hypothesis and developing all of its implications—to see whether they're 
+plausible—and then doing the same with the opposite hypothesis (136a-c; cf. Phaedo 
+101d-e).  For evidence that Socrates eventually mastered this training, see, for example, 
+his examination of the successive definitions of justice offered in Republic, book 1.   
+	
+(2.b) While most of what Parmenides says about Socrates is true—in the view, I 
+think, of the mature Socrates himself—he gets one important thing wrong.  As we'll see, 
+the mature Socrates thinks it's of the utmost importance to continue "paying regard to the 
+
+eros paper/Tom Pangle --4/3/19--3:37 PM		
+	
+	
+	
+	
+	
+	
+10
+	
+	
+	
+ 
+opinions of human beings"—though not in the way he did when he was still very young 
+and a slave to some of those opinions.  
+	
+(2.c) A last point on the Parmenides: as far as I can see, Socrates, having given up 
+on Anaxagorean Mind, has lapsed back into dogmatic atheism.  He displays no interest in 
+examining the question of the gods, although he’s willing to speak as if he believes in a 
+“god” or in “gods” (134b-e).  Perhaps Parmenides, who raises the question of whether the 
+gods alone could have precise knowledge of the idea of the beautiful, the idea of the 
+good, and the like, is encouraging Socrates to take the question of the gods more 
+seriously.    
+(3) When we next hear about Socrates, it's perhaps 440 BC, he's about 30 (see Sym 201d), 
+and as he tells the party-goers in the Symposium, he goes to Diotima—an apparently 
+fictional character he uses as a dramatic device—for an education in Eros.  (In other 
+words, as I understand it, his story of his education at the hands of Diotima is his playful 
+way of describing a portion of his self-education.  Why he attributes this education to a 
+foreign priestess, whose name means honored by Zeus or honorer of Zeus, and who 
+comes from a town (Mantineia) that sounds a lot like the Greek for “divination” 
+(mantike), I’m not sure.  Perhaps it’s because the surface of her teaching, with its 
+emphasis on procreation and account of the daimonic realm—the realm connecting gods 
+and human beings (Sym 202d-203a)—comes not unfittingly from the mouth of such a 
+woman.  In any case, it takes (and here I’m guessing, based partly on a statement at Rep 
+539e)—maybe 5 years—that is, until about 435 BC, when Socrates is about 35—for what 
+
+eros paper/Tom Pangle --4/3/19--3:37 PM		
+	
+	
+	
+	
+	
+	
+11
+	
+	
+	
+ 
+I’ll call the first two parts of his erotic education to be completed, or to sink in fully.  I'll 
+say more about the significance of this date later.  A third part of his erotic education 
+continues until the end of his life.   Two related things, corresponding to what I called the 
+6
+first two parts of his erotic education, prepare the way for his turn to the study of Eros.  
+Together they constitute what I’ll call Socrates’ second crisis—a crisis that is both 
+theoretical and practical, and by practical I mean a crisis in which he rethinks the most 
+fundamental practical question of all: how should I live?  Or to put it less formally, “what 
+the hell am I doing with my life, and what should I be doing?”—So on to the two 
+interrelated elements: 
+	
+(3.a) First, he has become perplexed about his own love of the noble or the 
+beautiful.  At 206b, Diotima asks Socrates: “Since eros is always this—by which she 
+means the desire to possess the good eternally—since eros is always this, in what 
+way of pursuing it, and in what action, would the seriousness and straining [of the 
+pursuers] be called love? … Can you say, [Socrates]?”  To which Socrates replies in 
+frustration: “If I could, Diotima, I would not, in admiration of your wisdom, keep 
+coming to you to learn these very things."  Now, I think that Socrates supposes he 
+knows perfectly well what the erotic ones—the lovers of the noble or beautiful (201e, 
+204d, etc.)—are doing: gazing into each other's eyes, making love, perhaps pursuing 
+ I'm assuming that Socrates’ efforts to confirm, through refutations, his insight into the 
+6
+roots of seeming religious experience are part of his on-going erotic education.  Cf. Ap 
+23b with Thg 128b: although there are others who possess human wisdom—which at 
+least in some cases (e.g. the Eleatic Stranger) includes genuine insight into the roots of 
+seeming religious experience—Socrates surpasses everyone who has ever lived in his 
+understanding of "the erotic things," in part, or perhaps in whole, because he is the first to 
+recognize the necessity and possibility of confirming this insight.  I will return to this 
+later.
+
+eros paper/Tom Pangle --4/3/19--3:37 PM		
+	
+	
+	
+	
+	
+	
+12
+	
+	
+	
+ 
+wisdom partly because it’s “among the noblest things” (204b, but cf. 205d).   The reason 
+he can’t answer her question may be that he isn’t sure how these activities are ways of 
+seeking one’s own eternal good (204c7-8).  To put it another way, Socrates has become 
+perplexed about his motivation: He was erotically drawn both to beautiful boys and to the 
+“splendor” or nobility of philosophic wisdom (211d, cf. 204b with Phaedo 96a).  But he 
+has begun to wonder how such erotic pursuits are good for the pursuer, if indeed they are 
+good.  What in the world is the good we’re striving for when we’re driven by our love of 
+the noble or beautiful?  Socrates says explicitly that this is a question that led him to 
+Diotima (206b; cf. 204c-e, 207c).  (In other words, he has begun to take seriously part of 
+Parmenides’ gentle chastisement.)  But there was another question that led him to her as 
+well, one that it wouldn’t have been prudent for him to state explicitly.…Today, however, 
+things have changed: the pious atmosphere of ancient Athens is gone, and perhaps we’d 
+benefit from its partial resuscitation.  So let me be explicit for him. 
+	
+(3.b) The second issue (or part of his crisis) is that Soc has become dissatisfied 
+with his dogmatic atheism.  (Perhaps his encounter with Parmenides played a role here 
+too.)  He has begun to be bothered by the fact—which he must have recognized when he 
+was still very young and turned to the ideas—that so-called natural science will never be 
+comprehensive enough to rule out the possibility of miraculous gods, gods whose 
+existence would be incompatible with nature and hence, of course, with natural science or 
+philosophy in the strict sense.  Let me spell this out: natural science or philosophy 
+presupposes the existence of nature, that is, of a fundamental necessity that limits what is 
+possible.  It presupposes that all choice takes place within these limits.  And this applies 
+
+eros paper/Tom Pangle --4/3/19--3:37 PM		
+	
+	
+	
+	
+	
+	
+13
+	
+	
+	
+ 
+to divine choice as well as human.  For if gods can alter things however they please, 
+nature doesn't exist, and what's called nature is merely the arrangement that persists until 
+they decide to change it.  In other words, if there are miraculous gods, natural science or 
+philosophy—understood as knowledge of the necessary character of things—is 
+impossible, because there is no necessary character of things.  But while Socrates has 
+long been aware that so-called natural science can’t rule out the possibility of such gods, 
+he doesn’t seem to have taken the problem seriously.  He seems to have regarded claims 
+about the gods as something like a claim that there are invisible magical elves wandering 
+the woods near Kenyon College.  If anyone made such a claim—and at Kenyon, anything 
+is possible—we couldn’t disprove it…but neither would we be bothered by it—we simply 
+wouldn’t take it seriously. 
+	
+Perhaps what, at long last, made the otherwise bare, theoretical possibility of 
+miraculous gods so unsettling to Socrates is that he had begun to wonder whether 
+evidence of such gods might not be found in his own erotic experience—his experience of 
+the noble or beautiful—once that experience ceased to be viewed through the lens of 
+dogmatic atheism.  I take this to be the serious meaning of his statement to Diotima at 
+202b that everyone agrees that Eros is a god.  We learn a few details about the romantic 
+side of Socrates’ erotic experience from statements at Symposium 211d and 206a: The 
+sight of beautiful boys left him feeling thunderstruck and induced a limited self-
+forgetting.  In looking at the beautiful ones, he was almost prepared to stop eating and 
+drinking and let himself wither away.  Yet at the same time, it seems to have awakened in 
+
+eros paper/Tom Pangle --4/3/19--3:37 PM		
+	
+	
+	
+	
+	
+	
+14
+	
+	
+	
+ 
+him a longing for, and even a strange hope of, complete happiness, including immortality 
+(cf. 211d with 206a). 
+Let me elaborate: Anyone who has ever fallen in love knows that a lover feels 
+utterly transformed.  He sometimes looks at himself and wonders: "What in the world has 
+happened to me?  I'm not the same person I was yesterday!"  His old concerns suddenly 
+seem trivial; and new, unanticipated things arise in him, including seemingly 
+contradictory things.  On the one hand, for example, he's filled with thoughts of devotion 
+(including a willingness to die for his beloved: a big theme in Phaedrus’ speech in the 
+Symposium); on the other, he feels a longing to be joined with his beloved forever, and 
+even a hope—at least a half-conscious hope—that such immortal union might somehow 
+be possible: a subtheme in Aristophanes speech in the Symposium (cf. 211d, 206a, 192d-
+e, 179b).  The thought of sacrifice for love and the hope or divination that love is 
+somehow the promise of complete happiness (including immortality) come flooding into 
+the soul almost simultaneously.  Where do these strange thoughts and hopes come from?  
+It isn't obvious that they simply arise from our “natures,” our psychological needs.  On 
+the contrary, they're so alien to what our "natures" had seemed to be until then that lovers 
+sometimes don't even recognize themselves: they feel reborn. But how is such rebirth 
+possible?  What wipes away our old "nature" and replaces it with something new?  
+Maybe, just maybe, the answer is that we've been touched by a power divine. And maybe 
+it's divine encouragement or the divine call that generates and fosters our new hopes.  At 
+any rate, both onlookers and the lover himself sometimes see him as a man 
+"possessed"—as a man who, to use Phaedrus's expression, has "a god within him" (180b).  
+
+eros paper/Tom Pangle --4/3/19--3:37 PM		
+	
+	
+	
+	
+	
+	
+15
+	
+	
+	
+ 
+This helps to explain why the Symposium is devoted to the seemingly bizarre question of 
+whether Eros is a god and why the roughly thirty-year-old Socrates thought that the 
+answer just might be “yes,” or at least that he couldn’t with sufficient confidence say “no” 
+(202b).  
+I’d like to step back from the text for a minute and talk more broadly about the 
+seeming evidence that god or gods might exist.  Socrates, I think, came to recognize that 
+the hopefulness accompanying love of the noble or beautiful could seem to be an 
+experience of divine encouragement—“something out there smiles upon noble men like 
+me”—or of the Divine Call.  Maybe such "weak" divine experience—and by "weak" I 
+mean to distinguish it from direct revelation: God talking to Moses from the burning 
+bush, for example—maybe such "weak" divine experience is inseparable not only from 
+ordinary love but from morality, and hence is nearly universal.  It is present, for example, 
+in the rush of hopefulness or sense of promise that accompanies the performance of a 
+noble deed, in the foreboding that accompanies the experience of guilt, in conscience 
+experienced as a voice within or as someone watching, and in anger, which can make us 
+feel like instruments or agents of super-human righteousness and which (despite its 
+painful side) fills us with a strange and pleasant hopefulness.  If we didn't live in such an 
+irreligious age, it might not be so hard to recognize that we are all filled with seeming 
+evidence of the gods’ existence. 
+	
+(3.c) Now back to Socrates.  Uncertain whether philosophy is possible, and 
+confused about his own erotic motivation—including his partly erotic motive for 
+philosophizing—Socrates turns to a study of Eros, which, as we'll later see, could also be 
+
+eros paper/Tom Pangle --4/3/19--3:37 PM		
+	
+	
+	
+	
+	
+	
+16
+	
+	
+	
+ 
+called a turn to the study of the noble or to political philosophy.  Diotima is presented as 
+his teacher.  What does he learn from her?  And how does it help him deal with his two-
+fold crisis?  Here I’ll have to paint in very broad strokes, in part because when we reach 
+the high point of the discussion—Diotima’s famous ladder of love speech—she offers 
+poetic images but almost no concrete details and no supporting arguments whatsoever.  
+Also, as I understand it, she presents one teaching in the foreground and another in the 
+background that is in some ways the opposite.  But the background teaching is merely 
+indicated or pointed to, not spelled out.   
+	
+Let me explain.  Eros, she all but says, is not a god but a human desire or longing, 
+and one first gets the impression—this is what I meant by the foreground—that it finds its 
+ultimate fulfillment in a mystical-sounding vision of “the beautiful itself.”  Her words 
+are: “It is here in life, if anywhere, my dear Socrates…that life is worth living for a 
+human being: beholding [or, as one could also translate it, ‘seeing clearly’  (θεωµένῳ)] 
+the beautiful itself” (211c-d).  To simplify, when cultivated properly, she teaches, eros has 
+a trajectory; it begins in love of beautiful human bodies, moves on to love of beautiful 
+souls, and after a couple more steps, it, or what follows on it, culminates in an all-
+fulfilling vision of the beautiful itself.   If this sounds somewhat fantastic, it isn’t 
+7
+surprising, because it turns out that her conclusion depends grammatically on the word 
+“be imagined” or perhaps “be fantasized” (φαντασθήσεται) (211a; see Dover’s note on 
+211a5).  What she actually says is that the beautiful “will be imagined” as “alone by 
+itself, with itself, always being of a single form” (211a-b).  And when she speaks almost 
+7 Oddly, she gives two somewhat different accounts of the ascent: cf. 210a-211b with 
+211c-d.  The second is silent about soul.
+
+eros paper/Tom Pangle --4/3/19--3:37 PM		
+	
+	
+	
+	
+	
+	
+17
+	
+	
+	
+ 
+immediately afterwards of “beholding the beautiful itself,” she seems to mean beholding 
+it in one’s imagination (211d2-3).  At any rate, she says nothing in between to lead us to 
+think otherwise.  And when a few lines later she speaks of someone who “glimpse[s] the 
+divinely beautiful itself…and beholds it with that with which it is necessary [to behold 
+it]”—a conspicuously vague locution—she is apparently referring once again to the 
+imagination, and not, say, to the intellect (211e-212a; cf. Dover on 212a1-2).  To put all 
+this another way, one could say that a man who beholds the beautiful itself only in his 
+imagination is a man who only imagines that he beholds the beautiful itself.   
+	
+This disconcerting textual observation about the role attributed to imagination fits 
+with a number of other oddities in Diotima’s speech.  Let me mention three.  First, when 
+discussing the desire for happiness, Diotima speaks in passing of eros as “deceptive for 
+everyone” or “all-beguiling” (205d1-2).  Kenneth Dover, who edited a fine Greek edition 
+of the Symposium, offers a beautiful illustration of a tendency of a certain school of 
+Platonic scholarship: He warns the reader not to pay any attention to these words!  But 
+Diotima herself goes on to suggest that romantic lovers, poets, and statesmen may be 
+misled by eros to expect an impossible immortality (cf. 209d-e with 208e4: “as they 
+suppose”).  Second, Diotima says that in climbing the ladder of love we grow "stronger" 
+and endure many "toils" or "pains” (210d-e; cf. Rep 535d).  But if the lover is moving 
+from things that are lovely to things that are even lovelier until he reaches the thing that is 
+loveliest of all, it’s unclear why strength is needed or why the process is toilsome or 
+painful.  Third, Diotima doesn’t say that “the beautiful itself” is an object of eros: it is 
+“beheld” but not loved—evidently because it isn’t lovable (211d, 212a).  Even on the 
+
+eros paper/Tom Pangle --4/3/19--3:37 PM		
+	
+	
+	
+	
+	
+	
+18
+	
+	
+	
+ 
+surface of her teaching, eros has a trajectory that leads beyond itself.  The lover who 
+cultivates his eros properly ends up, it seems, a lover no more. 
+	
+This is all very baffling.  Fortunately, there may be another way of understanding 
+Diotima’s speech in which the seemingly incongruous parts fit together.  Let me offer 
+some suggestions, suggestions about what I called her “background teaching.”  Just 
+before speaking of the one-time lover achieving a mystical vision of the beautiful itself, 
+Diotima spoke more soberly of someone whose erotic trajectory has led him to a “science 
+(or knowledge)” of a certain sort of beauty (210d7-e1), which turns out to be the 
+“beautiful itself” —in other words, a science that leads to seeing the “beautiful itself” 
+clearly, understood as seeing the truth about the beautiful—which may be a beautiful 
+truth, an ugly truth, or something in-between or other (210c-e).  But how does one 
+acquire this knowledge?  Plato’s Diotima points to the answer in her poetic description of 
+“the beautiful itself” as “in the first place, always being and neither coming to be or 
+perishing…and in the second place, not beautiful in one respect and ugly in another, 
+nor sometimes beautiful and sometimes not…nor beautiful here and ugly there, as 
+being beautiful to some and ugly to others” (210e-211a).  This language is similar to 
+the language that Socrates uses in the Phaedo and Republic when giving his own poetic 
+presentation of the ideas—including “the idea of the just” and “the idea of the beautiful 
+[or noble]”—as eternal, self-subsistent beings (Phaedo 78d).  But as Socrates begins to 
+show in Republic book 1 and says towards the end of book 7 (see especially 537e-539d), 
+the way to find the truth about the just and the noble isn’t to gaze off to a superhuman 
+realm where the perfect and unchangeable ideas make their home, but through dialectic
+
+eros paper/Tom Pangle --4/3/19--3:37 PM		
+	
+	
+	
+	
+	
+	
+19
+	
+	
+	
+ 
+—i.e., by thinking through common opinions about justice and nobility, seeing what 
+contradictions arise, and ascending to a noncontradictory understanding (cf. Phaedo 
+101d-e).  (You can find the beginning of such a dialectical examination in the Laches 
+section of the Laches, where, among other things, the nobility of a certain kind of courage 
+is discussed (esp. 192b-194b).)  Carrying out this inquiry could indeed require strength—
+or toughening up—and endurance of pain, in part because the truth may, in some 
+respects, fall short of our wondrous hopes, and learning it may sometimes mean freeing 
+ourselves from eros’ delightful…deceptions.  In the language of the Republic, dialectic 
+brings about a “turning around of the soul,” enabling us to escape from “the cave,” a life 
+of enslavement to the common opinions found in every city or political community and to 
+the passions dependent on, or inseparable from, these opinions (531d-533e along with 
+514a-517c and 518a, 519b, 521c, 525a, 525c, 526e, 532b, 533c-d).  In her ladder of love 
+speech, Diotima too speaks of a fundamental “turn,” though, displaying the delicacy of a 
+priestess, she doesn’t emphasize it as Socrates does in the Republic (210d).  Climbing the 
+Symposium’s ladder of love, I think, is the same as escaping from the Republic’s cave.  
+They are two images of the same thing—genuine education—viewed from different 
+angles. 
+	
+As I said before, Socrates began spending time with Diotima around 440 BC, and 
+it took perhaps 5 years—that is, until about 435 BC, when he was about 35—for him to 
+fully understand and digest her dialectical-psychological teaching.  By the end, he was no 
+longer tempted to regard his own erotic experiences as divine; he was no longer confused 
+about his own motive for philosophizing—these are what I called the first two parts of his 
+
+eros paper/Tom Pangle --4/3/19--3:37 PM		
+	
+	
+	
+	
+	
+	
+20
+	
+	
+	
+ 
+erotic education—and he may have considered himself wise in the only wisdom that isn’t 
+vulgar, according to Diotima—wise in erotic matters of a certain kind (203a).  If I’m 
+right, he now possessed “the science of the beautiful,” meaning, in part, he believed he 
+knew what in man calls out to god or gods and thinks it hears back (202d-203a).  He may 
+have thought that in the things that matter most he was as wise as anyone could be.  This 
+would be the moment of the Delphic oracle in the Apology—the moment when, 
+according to the playful or ironic Socrates, Apollo’s priestess, speaking for the god, 
+declared that no one was wiser than Socrates.  But Socrates wasn’t satisfied with this 
+wisdom, in part because, although he had come to understand his own seeming 
+experience of god, he of course still lacked knowledge of whether god or gods exist.  And 
+how could he be sure that what he had discovered about his own experience applied to the 
+experience of others?  How could he, with his merely human wisdom, as he calls it, be 
+sure that no one had “superhuman wisdom”—that is, knowledge based on genuine 
+experience of god? 
+	
+(4) We get a partial answer in the Apology itself, where Socrates says that after 
+puzzling over the oracle “for a long time”—perhaps three years, that is, until about 432 
+BC—he turned “very reluctantly” to an investigation of the oracle or of the god himself 
+(the Greek is ambiguous on this point) by cross-examining men and refuting their beliefs 
+about allegedly “noble and good” things— including, as we learn from the dialogues, 
+justice, law, and nobility itself (21b-c).  His reluctance may have stemmed from his 
+awareness that these cross-examinations were sure to bring him trouble (21d, 21e, 
+22e-23a).  But he persisted, he says, because “it seemed to be necessary to regard the 
+
+eros paper/Tom Pangle --4/3/19--3:37 PM		
+	
+	
+	
+	
+	
+	
+21
+	
+	
+	
+ 
+matter of the god”—which could mean the matter of the Delphic god’s or any god’s 
+existence—“as most important” (21e).  This was the third and last fundamental turn in 
+his theoretical life.  It seems that the first such examination was of Alcibiades in about 
+432 BC, the dramatic date of the Alcibiades I, when Socrates was perhaps 37.  He was 
+now a mature political philosopher, the one who appears in most of the Platonic 
+dialogues.  To the end of his days, in addition to philosophizing, he sought to confirm the 
+precondition of philosophy—the existence of nature.  He sought to confirm and perhaps 
+deepen his human wisdom, his erotic wisdom…his insight into the relation between eros, 
+the beautiful or noble things, and belief in, and even seeming experience of, god or gods. 
+To judge from the Theages quote I offered at the beginning of this talk—"Surely I always 
+say,” he says, “that I happen to know nothing, so to speak, except one small subject: the 
+erotic things.  But in this subject I am wondrously clever beyond any human being who 
+has ever lived or is now living” (128b)—to judge from this quote, he regarded his efforts 
+as tremendously successful.	  
+	
+Let me conclude by pointing out or reiterating some verbal equivalents in Plato 
+and drawing out their implications.  In the Apology Socrates implies that only an 
+examined life is worth living (38a).  Diotima implies that only a life with knowledge or 
+science of the noble or beautiful is worth living (211d, 210d-e).  Perhaps these are two 
+ways of saying the same thing.  Again, Socrates in the Apology says that he possesses 
+only human wisdom; elsewhere he claims to be supremely wise in “the erotic things.”  
+“Human wisdom,” another name, it seems, for “erotic wisdom,” has at its core the 
+“science of the beautiful,” which can also be described, as it is in the Apology, as a 
+
+eros paper/Tom Pangle --4/3/19--3:37 PM		
+	
+	
+	
+	
+	
+	
+22
+	
+	
+	
+ 
+certain ignorance of anything “noble and good” (21d).  [Consider: does the “science of 
+the beautiful” include understanding the roots of our hopes?] That is, he has discovered 
+that neither he nor, as far as he could tell, his untold number of interlocutors know of 
+anything fundamentally good for us because it is noble.  With this in mind we can 
+perhaps begin to understand his statement in the Phaedo that philosophers practice 
+nothing other than “dying and being dead” (64a).  This may seem grim, but in the 
+Apology Socrates assures us that the philosophic life, the examined life, is the greatest 
+good for a human being (38a), and that the continuation of this life beyond the grave 
+would be an “inconceivable happiness,” or more literally, “a happiness that cannot be 
+devised [ἀµήχανον],” meaning, perhaps, an “impossible happiness” (41c). Impossible 
+happiness, possible happiness: the mature Socrates is confident that he understands both.   
