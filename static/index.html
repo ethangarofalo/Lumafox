@@ -426,6 +426,89 @@ async function copyText(text) {
   }
 }
 
+// ── Auth Modal ──
+function AuthModal({ onClose, onAuth, guestId }) {
+  const [isLogin, setIsLogin] = useState(true);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [name, setName] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+  const emailRef = useRef(null);
+
+  useEffect(() => { emailRef.current?.focus(); }, [isLogin]);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!email.trim() || !password) return;
+    setError(""); setLoading(true);
+    try {
+      const endpoint = isLogin ? "/auth/login" : "/auth/register";
+      const body = isLogin
+        ? { email: email.trim(), password }
+        : { email: email.trim(), password, name: name.trim() };
+      const headers = { "Content-Type": "application/json" };
+      if (guestId) headers["X-Guest-Id"] = guestId;
+      const res = await fetch(`${API}${endpoint}`, {
+        method: "POST", headers, body: JSON.stringify(body),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ detail: "Something went wrong" }));
+        throw new Error(err.detail);
+      }
+      const data = await res.json();
+      setToken(data.token); setUser(data.user);
+      onAuth(data.user);
+    } catch (err) { setError(err.message); }
+    setLoading(false);
+  };
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal" onClick={e => e.stopPropagation()} style={{ width: 400 }}>
+        <div className="modal-title">{isLogin ? "Sign in" : "Create account"}</div>
+        {guestId && !isLogin && (
+          <p style={{ fontSize: 13, color: "var(--green)", fontFamily: "var(--font-sans)", marginBottom: 16 }}>
+            Your current work will be saved to your new account.
+          </p>
+        )}
+        <form onSubmit={handleSubmit}>
+          {error && (
+            <div style={{ background: "rgba(179,80,80,0.15)", border: "1px solid var(--red)",
+              color: "var(--red)", padding: "8px 12px", borderRadius: "var(--radius)",
+              fontSize: 13, marginBottom: 12, fontFamily: "var(--font-sans)" }}>
+              {error}
+            </div>
+          )}
+          {!isLogin && (
+            <input className="modal-input" type="text" placeholder="Your name"
+              value={name} onChange={e => setName(e.target.value)} />
+          )}
+          <input ref={emailRef} className="modal-input" type="email" placeholder="Email" required
+            value={email} onChange={e => setEmail(e.target.value)} />
+          <input className="modal-input" type="password" placeholder="Password" minLength={6} required
+            value={password} onChange={e => setPassword(e.target.value)} />
+          <div className="modal-actions">
+            <button type="button" className="action-btn secondary" onClick={onClose}>Cancel</button>
+            <button type="submit" className="action-btn" disabled={loading}>
+              {loading ? "..." : isLogin ? "Sign In" : "Create Account"}
+            </button>
+          </div>
+        </form>
+        <div style={{ textAlign: "center", marginTop: 16, fontSize: 13, color: "var(--text-dim)", fontFamily: "var(--font-sans)" }}>
+          {isLogin ? (
+            <>No account? <a style={{ color: "var(--accent)", cursor: "pointer" }}
+              onClick={() => { setIsLogin(false); setError(""); }}>Create one</a></>
+          ) : (
+            <>Have an account? <a style={{ color: "var(--accent)", cursor: "pointer" }}
+              onClick={() => { setIsLogin(true); setError(""); }}>Sign in</a></>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Confirm Modal ──
 function ConfirmModal({ title, body, confirmLabel = "Delete", onConfirm, onCancel }) {
   return (
@@ -1173,32 +1256,51 @@ function App() {
   const [user, setUserState] = useState(getUser);
   const [profiles, setProfiles] = useState([]);
   const [activeProfile, setActiveProfile] = useState(null);
-  const [mode, setMode] = useState("teach"); // teach, write, analyze, export
+  const [mode, setMode] = useState("teach");
   const [showCreate, setShowCreate] = useState(false);
   const [showFind, setShowFind] = useState(false);
+  const [showAuth, setShowAuth] = useState(false);
   const [pendingDesc, setPendingDesc] = useState("");
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [loaded, setLoaded] = useState(false);
 
-  const handleAuth = (u) => setUserState(u);
-  const handleLogout = () => {
-    clearToken(); clearUser();
-    setUserState(null);
-    setProfiles([]);
-    setActiveProfile(null);
-  };
+  const isGuest = user?.user_id?.startsWith("guest-");
+
+  // Auto-create guest session if no token on first visit
+  useEffect(() => {
+    if (!getToken()) {
+      fetch(`${API}/auth/guest`, { method: "POST", headers: { "Content-Type": "application/json" } })
+        .then(r => r.json())
+        .then(data => { setToken(data.token); setUser(data.user); setUserState(data.user); })
+        .catch(console.error);
+    }
+  }, []);
 
   const loadProfiles = useCallback(async () => {
-    if (!user) { setLoaded(true); return; }
     try {
       const list = await api("/profiles");
       setProfiles(list);
-      if (!activeProfile && list.length > 0) setActiveProfile(list[0]);
+      setActiveProfile(prev => prev || list[0] || null);
     } catch (e) { console.error("Failed to load profiles:", e); }
     setLoaded(true);
-  }, [user]);
+  }, []);
 
-  useEffect(() => { loadProfiles(); }, [loadProfiles]);
+  useEffect(() => { if (user) loadProfiles(); }, [user, loadProfiles]);
+
+  const handleAuth = async (u) => {
+    setUserState(u);
+    setShowAuth(false);
+    await loadProfiles();
+  };
+
+  const handleLogout = () => {
+    clearToken(); clearUser();
+    // Create a new guest session immediately after logout
+    fetch(`${API}/auth/guest`, { method: "POST", headers: { "Content-Type": "application/json" } })
+      .then(r => r.json())
+      .then(data => { setToken(data.token); setUser(data.user); setUserState(data.user); setProfiles([]); setActiveProfile(null); setLoaded(false); })
+      .catch(() => { setUserState(null); setProfiles([]); setActiveProfile(null); });
+  };
 
   const handleCreate = (profile) => {
     setProfiles(prev => [profile, ...prev]);
@@ -1220,10 +1322,7 @@ function App() {
     setShowCreate(true);
   };
 
-  const handleDelete = () => {
-    if (!activeProfile) return;
-    setConfirmDelete(true);
-  };
+  const handleDelete = () => { if (activeProfile) setConfirmDelete(true); };
 
   const confirmDeleteProfile = async () => {
     setConfirmDelete(false);
@@ -1238,9 +1337,8 @@ function App() {
     } catch (e) { toastError(e.message); }
   };
 
-  if (!user) return <AuthPage onAuth={handleAuth} />;
-
-  if (!loaded) {
+  // Show spinner only on very first load before guest session is established
+  if (!user) {
     return (
       <div className="app">
         <div className="empty-state">
@@ -1265,10 +1363,20 @@ function App() {
               <button className={`topbar-btn ${mode === "export" ? "active" : ""}`} onClick={() => setMode("export")}>Export</button>
             </div>
           )}
-          <div className="user-badge">
-            <span>{user.name || user.email}</span>
-            <button className="logout-btn" onClick={handleLogout}>Sign out</button>
-          </div>
+          {isGuest ? (
+            <div className="user-badge">
+              <span style={{ color: "var(--text-faint)" }}>Guest</span>
+              <button className="topbar-btn active" style={{ borderColor: "var(--accent)", color: "var(--accent)" }}
+                onClick={() => setShowAuth(true)}>
+                Save your work →
+              </button>
+            </div>
+          ) : (
+            <div className="user-badge">
+              <span>{user.name || user.email}</span>
+              <button className="logout-btn" onClick={handleLogout}>Sign out</button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -1364,6 +1472,13 @@ function App() {
         />
       )}
       {showFind && <FindVoiceModal onClose={() => setShowFind(false)} onResult={handleFindResult} />}
+      {showAuth && (
+        <AuthModal
+          onClose={() => setShowAuth(false)}
+          onAuth={handleAuth}
+          guestId={isGuest ? user.user_id : null}
+        />
+      )}
       {confirmDelete && activeProfile && (
         <ConfirmModal
           title={`Delete "${activeProfile.name}"?`}

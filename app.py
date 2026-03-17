@@ -18,7 +18,7 @@ from fastapi.responses import FileResponse
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel, Field
 
-from auth import register, login, verify_token, ensure_dirs as ensure_auth_dirs
+from auth import register, login, verify_token, create_token, ensure_dirs as ensure_auth_dirs
 from billing import (
     get_subscription, get_plan_limits, create_checkout_session,
     create_portal_session, handle_webhook,
@@ -39,6 +39,7 @@ from voice_engine import (
     save_uploaded_file,
     list_uploaded_files,
     ingest_writing_samples,
+    update_profile_metadata,
     ensure_dirs,
 )
 
@@ -181,9 +182,31 @@ class AuthResponse(BaseModel):
     user: dict
 
 
+@app.post("/auth/guest")
+async def guest_session():
+    """Create an anonymous guest session — no sign-up required."""
+    import uuid
+    guest_id = f"guest-{uuid.uuid4().hex[:12]}"
+    token = create_token(guest_id, f"{guest_id}@guest")
+    return {
+        "token": token,
+        "user": {"user_id": guest_id, "name": "Guest", "email": "", "plan": "free"},
+    }
+
+
+def _transfer_guest_profiles(guest_id: str, new_user_id: str):
+    """Move any profiles created under a guest session to a real account."""
+    if not guest_id or not guest_id.startswith("guest-"):
+        return
+    for profile in list_profiles(guest_id):
+        profile.owner_id = new_user_id
+        update_profile_metadata(profile)
+
+
 @app.post("/auth/register", response_model=AuthResponse)
-async def register_user(req: RegisterRequest, request: Request):
-    """Create a new account."""
+async def register_user(req: RegisterRequest, request: Request,
+                        x_guest_id: str = Header(default=None)):
+    """Create a new account, optionally transferring a guest session's profiles."""
     _check_login_rate(request.client.host if request.client else "unknown")
     try:
         user = register(req.email, req.password, req.name)
@@ -191,16 +214,19 @@ async def register_user(req: RegisterRequest, request: Request):
         raise HTTPException(status_code=400, detail=str(e))
 
     result = login(req.email, req.password)
+    _transfer_guest_profiles(x_guest_id, result["user"]["user_id"])
     return AuthResponse(token=result["token"], user=result["user"])
 
 
 @app.post("/auth/login", response_model=AuthResponse)
-async def login_user(req: LoginRequest, request: Request):
-    """Log in and receive a JWT token."""
+async def login_user(req: LoginRequest, request: Request,
+                     x_guest_id: str = Header(default=None)):
+    """Log in and receive a JWT token, optionally absorbing a guest session."""
     _check_login_rate(request.client.host if request.client else "unknown")
     result = login(req.email, req.password)
     if not result:
         raise HTTPException(status_code=401, detail="Invalid email or password")
+    _transfer_guest_profiles(x_guest_id, result["user"]["user_id"])
     return AuthResponse(token=result["token"], user=result["user"])
 
 
