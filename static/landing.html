@@ -366,9 +366,9 @@ let touchStartY = null;
 window.addEventListener('touchstart', (e) => { touchStartY = e.touches[0].clientY; }, { passive: true });
 window.addEventListener('touchend', (e) => {
   if (touchStartY === null) return;
-  const dy = touchStartY - e.changedTouches[0].clientY;
+  const dy = e.changedTouches[0].clientY - touchStartY;
   touchStartY = null;
-  if (dy > 60) goToApp(); // swiped up by 60px → navigate
+  if (dy > 60) goToApp(); // swiped down by 60px → navigate
 });
 </script>
 
