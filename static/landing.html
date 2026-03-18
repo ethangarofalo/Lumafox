@@ -192,11 +192,11 @@
 
     /* ── Page-exit slide ── */
     @keyframes slideUp {
-      from { transform: translateY(0); opacity: 1; }
-      to   { transform: translateY(-60px); opacity: 0; }
+      from { transform: translateY(0); }
+      to   { transform: translateY(-100vh); }
     }
     body.exiting {
-      animation: slideUp 0.38s ease forwards;
+      animation: slideUp 0.55s cubic-bezier(0.4, 0, 0.2, 1) forwards;
       pointer-events: none;
     }
 
@@ -348,7 +348,8 @@ draw();
 function goToApp() {
   if (document.body.classList.contains('exiting')) return;
   document.body.classList.add('exiting');
-  setTimeout(() => { window.location.href = '/app'; }, 360);
+  sessionStorage.setItem('slide-in', '1');
+  setTimeout(() => { window.location.href = '/app'; }, 520);
 }
 
 // Mouse wheel — single intentional downward scroll triggers it
