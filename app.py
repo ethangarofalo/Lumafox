@@ -10,6 +10,7 @@ from datetime import datetime
 from typing import Optional
 
 from pathlib import Path
+import anthropic as _anthropic
 
 from fastapi import FastAPI, HTTPException, Depends, Header, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -692,6 +693,97 @@ async def export_profile(
         profile_name=profile.name,
         refinement_count=len(refinements),
     )
+
+
+async def _synthesize_skill_md(profile, voice_text: str, refinement_count: int) -> str:
+    """Synthesize a Claude Code SKILL.md from a voice profile."""
+    client = _anthropic.AsyncAnthropic()
+
+    prompt = f"""You are converting a writing voice profile into a Claude Code SKILL.md file.
+
+SKILL.md files tell Claude when and how to apply a skill. The exact format is:
+
+---
+description: <one sentence>
+---
+<skill content>
+
+---
+VOICE NAME: {profile.name}
+REFINEMENTS: {refinement_count} teaching sessions
+
+FULL VOICE SPECIFICATION:
+{voice_text}
+---
+
+Produce a complete, self-contained SKILL.md that:
+
+1. Opens with frontmatter (exactly: three dashes, description line, three dashes).
+   The description MUST begin: "Write in {profile.name}'s voice."
+   Include trigger phrases: write, draft, rewrite, edit prose, make this sound like me.
+
+2. Has a # {profile.name} heading.
+
+3. Has a ## Core Style section — 5–8 bullet points of essential stylistic principles,
+   written as direct instructions (e.g. "Use fragments when the rhythm calls for them",
+   NOT "This voice uses fragments"). Drawn directly from the principles in the specification.
+
+4. Has a ## What This Voice Avoids section — bullet list of anti-patterns,
+   written as direct instructions ("Never use transitional words like 'however' or 'moreover'").
+
+5. Has a ## Voice in Practice section — 2–3 short examples that demonstrate the style.
+   Use actual examples from the specification if present; otherwise extrapolate faithfully.
+
+6. Ends with a ## Instructions line: "When asked to write, draft, or edit in this voice,
+   follow the style above precisely. Do not soften, modernize, or normalize the style."
+
+Rules:
+- Write every bullet as a direct instruction, not a description.
+- Be specific. No vague adjectives like "nuanced", "distinctive", "powerful", "sophisticated".
+- Do not restate the same principle twice.
+- Do not pad with commentary about the export process."""
+
+    response = await client.messages.create(
+        model="claude-opus-4-5",
+        max_tokens=1800,
+        messages=[{"role": "user", "content": prompt}],
+    )
+    return response.content[0].text.strip()
+
+
+@app.get("/profiles/{profile_id}/export/skill")
+async def export_profile_as_skill(
+    profile_id: str,
+    user_id: str = Depends(get_current_user),
+):
+    """Synthesize and export a voice profile as a Claude Code SKILL.md file.
+
+    Unlike the raw markdown export, this uses Claude to distil the voice
+    into a concise, directly-instructional skill file designed to be
+    dropped into ~/.claude/skills/ or used as a Claude Projects system prompt.
+    """
+    profile = load_profile(profile_id)
+    if not profile:
+        raise HTTPException(status_code=404, detail="Profile not found")
+    if profile.owner_id != user_id:
+        raise HTTPException(status_code=403, detail="Not your profile")
+    if profile.refinement_count == 0:
+        raise HTTPException(
+            status_code=400,
+            detail="Teach the voice at least one refinement before exporting as a skill.",
+        )
+
+    voice_text = get_full_voice_text(profile_id)
+    refinements = load_refinements(profile_id)
+
+    skill_content = await _synthesize_skill_md(profile, voice_text, len(refinements))
+
+    # Sanitize name for filename
+    safe_name = "".join(c if c.isalnum() or c in "- " else "" for c in profile.name)
+    safe_name = safe_name.strip().replace(" ", "-").lower() or "voice"
+    filename = f"{safe_name}.md"
+
+    return {"filename": filename, "content": skill_content, "profile_name": profile.name}
 
 
 # ── Voice Text (for debugging / advanced use) ──

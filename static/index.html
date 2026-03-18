@@ -1199,6 +1199,7 @@ function AnalyzeView({ profileId, profileName }) {
 function ExportView({ profileId }) {
   const [markdown, setMarkdown] = useState("");
   const [loading, setLoading] = useState(true);
+  const [skillLoading, setSkillLoading] = useState(false);
 
   useEffect(() => {
     setLoading(true);
@@ -1208,12 +1209,52 @@ function ExportView({ profileId }) {
       .finally(() => setLoading(false));
   }, [profileId]);
 
+  const downloadSkill = async () => {
+    setSkillLoading(true);
+    try {
+      const r = await api(`/profiles/${profileId}/export/skill`);
+      const blob = new Blob([r.content], { type: "text/markdown" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = r.filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      toastError(e.message || "Could not generate skill file.");
+    }
+    setSkillLoading(false);
+  };
+
   return (
     <div className="export-view">
       <div style={{ maxWidth: 720, margin: "0 auto" }}>
-        <div className="write-label">Portable Voice Profile</div>
-        <p style={{ color: "var(--text-dim)", fontSize: 14, marginBottom: 16, fontFamily: "var(--font-sans)" }}>
-          Copy this to any AI tool — Claude Projects, ChatGPT, system prompts. Your voice goes where you go.
+
+        {/* Claude Skill export — primary action */}
+        <div style={{ marginBottom: 36, padding: "24px 28px", background: "var(--bg-elevated)", borderRadius: "var(--radius)", border: "1px solid var(--accent-dim)" }}>
+          <div className="write-label" style={{ marginBottom: 10, color: "var(--accent)", fontSize: 10, letterSpacing: "0.3em" }}>
+            CLAUDE SKILL FILE
+          </div>
+          <p style={{ fontFamily: "var(--font-sans)", fontSize: 14, color: "var(--text-dim)", marginBottom: 16, lineHeight: 1.75 }}>
+            Generates a synthesized <code style={{ fontFamily: "monospace", fontSize: 13, color: "var(--text)" }}>SKILL.md</code> — a concise, directly-instructional file
+            Claude Code reads automatically when you write in your voice.
+            Drop it into <code style={{ fontFamily: "monospace", fontSize: 13, color: "var(--text)" }}>~/.claude/skills/</code> or paste it as a Claude Projects system prompt.
+          </p>
+          <button
+            className="action-btn"
+            onClick={downloadSkill}
+            disabled={skillLoading}
+          >
+            {skillLoading ? <>Synthesizing skill<LoadingDots /></> : "↓ Download as Claude Skill"}
+          </button>
+        </div>
+
+        {/* Raw markdown export — secondary */}
+        <div className="write-label" style={{ marginBottom: 10 }}>Raw Voice Profile</div>
+        <p style={{ color: "var(--text-faint)", fontSize: 13, marginBottom: 14, fontFamily: "var(--font-sans)" }}>
+          The full voice specification — paste directly into any AI tool or system prompt.
         </p>
         {loading ? (
           <div style={{ color: "var(--text-faint)", padding: 40 }}>Loading<LoadingDots /></div>
