@@ -371,6 +371,197 @@
       opacity: 1;
       transform: translateY(0);
     }
+
+    /* ── About Section ── */
+    .about {
+      position: relative; z-index: 2;
+      background: var(--bg-section);
+      border-top: 1px solid var(--border);
+      padding: 100px 40px 80px;
+    }
+
+    .about-inner {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+
+    .about-lead {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 60px;
+      margin-bottom: 72px;
+      align-items: start;
+    }
+
+    @media (max-width: 720px) {
+      .about-lead { grid-template-columns: 1fr; gap: 36px; }
+      .about { padding: 72px 24px 60px; }
+    }
+
+    .about-headline {
+      font-family: var(--font);
+      font-size: clamp(1.7rem, 3.2vw, 2.6rem);
+      font-weight: 400;
+      line-height: 1.2;
+      letter-spacing: -0.02em;
+      color: var(--text);
+    }
+    .about-headline em {
+      font-style: italic;
+      color: var(--accent);
+    }
+
+    .about-body {
+      font-family: var(--font-sans);
+      font-size: 15px;
+      color: var(--text-dim);
+      line-height: 1.85;
+    }
+    .about-body p + p { margin-top: 14px; }
+
+    .about-divider {
+      height: 1px;
+      background: var(--border);
+      margin-bottom: 64px;
+    }
+
+    .about-blocks {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 40px 60px;
+      margin-bottom: 72px;
+    }
+    @media (max-width: 720px) { .about-blocks { grid-template-columns: 1fr; gap: 36px; } }
+
+    .about-block-eyebrow {
+      font-family: var(--font-sans);
+      font-size: 10px;
+      letter-spacing: 0.3em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 18px;
+    }
+
+    .about-step {
+      display: flex;
+      gap: 16px;
+      margin-bottom: 20px;
+      align-items: flex-start;
+    }
+    .about-step:last-child { margin-bottom: 0; }
+
+    .about-step-num {
+      font-family: var(--font-sans);
+      font-size: 10px;
+      letter-spacing: 0.15em;
+      color: var(--accent);
+      padding-top: 3px;
+      min-width: 20px;
+      flex-shrink: 0;
+    }
+
+    .about-step-title {
+      font-family: var(--font);
+      font-size: 15px;
+      color: var(--text);
+      margin-bottom: 5px;
+    }
+
+    .about-step-desc {
+      font-family: var(--font-sans);
+      font-size: 13px;
+      color: var(--text-dim);
+      line-height: 1.65;
+    }
+
+    .about-diff-item {
+      padding: 24px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .about-diff-item:first-child { padding-top: 0; }
+    .about-diff-item:last-child  { border-bottom: none; padding-bottom: 0; }
+
+    .about-diff-label {
+      font-family: var(--font-sans);
+      font-size: 10px;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--text-faint);
+      margin-bottom: 10px;
+    }
+
+    .about-diff-title {
+      font-family: var(--font);
+      font-size: 1.1rem;
+      color: var(--text);
+      margin-bottom: 8px;
+      line-height: 1.3;
+    }
+
+    .about-diff-desc {
+      font-family: var(--font-sans);
+      font-size: 13px;
+      color: var(--text-dim);
+      line-height: 1.65;
+    }
+
+    .about-council {
+      margin-top: 72px;
+      padding: 36px 40px;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background: var(--bg-card);
+      display: grid;
+      grid-template-columns: 1fr 1.6fr;
+      gap: 40px;
+      align-items: center;
+    }
+    @media (max-width: 720px) {
+      .about-council { grid-template-columns: 1fr; padding: 28px 24px; }
+    }
+
+    .about-council-label {
+      font-family: var(--font-sans);
+      font-size: 10px;
+      letter-spacing: 0.3em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 14px;
+    }
+
+    .about-council-title {
+      font-family: var(--font);
+      font-size: clamp(1.3rem, 2.2vw, 1.75rem);
+      color: var(--text);
+      font-weight: 400;
+      line-height: 1.25;
+      margin-bottom: 12px;
+    }
+    .about-council-title em { font-style: italic; color: var(--accent); }
+
+    .about-council-desc {
+      font-family: var(--font-sans);
+      font-size: 13px;
+      color: var(--text-dim);
+      line-height: 1.7;
+    }
+
+    .about-council-thinkers {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .thinker-chip {
+      font-family: var(--font-sans);
+      font-size: 11px;
+      color: var(--text-dim);
+      border: 1px solid var(--border-card);
+      border-radius: 20px;
+      padding: 5px 12px;
+      background: var(--bg);
+      letter-spacing: 0.02em;
+    }
   </style>
 </head>
 <body>
@@ -399,7 +590,7 @@
 
   <div class="note">No account required to start</div>
 
-  <a href="#use-cases" class="scroll-hint">
+  <a href="#use-cases" class="scroll-hint" id="hero-scroll">
     <span>Explore</span>
     <div class="scroll-chevron"></div>
   </a>
@@ -467,6 +658,149 @@
         From weekly letters to podcast scripts — make sure your audience recognizes
         you before they even see your name.
       </p>
+    </div>
+
+  </div>
+</section>
+
+<!-- ── About ── -->
+<section class="about" id="about">
+  <div class="about-inner">
+
+    <!-- Lead: headline + body -->
+    <div class="about-lead reveal">
+      <h2 class="about-headline">
+        The first AI writing tool<br>built around <em>you</em>,<br>not around prompts.
+      </h2>
+      <div class="about-body">
+        <p>
+          Every general AI tool writes fluently. None of them write like <em>you</em>.
+          Voice is different. It builds a precise, trainable model of your writing —
+          your rhythm, your rules, your instincts — and gets sharper every time you use it.
+        </p>
+        <p>
+          The model isn't a persona or a template. It's a living record of how you think
+          and communicate, built entirely from what you teach it and what you correct it on.
+          The more you use it, the more it sounds like you and no one else.
+        </p>
+      </div>
+    </div>
+
+    <div class="about-divider"></div>
+
+    <!-- How it works + Why it's different -->
+    <div class="about-blocks">
+
+      <div class="reveal">
+        <div class="about-block-eyebrow">How It Works</div>
+
+        <div class="about-step">
+          <div class="about-step-num">01</div>
+          <div>
+            <div class="about-step-title">Teach it your principles</div>
+            <div class="about-step-desc">
+              Tell it how you write in plain language. Short sentences. No adverbs.
+              Never start with a subordinate clause. Whatever is true for you.
+            </div>
+          </div>
+        </div>
+
+        <div class="about-step">
+          <div class="about-step-num">02</div>
+          <div>
+            <div class="about-step-title">Upload your past work</div>
+            <div class="about-step-desc">
+              Drop in essays, articles, emails, or scripts. The voice learns your
+              patterns directly from what you've already written.
+            </div>
+          </div>
+        </div>
+
+        <div class="about-step">
+          <div class="about-step-num">03</div>
+          <div>
+            <div class="about-step-title">Generate and correct</div>
+            <div class="about-step-desc">
+              Write something. When it's off, correct it on the spot — the correction
+              is saved as a refinement and the voice retries immediately.
+            </div>
+          </div>
+        </div>
+
+        <div class="about-step">
+          <div class="about-step-num">04</div>
+          <div>
+            <div class="about-step-title">Export it anywhere</div>
+            <div class="about-step-desc">
+              Copy the distilled voice prompt and paste it into any AI tool you
+              already use — ChatGPT, Claude, Notion AI, wherever you work.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="reveal">
+        <div class="about-block-eyebrow">Why It's Different</div>
+
+        <div class="about-diff-item">
+          <div class="about-diff-label">vs. General AI</div>
+          <div class="about-diff-title">It knows it's wrong when it doesn't sound like you</div>
+          <div class="about-diff-desc">
+            ChatGPT doesn't know your style exists. Voice is built on the premise
+            that your writing has a specific logic — and that logic can be taught,
+            tested, and exported.
+          </div>
+        </div>
+
+        <div class="about-diff-item">
+          <div class="about-diff-label">vs. Style guides</div>
+          <div class="about-diff-title">It improves through use, not just documentation</div>
+          <div class="about-diff-desc">
+            A style guide sits still. Voice accumulates refinements every time you
+            correct it — it gets more precise the longer you use it.
+          </div>
+        </div>
+
+        <div class="about-diff-item">
+          <div class="about-diff-label">vs. Fine-tuned models</div>
+          <div class="about-diff-title">No engineering required</div>
+          <div class="about-diff-desc">
+            No datasets, no training runs, no API keys to configure. Teach it in
+            plain English, correct it in plain English, use it immediately.
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Council callout -->
+    <div class="about-council reveal">
+      <div>
+        <div class="about-council-label">For Members — The Council</div>
+        <div class="about-council-title">
+          Six of history's sharpest minds.<br>
+          One <em>collective memory</em>.
+        </div>
+        <div class="about-council-desc">
+          Bring any question before Socrates, Aristotle, Machiavelli, William James,
+          John Locke, and Jesus — and watch them disagree. The council remembers every
+          question it has considered. The longer it runs, the wiser it gets.
+        </div>
+      </div>
+      <div>
+        <div class="about-council-thinkers">
+          <span class="thinker-chip">Socrates · Socratic</span>
+          <span class="thinker-chip">Aristotle · Aristotelian</span>
+          <span class="thinker-chip">Machiavelli · Realist</span>
+          <span class="thinker-chip">William James · Pragmatist</span>
+          <span class="thinker-chip">John Locke · Lockean</span>
+          <span class="thinker-chip">Jesus · Christian</span>
+        </div>
+        <div style="margin-top: 20px; font-family: var(--font-sans); font-size: 12px; color: var(--text-faint); line-height: 1.6;">
+          Swarm intelligence means the council improves with every question asked
+          by every member — not just yours. Disagreement is not a bug. It is the method.
+        </div>
+      </div>
     </div>
 
   </div>
