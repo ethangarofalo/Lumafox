@@ -991,6 +991,7 @@ function UploadView({ profileId }) {
   const [uploading, setUploading] = useState(false);
   const [ingesting, setIngesting] = useState(false);
   const [result, setResult] = useState(null);
+  const [dragOver, setDragOver] = useState(false);
   const fileInput = useRef(null);
 
   const loadFiles = async () => {
@@ -1002,9 +1003,11 @@ function UploadView({ profileId }) {
 
   useEffect(() => { loadFiles(); setResult(null); }, [profileId]);
 
-  const handleUpload = async (e) => {
-    const file = e.target.files?.[0];
+  const uploadFile = async (file) => {
     if (!file) return;
+    const allowed = [".txt", ".md", ".html", ".text"];
+    const ext = "." + file.name.split(".").pop().toLowerCase();
+    if (!allowed.includes(ext)) { toastError("Only .txt, .md, or .html files allowed"); return; }
     setUploading(true);
     try {
       const formData = new FormData();
@@ -1024,6 +1027,15 @@ function UploadView({ profileId }) {
     } catch (err) { toastError(err.message); }
     setUploading(false);
     if (fileInput.current) fileInput.current.value = "";
+  };
+
+  const handleInputChange = (e) => uploadFile(e.target.files?.[0]);
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    setDragOver(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file) uploadFile(file);
   };
 
   const handleIngest = async () => {
@@ -1047,17 +1059,41 @@ function UploadView({ profileId }) {
           Then hit "Analyze" and the system will extract examples, principles, and patterns automatically.
         </p>
 
-        <div style={{ display: "flex", gap: 12, alignItems: "center", marginBottom: 20 }}>
-          <input
-            ref={fileInput} type="file" accept=".txt,.md,.html,.text"
-            onChange={handleUpload} style={{ display: "none" }}
-          />
-          <button className="action-btn" onClick={() => fileInput.current?.click()} disabled={uploading}>
-            {uploading ? "Uploading..." : "Upload File"}
-          </button>
-          <span style={{ fontSize: 12, color: "var(--text-faint)", fontFamily: "var(--font-sans)" }}>
-            .txt, .md, .html — up to 500KB
-          </span>
+        <input
+          ref={fileInput} type="file" accept=".txt,.md,.html,.text"
+          onChange={handleInputChange} style={{ display: "none" }}
+        />
+        <div
+          onClick={() => !uploading && fileInput.current?.click()}
+          onDrop={handleDrop}
+          onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+          onDragLeave={() => setDragOver(false)}
+          style={{
+            border: `2px dashed ${dragOver ? "var(--accent)" : "var(--border)"}`,
+            borderRadius: "var(--radius)",
+            padding: "36px 24px",
+            textAlign: "center",
+            cursor: uploading ? "default" : "pointer",
+            background: dragOver ? "rgba(200,164,110,0.06)" : "transparent",
+            transition: "border-color 0.15s, background 0.15s",
+            marginBottom: 20,
+          }}
+        >
+          {uploading ? (
+            <span style={{ fontFamily: "var(--font-sans)", fontSize: 14, color: "var(--text-dim)" }}>
+              Uploading…
+            </span>
+          ) : (
+            <>
+              <div style={{ fontSize: 28, marginBottom: 8, opacity: 0.5 }}>↑</div>
+              <div style={{ fontFamily: "var(--font-sans)", fontSize: 14, color: "var(--text-dim)" }}>
+                Drop a file here, or <span style={{ color: "var(--accent)", textDecoration: "underline" }}>browse</span>
+              </div>
+              <div style={{ fontFamily: "var(--font-sans)", fontSize: 12, color: "var(--text-faint)", marginTop: 6 }}>
+                .txt · .md · .html — up to 500 KB
+              </div>
+            </>
+          )}
         </div>
 
         {files.length > 0 && (
