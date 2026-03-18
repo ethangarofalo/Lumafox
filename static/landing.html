@@ -9,36 +9,51 @@
 
     :root {
       --bg: #0a0a0a;
+      --bg-section: #0d0d0d;
+      --bg-card: #141414;
       --accent: #c8a46e;
       --accent-dim: #8a7040;
       --text: #e8e8e8;
       --text-dim: #888;
       --text-faint: #444;
       --border: #2a2a2a;
+      --border-card: #222;
       --font: 'Georgia', 'Times New Roman', serif;
       --font-mono: 'SF Mono', 'Fira Code', 'Consolas', monospace;
       --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      --radius: 8px;
+      --radius: 10px;
     }
 
-    html, body {
-      height: 100%;
+    html { scroll-behavior: smooth; }
+
+    body {
       background: var(--bg);
       color: var(--text);
       font-family: var(--font);
-      overflow: hidden;
     }
 
-    /* ── Canvas background ── */
+    /* ── Canvas background (hero only) ── */
     canvas {
       position: fixed;
       inset: 0;
       width: 100%;
       height: 100%;
       z-index: 0;
+      pointer-events: none;
     }
 
-    /* Radial vignette — darkens the center so hero text is readable */
+    /* Fades canvas out as user scrolls into the sections */
+    .canvas-fade {
+      position: fixed;
+      bottom: 0;
+      left: 0; right: 0;
+      height: 40vh;
+      background: linear-gradient(to bottom, transparent, var(--bg));
+      z-index: 1;
+      pointer-events: none;
+    }
+
+    /* Radial vignette */
     .vignette {
       position: fixed;
       inset: 0;
@@ -49,6 +64,7 @@
         rgba(10, 10, 10, 0.0) 100%
       );
       z-index: 1;
+      pointer-events: none;
     }
 
     /* ── Hero ── */
@@ -62,7 +78,6 @@
       justify-content: center;
       text-align: center;
       padding: 40px 24px;
-      gap: 0;
     }
 
     .wordmark {
@@ -155,63 +170,179 @@
       animation: fadeUp 0.8s ease forwards 1.0s;
     }
 
-    /* ── Swipe hint ── */
-    .swipe-hint {
-      position: fixed;
-      bottom: 28px;
+    /* ── Scroll hint ── */
+    .scroll-hint {
+      position: absolute;
+      bottom: 32px;
       left: 50%;
       transform: translateX(-50%);
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 6px;
-      z-index: 3;
+      gap: 8px;
       opacity: 0;
       animation: fadeUp 0.8s ease forwards 1.4s;
-      pointer-events: none;
+      cursor: pointer;
+      color: var(--text-faint);
+      text-decoration: none;
     }
-    .swipe-hint span {
+    .scroll-hint span {
       font-family: var(--font-sans);
       font-size: 10px;
       letter-spacing: 0.2em;
       text-transform: uppercase;
-      color: var(--text-faint);
     }
-    .swipe-arrow {
-      width: 18px;
-      height: 18px;
-      border-right: 1.5px solid var(--text-faint);
-      border-bottom: 1.5px solid var(--text-faint);
+    .scroll-chevron {
+      width: 16px;
+      height: 16px;
+      border-right: 1.5px solid currentColor;
+      border-bottom: 1.5px solid currentColor;
       transform: rotate(45deg);
-      animation: bounce 1.6s ease-in-out infinite;
+      animation: bounce 1.8s ease-in-out infinite;
     }
     @keyframes bounce {
       0%, 100% { transform: rotate(45deg) translateY(0); }
       50%       { transform: rotate(45deg) translateY(5px); }
     }
 
-    /* ── Page-exit slide ── */
-    @keyframes slideUp {
-      from { transform: translateY(0); }
-      to   { transform: translateY(-100vh); }
-    }
-    body.exiting {
-      animation: slideUp 0.55s cubic-bezier(0.4, 0, 0.2, 1) forwards;
-      pointer-events: none;
+    /* ── Use cases section ── */
+    .use-cases {
+      position: relative;
+      z-index: 2;
+      background: var(--bg);
+      padding: 100px 40px 80px;
     }
 
-    /* Thin rule above/below, evokes the topbar style */
+    .section-eyebrow {
+      font-family: var(--font-sans);
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 0.4em;
+      text-transform: uppercase;
+      color: var(--accent);
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    .section-heading {
+      font-family: var(--font);
+      font-size: clamp(1.8rem, 4vw, 3rem);
+      font-weight: 400;
+      line-height: 1.2;
+      letter-spacing: -0.02em;
+      color: var(--text);
+      text-align: center;
+      margin-bottom: 16px;
+    }
+
+    .section-sub {
+      font-family: var(--font-sans);
+      font-size: 15px;
+      color: var(--text-dim);
+      text-align: center;
+      max-width: 480px;
+      margin: 0 auto 60px;
+      line-height: 1.7;
+    }
+
+    .card-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      max-width: 1060px;
+      margin: 0 auto;
+    }
+
+    @media (max-width: 860px) { .card-grid { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 560px) { .card-grid { grid-template-columns: 1fr; } }
+
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-card);
+      border-radius: 12px;
+      padding: 28px 26px 30px;
+      transition: border-color 0.2s, background 0.2s;
+    }
+    .card:hover {
+      border-color: #333;
+      background: #181818;
+    }
+
+    .card-category {
+      font-family: var(--font-sans);
+      font-size: 10px;
+      font-weight: 500;
+      letter-spacing: 0.25em;
+      text-transform: uppercase;
+      color: var(--text-faint);
+      margin-bottom: 14px;
+    }
+
+    .card-title {
+      font-family: var(--font);
+      font-size: 1.15rem;
+      font-weight: 400;
+      color: var(--text);
+      margin-bottom: 12px;
+      line-height: 1.3;
+    }
+
+    .card-body {
+      font-family: var(--font-sans);
+      font-size: 13.5px;
+      color: var(--text-dim);
+      line-height: 1.7;
+    }
+
+    /* ── Bottom CTA ── */
+    .bottom-cta {
+      position: relative;
+      z-index: 2;
+      background: var(--bg);
+      border-top: 1px solid var(--border);
+      padding: 80px 40px 100px;
+      text-align: center;
+    }
+
+    .bottom-cta h2 {
+      font-family: var(--font);
+      font-size: clamp(1.6rem, 3.5vw, 2.6rem);
+      font-weight: 400;
+      letter-spacing: -0.02em;
+      color: var(--text);
+      margin-bottom: 16px;
+    }
+
+    .bottom-cta h2 em {
+      font-style: italic;
+      color: var(--accent);
+    }
+
+    .bottom-cta p {
+      font-family: var(--font-sans);
+      font-size: 15px;
+      color: var(--text-dim);
+      margin-bottom: 40px;
+      line-height: 1.7;
+    }
+
+    .bottom-note {
+      margin-top: 16px;
+      font-family: var(--font-sans);
+      font-size: 12px;
+      color: var(--text-faint);
+    }
+
+    /* ── Fixed chrome ── */
     .rule {
       position: fixed;
       left: 0; right: 0;
       height: 1px;
       background: var(--border);
-      z-index: 3;
+      z-index: 10;
     }
     .rule.top { top: 0; }
-    .rule.bottom { bottom: 0; }
 
-    /* Wordmark in top-left corner (subtle) */
     .corner-mark {
       position: fixed;
       top: 18px;
@@ -221,12 +352,24 @@
       letter-spacing: 0.3em;
       text-transform: uppercase;
       color: var(--text-faint);
-      z-index: 4;
+      z-index: 11;
+      text-decoration: none;
     }
 
     @keyframes fadeUp {
       from { opacity: 0; transform: translateY(16px); }
       to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Fade-in on scroll for cards */
+    .reveal {
+      opacity: 0;
+      transform: translateY(24px);
+      transition: opacity 0.6s ease, transform 0.6s ease;
+    }
+    .reveal.visible {
+      opacity: 1;
+      transform: translateY(0);
     }
   </style>
 </head>
@@ -234,10 +377,10 @@
 
 <canvas id="bg"></canvas>
 <div class="vignette"></div>
+<div class="canvas-fade"></div>
 
 <div class="rule top"></div>
-<div class="rule bottom"></div>
-<div class="corner-mark">Voice</div>
+<a href="/" class="corner-mark">Voice</a>
 
 <div class="hero">
   <div class="wordmark">V O I C E</div>
@@ -255,19 +398,95 @@
   </div>
 
   <div class="note">No account required to start</div>
+
+  <a href="#use-cases" class="scroll-hint">
+    <span>Explore</span>
+    <div class="scroll-chevron"></div>
+  </a>
 </div>
 
-<div class="swipe-hint">
-  <span>scroll</span>
-  <div class="swipe-arrow"></div>
-</div>
+<!-- ── Use Cases ── -->
+<section class="use-cases" id="use-cases">
+  <div class="section-eyebrow">Built for Every Voice</div>
+  <h2 class="section-heading">Write for any purpose.<br>Sound like yourself every time.</h2>
+  <p class="section-sub">
+    Voice works wherever you write — and whoever you're writing as.
+  </p>
+
+  <div class="card-grid">
+
+    <div class="card reveal">
+      <div class="card-category">Journalism / Editorial</div>
+      <div class="card-title">Articles & Essays</div>
+      <p class="card-body">
+        Build a voice that makes your byline unmistakable. Train on your best work,
+        write in your register, and refine it as you grow.
+      </p>
+    </div>
+
+    <div class="card reveal">
+      <div class="card-category">Brand / Marketing</div>
+      <div class="card-title">Company Brand Voice</div>
+      <p class="card-body">
+        Define tone, vocabulary, and rules once. Keep every email, campaign, and
+        post consistent — no matter who on your team writes it.
+      </p>
+    </div>
+
+    <div class="card reveal">
+      <div class="card-category">Personal / Reflective</div>
+      <div class="card-title">Self-Discovery</div>
+      <p class="card-body">
+        Explore how you want to articulate yourself in the world. Find the thread
+        that runs through everything you write, and learn to pull it deliberately.
+      </p>
+    </div>
+
+    <div class="card reveal">
+      <div class="card-category">Fiction / Narrative</div>
+      <div class="card-title">Characters & Personas</div>
+      <p class="card-body">
+        Give distinct voices to narrators, characters, or alter egos. Write fluently
+        in each, then analyze what makes every one distinct.
+      </p>
+    </div>
+
+    <div class="card reveal">
+      <div class="card-category">Academic / Research</div>
+      <div class="card-title">Scholarly Writing</div>
+      <p class="card-body">
+        Maintain your argumentative style across papers, grants, and reviews
+        without losing what makes your thinking yours.
+      </p>
+    </div>
+
+    <div class="card reveal">
+      <div class="card-category">Content / Media</div>
+      <div class="card-title">Newsletters & Dispatches</div>
+      <p class="card-body">
+        From weekly letters to podcast scripts — make sure your audience recognizes
+        you before they even see your name.
+      </p>
+    </div>
+
+  </div>
+</section>
+
+<!-- ── Bottom CTA ── -->
+<section class="bottom-cta">
+  <h2>Your voice is already there.<br>Time to <em>teach</em> it.</h2>
+  <p>No templates. No presets. A model built entirely from your writing.</p>
+  <div class="cta-row">
+    <a href="/app" class="btn-primary">Start free →</a>
+    <a href="/app?signin=1" class="btn-secondary">Sign in</a>
+  </div>
+  <div class="bottom-note">No account required to start</div>
+</section>
 
 <script>
 const canvas = document.getElementById('bg');
 const ctx = canvas.getContext('2d');
 
-// ── Character set ──
-// Latin, Greek, Cyrillic, punctuation — the breadth of written language
 const CHARS = (
   'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz' +
   'αβγδεζηθικλμνξπρστυφχψω' +
@@ -276,35 +495,28 @@ const CHARS = (
 ).split('');
 
 const FONT_SIZE = 14;
-const [R, G, B] = [200, 164, 110]; // --accent
+const [R, G, B] = [200, 164, 110];
 
-// ── Grid state ──
 let grid = [], COLS = 0, ROWS = 0;
 
 function init() {
   canvas.width  = window.innerWidth;
   canvas.height = window.innerHeight;
   ctx.font = `${FONT_SIZE}px "SF Mono", "Fira Code", Consolas, monospace`;
-
   COLS = Math.ceil(canvas.width  / FONT_SIZE) + 1;
   ROWS = Math.ceil(canvas.height / FONT_SIZE) + 1;
-
-  // Each cell stores the character and a slow-change timer
   grid = Array.from({ length: ROWS }, () =>
     Array.from({ length: COLS }, () => ({
       char: CHARS[Math.floor(Math.random() * CHARS.length)],
-      tick: Math.floor(Math.random() * 60), // stagger change times
+      tick: Math.floor(Math.random() * 60),
     }))
   );
 }
 
-// ── Two overlapping sine waves sweep brightness across the grid ──
-// Together they create organic, slowly-moving pools of attention.
 function glowAt(col, row, time) {
   const w1 = Math.sin(time * 0.25 + col * 0.18) * 0.5 + 0.5;
   const w2 = Math.sin(time * 0.10 + row * 0.12 + col * 0.06) * 0.5 + 0.5;
   const w3 = Math.sin(time * 0.40 - col * 0.09 + row * 0.04) * 0.5 + 0.5;
-  // Multiply waves → bright only where all three peak together
   return Math.pow(w1 * w2 * w3, 2.8);
 }
 
@@ -312,30 +524,21 @@ let frameCount = 0;
 
 function draw() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
-  const time = frameCount * 0.016; // ~60fps → seconds
-
+  const time = frameCount * 0.016;
   for (let row = 0; row < ROWS; row++) {
     for (let col = 0; col < COLS; col++) {
       const cell = grid[row][col];
-
-      // Randomly update characters — dim cells change faster (scanning),
-      // bright cells linger (focusing).
       const glow = glowAt(col, row, time);
       cell.tick++;
-      const changeRate = Math.floor(8 + (1 - glow) * 52); // 8–60 frames
-      if (cell.tick >= changeRate) {
+      if (cell.tick >= Math.floor(8 + (1 - glow) * 52)) {
         cell.char = CHARS[Math.floor(Math.random() * CHARS.length)];
         cell.tick = 0;
       }
-
-      // Alpha: very dim baseline, peaks at ~0.75 in bright zones
       const alpha = 0.035 + glow * 0.72;
-
       ctx.fillStyle = `rgba(${R},${G},${B},${alpha})`;
       ctx.fillText(cell.char, col * FONT_SIZE, row * FONT_SIZE + FONT_SIZE);
     }
   }
-
   frameCount++;
   requestAnimationFrame(draw);
 }
@@ -344,33 +547,24 @@ init();
 window.addEventListener('resize', init);
 draw();
 
-// ── Swipe / scroll to enter ──
-function goToApp() {
-  if (document.body.classList.contains('exiting')) return;
-  document.body.classList.add('exiting');
-  sessionStorage.setItem('slide-in', '1');
-  setTimeout(() => { window.location.href = '/app'; }, 520);
-}
-
-// Mouse wheel — single intentional downward scroll triggers it
-let wheelDelta = 0, wheelTimer;
-window.addEventListener('wheel', (e) => {
-  if (e.deltaY <= 0) { wheelDelta = 0; return; }
-  wheelDelta += e.deltaY;
-  clearTimeout(wheelTimer);
-  wheelTimer = setTimeout(() => { wheelDelta = 0; }, 400);
-  if (wheelDelta > 80) goToApp();
+// Fade canvas as user scrolls below hero
+window.addEventListener('scroll', () => {
+  const ratio = Math.min(window.scrollY / window.innerHeight, 1);
+  canvas.style.opacity = 1 - ratio;
 }, { passive: true });
 
-// Touch swipe down → up gesture
-let touchStartY = null;
-window.addEventListener('touchstart', (e) => { touchStartY = e.touches[0].clientY; }, { passive: true });
-window.addEventListener('touchend', (e) => {
-  if (touchStartY === null) return;
-  const dy = e.changedTouches[0].clientY - touchStartY;
-  touchStartY = null;
-  if (dy > 60) goToApp(); // swiped down by 60px → navigate
-});
+// Reveal cards on scroll
+const reveals = document.querySelectorAll('.reveal');
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach((e, i) => {
+    if (e.isIntersecting) {
+      // stagger each card slightly
+      setTimeout(() => e.target.classList.add('visible'), i * 80);
+      observer.unobserve(e.target);
+    }
+  });
+}, { threshold: 0.1 });
+reveals.forEach(el => observer.observe(el));
 </script>
 
 </body>

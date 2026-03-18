@@ -1311,15 +1311,6 @@ function App() {
 
   const isGuest = user?.user_id?.startsWith("guest-");
 
-  // Slide-in from landing page
-  useEffect(() => {
-    if (sessionStorage.getItem('slide-in')) {
-      sessionStorage.removeItem('slide-in');
-      document.body.classList.add('slide-in');
-      document.body.addEventListener('animationend', () => document.body.classList.remove('slide-in'), { once: true });
-    }
-  }, []);
-
   // Open auth modal immediately if landing page sent ?signin=1
   useEffect(() => {
     if (new URLSearchParams(window.location.search).get("signin") === "1") {
