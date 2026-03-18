@@ -46,7 +46,8 @@ from voice_engine import (
 # ── LLM Setup ──
 
 from llm import make_claude_caller, make_mock_caller
-from council import run_council, COUNCIL_NAMES, VALID_MODES
+from council import COUNCIL_NAMES, VALID_MODES
+from council_agents import run_council_agents
 
 
 def make_voice_mock_caller():
@@ -751,14 +752,11 @@ async def convene_council(
                  f"and more powerful:\n\n{req.prose.strip()}"
         )
 
-    import asyncio
     try:
-        result = await asyncio.to_thread(
-            run_council,
-            question,
-            req.mode,
-            req.thinkers,
-            LLM_CALL,
+        result = await run_council_agents(
+            question=question,
+            mode=req.mode,
+            thinker_names=req.thinkers,
         )
     except Exception as e:
         raise HTTPException(500, f"Council deliberation failed: {e}")

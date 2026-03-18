@@ -11,8 +11,8 @@
       --bg: #0a0a0a;
       --bg-section: #0d0d0d;
       --bg-card: #141414;
-      --accent: #c8a46e;
-      --accent-dim: #8a7040;
+      --accent: #d9a83c;
+      --accent-dim: #a07828;
       --text: #e8e8e8;
       --text-dim: #888;
       --text-faint: #444;
@@ -495,7 +495,7 @@ const CHARS = (
 ).split('');
 
 const FONT_SIZE = 14;
-const [R, G, B] = [200, 164, 110];
+const [R, G, B] = [217, 168, 60];
 
 let grid = [], COLS = 0, ROWS = 0;
 
@@ -534,7 +534,7 @@ function draw() {
         cell.char = CHARS[Math.floor(Math.random() * CHARS.length)];
         cell.tick = 0;
       }
-      const alpha = 0.035 + glow * 0.72;
+      const alpha = 0.045 + glow * 0.88;
       ctx.fillStyle = `rgba(${R},${G},${B},${alpha})`;
       ctx.fillText(cell.char, col * FONT_SIZE, row * FONT_SIZE + FONT_SIZE);
     }
