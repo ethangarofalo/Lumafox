@@ -1,5 +1,5 @@
 """
-Voice Authoring Platform — FastAPI Application
+Luxa — FastAPI Application
 
 The API layer over voice_engine.py. Stateless endpoints for
 teaching, writing, analyzing, and managing voice profiles.
@@ -95,10 +95,10 @@ LLM_CALL = get_llm_caller()
 # ── App ──
 
 app = FastAPI(
-    title="Voice Authoring Platform",
+    title="Luxa",
     description=(
-        "Teach an AI your voice through dialogue, not configuration. "
-        "Three modes: Teach (refine), Write (generate), Analyze (evaluate)."
+        "Luxa — Voice and Council. "
+        "Teach an AI your voice through dialogue, then summon history's greatest minds on any question."
     ),
     version="0.1.0",
 )
