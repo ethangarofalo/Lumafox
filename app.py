@@ -46,6 +46,7 @@ from voice_engine import (
 # ── LLM Setup ──
 
 from llm import make_claude_caller, make_mock_caller
+from council import run_council, COUNCIL_NAMES, VALID_MODES
 
 
 def make_voice_mock_caller():
@@ -714,6 +715,62 @@ async def get_voice_text(
 
 
 # ── Health ──
+
+# ── Council ──────────────────────────────────────────────────────────────────
+
+class CouncilRequest(BaseModel):
+    question: str = Field(..., min_length=4, max_length=2000)
+    mode: str = Field("advice")
+    thinkers: list[str] = Field(default_factory=lambda: list(COUNCIL_NAMES))
+    # For writing mode with prose critique — prepend as context
+    prose: str = Field(default="", max_length=4000)
+
+
+@app.post("/council")
+async def convene_council(
+    req: CouncilRequest,
+    user_id: str = Depends(get_current_user),
+):
+
+    if req.mode not in VALID_MODES:
+        raise HTTPException(400, f"mode must be one of {sorted(VALID_MODES)}")
+    if not (2 <= len(req.thinkers) <= 6):
+        raise HTTPException(400, "Select between 2 and 6 thinkers")
+    unknown = [n for n in req.thinkers if n not in COUNCIL_NAMES]
+    if unknown:
+        raise HTTPException(400, f"Unknown thinkers: {unknown}")
+
+    # For writing mode: if prose is provided, fold it into the question
+    question = req.question
+    if req.mode == "writing" and req.prose.strip():
+        question = (
+            f"Please critique this passage and advise how to make it truer, clearer, "
+            f"and more powerful:\n\n{req.prose.strip()}\n\n"
+            f"Additional context from the writer: {req.question}" if req.question.strip()
+            else f"Please critique this passage and advise how to make it truer, clearer, "
+                 f"and more powerful:\n\n{req.prose.strip()}"
+        )
+
+    import asyncio
+    try:
+        result = await asyncio.to_thread(
+            run_council,
+            question,
+            req.mode,
+            req.thinkers,
+            LLM_CALL,
+        )
+    except Exception as e:
+        raise HTTPException(500, f"Council deliberation failed: {e}")
+
+    return result
+
+
+@app.get("/council/thinkers")
+async def list_thinkers():
+    """Return available council members. No auth required."""
+    return {"thinkers": COUNCIL_NAMES, "modes": sorted(VALID_MODES)}
+
 
 @app.get("/health")
 async def health():

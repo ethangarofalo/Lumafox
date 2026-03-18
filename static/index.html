@@ -1296,12 +1296,324 @@ function AuthPage({ onAuth }) {
 }
 
 
+// ── Council View ──────────────────────────────────────────────────────────────
+const ALL_THINKERS = ["Socrates", "Aristotle", "Machiavelli", "John Locke", "Jesus", "William James"];
+const TRADITION_LABEL = {
+  "Socrates": "Socratic",
+  "Aristotle": "Aristotelian",
+  "Machiavelli": "Machiavellian",
+  "John Locke": "Lockean",
+  "Jesus": "Christian",
+  "William James": "Pragmatist",
+};
+
+function CouncilView({ isGuest, onNeedAuth }) {
+  const [mode, setMode] = useState("advice");
+  const [question, setQuestion] = useState("");
+  const [prose, setProse] = useState("");
+  const [writingInputMode, setWritingInputMode] = useState("question"); // "question" | "prose"
+  const [thinkers, setThinkers] = useState(new Set(ALL_THINKERS));
+  const [deliberating, setDeliberating] = useState(false);
+  const [result, setResult] = useState(null);
+  const [error, setError] = useState("");
+
+  const toggleThinker = (name) => {
+    setThinkers(prev => {
+      const next = new Set(prev);
+      if (next.has(name)) {
+        if (next.size <= 2) return prev; // minimum 2
+        next.delete(name);
+      } else {
+        next.add(name);
+      }
+      return next;
+    });
+  };
+
+  const handleSubmit = async () => {
+    if (isGuest) { onNeedAuth(); return; }
+    const q = question.trim();
+    const p = prose.trim();
+    if (mode === "writing" && writingInputMode === "prose" && !p) {
+      setError("Paste the text you'd like the council to read."); return;
+    }
+    if (mode !== "writing" && !q) { setError("Ask the council something."); return; }
+    if (mode === "writing" && writingInputMode === "question" && !q) {
+      setError("Ask a question about your writing."); return;
+    }
+    setError("");
+    setDeliberating(true);
+    setResult(null);
+    try {
+      const body = { question: q || "Please read and respond to this passage.", mode, thinkers: [...thinkers] };
+      if (mode === "writing" && p) body.prose = p;
+      const r = await api("/council", { method: "POST", body: JSON.stringify(body) });
+      setResult(r);
+    } catch (e) { setError(e.message || "The council could not convene. Try again."); }
+    setDeliberating(false);
+  };
+
+  if (deliberating) {
+    return (
+      <div className="write-container" style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: 360 }}>
+        <div style={{ textAlign: "center" }}>
+          <div style={{ fontFamily: "var(--font)", fontSize: "1.4rem", color: "var(--text)", marginBottom: 16 }}>
+            The council convenes…
+          </div>
+          <div style={{ fontFamily: "var(--font-sans)", fontSize: 13, color: "var(--text-faint)", lineHeight: 1.8 }}>
+            {[...thinkers].join(" · ")}
+          </div>
+          <div style={{ marginTop: 28, display: "flex", gap: 8, justifyContent: "center" }}>
+            {[0, 1, 2].map(i => (
+              <div key={i} style={{
+                width: 6, height: 6, borderRadius: "50%", background: "var(--accent)",
+                animation: `pulse 1.4s ease-in-out ${i * 0.2}s infinite`,
+              }} />
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (result) {
+    return (
+      <div className="write-container">
+        <div className="write-section">
+          {/* Synthesis */}
+          <div style={{ marginBottom: 36, padding: "28px 32px", background: "var(--bg-elevated)", borderRadius: "var(--radius)", border: "1px solid var(--border)" }}>
+            <div className="write-label" style={{ marginBottom: 14, color: "var(--accent)", fontSize: 10, letterSpacing: "0.3em" }}>THE COUNCIL SPEAKS</div>
+            <p style={{ fontFamily: "var(--font)", fontSize: "1.05rem", color: "var(--text)", lineHeight: 1.85 }}>
+              {result.synthesis}
+            </p>
+          </div>
+
+          {/* Thinker cards */}
+          <div className="write-label" style={{ marginBottom: 14 }}>Individual Positions</div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 12, marginBottom: 28 }}>
+            {result.thinkers.map(t => (
+              <ThinkerCard key={t.name} thinker={t} />
+            ))}
+          </div>
+
+          {/* Tensions & Alliances */}
+          {(result.tensions?.length > 0 || result.alliances?.length > 0) && (
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 28 }}>
+              {result.tensions?.length > 0 && (
+                <div style={{ padding: "16px 18px", background: "var(--bg-elevated)", borderRadius: "var(--radius)", border: "1px solid var(--border)" }}>
+                  <div className="write-label" style={{ marginBottom: 10, fontSize: 10 }}>Tensions</div>
+                  {result.tensions.map((t, i) => (
+                    <p key={i} style={{ fontFamily: "var(--font-sans)", fontSize: 13, color: "var(--text-dim)", marginBottom: 6, lineHeight: 1.5 }}>{t}</p>
+                  ))}
+                </div>
+              )}
+              {result.alliances?.length > 0 && (
+                <div style={{ padding: "16px 18px", background: "var(--bg-elevated)", borderRadius: "var(--radius)", border: "1px solid var(--border)" }}>
+                  <div className="write-label" style={{ marginBottom: 10, fontSize: 10 }}>Convergences</div>
+                  {result.alliances.map((a, i) => (
+                    <p key={i} style={{ fontFamily: "var(--font-sans)", fontSize: 13, color: "var(--text-dim)", marginBottom: 6, lineHeight: 1.5 }}>{a}</p>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Narrative */}
+          {result.narrative && (
+            <div style={{ marginBottom: 28 }}>
+              <div className="write-label" style={{ marginBottom: 10 }}>How the Deliberation Unfolded</div>
+              <p style={{ fontFamily: "var(--font-sans)", fontSize: 14, color: "var(--text-dim)", lineHeight: 1.8 }}>
+                {result.narrative}
+              </p>
+            </div>
+          )}
+
+          <button className="action-btn" onClick={() => { setResult(null); setQuestion(""); setProse(""); }}>
+            Ask another question
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="write-container">
+      <div className="write-section">
+        <div className="write-label">The Council</div>
+        <p style={{ fontFamily: "var(--font-sans)", fontSize: 14, color: "var(--text-dim)", marginBottom: 24, lineHeight: 1.75 }}>
+          Six of history's sharpest minds deliberate on your question. They disagree with each other, and that is the point.
+        </p>
+
+        {/* Mode selector */}
+        <div style={{ display: "flex", gap: 8, marginBottom: 24, flexWrap: "wrap" }}>
+          {[["advice", "Seek Advice"], ["predict", "Make a Prediction"], ["writing", "Writing Lesson"]].map(([val, label]) => (
+            <button key={val} onClick={() => setMode(val)} style={{
+              padding: "7px 16px", borderRadius: "var(--radius)",
+              border: `1px solid ${mode === val ? "var(--accent)" : "var(--border)"}`,
+              background: mode === val ? "rgba(200,164,110,0.1)" : "none",
+              color: mode === val ? "var(--accent)" : "var(--text-dim)",
+              fontFamily: "var(--font-sans)", fontSize: 13, cursor: "pointer", transition: "all 0.15s",
+            }}>{label}</button>
+          ))}
+        </div>
+
+        {/* Writing sub-mode */}
+        {mode === "writing" && (
+          <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
+            {[["question", "Ask about craft"], ["prose", "Paste text to critique"]].map(([val, label]) => (
+              <button key={val} onClick={() => setWritingInputMode(val)} style={{
+                padding: "5px 12px", borderRadius: "var(--radius)",
+                border: `1px solid ${writingInputMode === val ? "var(--accent-dim)" : "var(--border)"}`,
+                background: "none",
+                color: writingInputMode === val ? "var(--text)" : "var(--text-faint)",
+                fontFamily: "var(--font-sans)", fontSize: 12, cursor: "pointer", transition: "all 0.15s",
+              }}>{label}</button>
+            ))}
+          </div>
+        )}
+
+        {/* Main input */}
+        {(mode !== "writing" || writingInputMode === "question") && (
+          <textarea
+            value={question}
+            onChange={e => setQuestion(e.target.value)}
+            placeholder={
+              mode === "advice" ? "What question do you bring before the council?" :
+              mode === "predict" ? "What situation would you like them to reason about?" :
+              "What would you like to understand better about your writing?"
+            }
+            style={{
+              width: "100%", minHeight: 120, padding: "12px 14px",
+              background: "var(--bg-elevated)", border: "1px solid var(--border)",
+              borderRadius: "var(--radius)", color: "var(--text)",
+              fontFamily: "var(--font)", fontSize: "1rem", lineHeight: 1.7,
+              resize: "vertical", marginBottom: 16,
+            }}
+          />
+        )}
+        {mode === "writing" && writingInputMode === "prose" && (
+          <>
+            <textarea
+              value={prose}
+              onChange={e => setProse(e.target.value)}
+              placeholder="Paste the text you'd like the council to read and critique…"
+              style={{
+                width: "100%", minHeight: 180, padding: "12px 14px",
+                background: "var(--bg-elevated)", border: "1px solid var(--border)",
+                borderRadius: "var(--radius)", color: "var(--text)",
+                fontFamily: "var(--font)", fontSize: "1rem", lineHeight: 1.7,
+                resize: "vertical", marginBottom: 10,
+              }}
+            />
+            <textarea
+              value={question}
+              onChange={e => setQuestion(e.target.value)}
+              placeholder="Anything specific you'd like them to address? (optional)"
+              style={{
+                width: "100%", minHeight: 60, padding: "10px 14px",
+                background: "var(--bg-elevated)", border: "1px solid var(--border)",
+                borderRadius: "var(--radius)", color: "var(--text)",
+                fontFamily: "var(--font-sans)", fontSize: 14, lineHeight: 1.6,
+                resize: "vertical", marginBottom: 16,
+              }}
+            />
+          </>
+        )}
+
+        {/* Thinker selector */}
+        <div style={{ marginBottom: 20 }}>
+          <div style={{ fontFamily: "var(--font-sans)", fontSize: 11, letterSpacing: "0.2em", textTransform: "uppercase", color: "var(--text-faint)", marginBottom: 10 }}>
+            Council Members
+          </div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+            {ALL_THINKERS.map(name => (
+              <button key={name} onClick={() => toggleThinker(name)} style={{
+                padding: "5px 13px", borderRadius: 20,
+                border: `1px solid ${thinkers.has(name) ? "var(--accent-dim)" : "var(--border)"}`,
+                background: thinkers.has(name) ? "rgba(200,164,110,0.1)" : "none",
+                color: thinkers.has(name) ? "var(--text)" : "var(--text-faint)",
+                fontFamily: "var(--font-sans)", fontSize: 12, cursor: "pointer", transition: "all 0.15s",
+              }}>
+                {name}
+                <span style={{ marginLeft: 5, fontSize: 10, color: "var(--text-faint)" }}>
+                  {TRADITION_LABEL[name]}
+                </span>
+              </button>
+            ))}
+          </div>
+          <div style={{ marginTop: 6, fontFamily: "var(--font-sans)", fontSize: 11, color: "var(--text-faint)" }}>
+            {thinkers.size} thinker{thinkers.size !== 1 ? "s" : ""} selected · minimum 2
+          </div>
+        </div>
+
+        {error && <div style={{ color: "#e07070", fontFamily: "var(--font-sans)", fontSize: 13, marginBottom: 12 }}>{error}</div>}
+
+        {isGuest ? (
+          <div style={{ padding: "16px 18px", background: "var(--bg-elevated)", border: "1px solid var(--border)", borderRadius: "var(--radius)" }}>
+            <p style={{ fontFamily: "var(--font-sans)", fontSize: 14, color: "var(--text-dim)", marginBottom: 12 }}>
+              Create an account to convene the council.
+            </p>
+            <button className="action-btn" onClick={onNeedAuth}>Sign up free →</button>
+          </div>
+        ) : (
+          <button className="action-btn" onClick={handleSubmit}>
+            Convene the Council →
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function ThinkerCard({ thinker }) {
+  const [expanded, setExpanded] = useState(false);
+  return (
+    <div style={{
+      background: "var(--bg-elevated)", border: "1px solid var(--border)",
+      borderRadius: "var(--radius)", padding: "18px 20px",
+    }}>
+      <div style={{ fontFamily: "var(--font-sans)", fontSize: 10, letterSpacing: "0.2em", textTransform: "uppercase", color: "var(--text-faint)", marginBottom: 6 }}>
+        {TRADITION_LABEL[thinker.name] || thinker.tradition}
+      </div>
+      <div style={{ fontFamily: "var(--font)", fontSize: "1rem", color: "var(--text)", marginBottom: 10 }}>
+        {thinker.name}
+      </div>
+      <p style={{ fontFamily: "var(--font-sans)", fontSize: 13, color: "var(--text-dim)", lineHeight: 1.65, marginBottom: 10 }}>
+        {thinker.final_position || thinker.ideal_position}
+      </p>
+      {thinker.key_argument && (
+        <>
+          <button onClick={() => setExpanded(e => !e)} style={{
+            background: "none", border: "none", cursor: "pointer",
+            fontFamily: "var(--font-sans)", fontSize: 11, color: "var(--text-faint)",
+            padding: 0, letterSpacing: "0.05em",
+          }}>
+            {expanded ? "▲ Less" : "▼ Full argument"}
+          </button>
+          {expanded && (
+            <p style={{ fontFamily: "var(--font-sans)", fontSize: 13, color: "var(--text-dim)", lineHeight: 1.7, marginTop: 10 }}>
+              {thinker.key_argument}
+            </p>
+          )}
+        </>
+      )}
+      {thinker.private_thought && expanded && (
+        <p style={{ fontFamily: "var(--font-sans)", fontSize: 12, color: "var(--text-faint)", fontStyle: "italic", marginTop: 8, borderTop: "1px solid var(--border)", paddingTop: 8 }}>
+          Private thought: "{thinker.private_thought}"
+        </p>
+      )}
+    </div>
+  );
+}
+
+
 // ── Main App ──
 function App() {
   const [user, setUserState] = useState(getUser);
   const [profiles, setProfiles] = useState([]);
   const [activeProfile, setActiveProfile] = useState(null);
   const [mode, setMode] = useState("teach");
+  const [showCouncil, setShowCouncil] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
   const [showFind, setShowFind] = useState(false);
   const [showAuth, setShowAuth] = useState(false);
@@ -1407,7 +1719,7 @@ function App() {
       <div className="topbar">
         <div className="topbar-logo">Voice</div>
         <div style={{ display: "flex", alignItems: "center", gap: 24 }}>
-          {activeProfile && (
+          {activeProfile && !showCouncil && (
             <div className="topbar-nav">
               <button className={`topbar-btn ${mode === "teach" ? "active" : ""}`} onClick={() => setMode("teach")}>Teach</button>
               <button className={`topbar-btn ${mode === "write" ? "active" : ""}`} onClick={() => setMode("write")}>Write</button>
@@ -1416,6 +1728,13 @@ function App() {
               <button className={`topbar-btn ${mode === "export" ? "active" : ""}`} onClick={() => setMode("export")}>Export</button>
             </div>
           )}
+          <button
+            className={`topbar-btn ${showCouncil ? "active" : ""}`}
+            onClick={() => setShowCouncil(c => !c)}
+            style={{ fontStyle: "italic" }}
+          >
+            Council
+          </button>
           {isGuest ? (
             <div className="user-badge">
               <span style={{ color: "var(--text-faint)" }}>Guest</span>
@@ -1462,7 +1781,9 @@ function App() {
 
         {/* Content */}
         <div className="content">
-          {activeProfile ? (
+          {showCouncil ? (
+            <CouncilView isGuest={isGuest} onNeedAuth={() => setShowAuth(true)} />
+          ) : activeProfile ? (
             <>
               <div className="profile-header">
                 <div style={{ display: "flex", alignItems: "baseline" }}>
