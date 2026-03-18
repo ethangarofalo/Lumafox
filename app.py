@@ -729,7 +729,11 @@ async def health():
 STATIC_DIR = Path(__file__).parent / "static"
 
 @app.get("/")
-async def serve_frontend():
+async def serve_landing():
+    return FileResponse(STATIC_DIR / "landing.html")
+
+@app.get("/app")
+async def serve_app():
     return FileResponse(STATIC_DIR / "index.html")
 
 

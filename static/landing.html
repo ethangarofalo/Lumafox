@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Voice — Teach an AI your writing style</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0a0a0a;
+      --accent: #c8a46e;
+      --accent-dim: #8a7040;
+      --text: #e8e8e8;
+      --text-dim: #888;
+      --text-faint: #444;
+      --border: #2a2a2a;
+      --font: 'Georgia', 'Times New Roman', serif;
+      --font-mono: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+      --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      --radius: 8px;
+    }
+
+    html, body {
+      height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font);
+      overflow: hidden;
+    }
+
+    /* ── Canvas background ── */
+    canvas {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 0;
+    }
+
+    /* Radial vignette — darkens the center so hero text is readable */
+    .vignette {
+      position: fixed;
+      inset: 0;
+      background: radial-gradient(
+        ellipse 55% 65% at 50% 50%,
+        rgba(10, 10, 10, 0.82) 0%,
+        rgba(10, 10, 10, 0.45) 55%,
+        rgba(10, 10, 10, 0.0) 100%
+      );
+      z-index: 1;
+    }
+
+    /* ── Hero ── */
+    .hero {
+      position: relative;
+      z-index: 2;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 40px 24px;
+      gap: 0;
+    }
+
+    .wordmark {
+      font-family: var(--font-sans);
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 0.45em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 52px;
+      opacity: 0;
+      animation: fadeUp 0.8s ease forwards 0.2s;
+    }
+
+    h1 {
+      font-family: var(--font);
+      font-size: clamp(2.2rem, 5.5vw, 4.2rem);
+      font-weight: 400;
+      line-height: 1.18;
+      letter-spacing: -0.02em;
+      color: var(--text);
+      max-width: 680px;
+      margin-bottom: 28px;
+      opacity: 0;
+      animation: fadeUp 0.8s ease forwards 0.45s;
+    }
+
+    h1 em {
+      font-style: italic;
+      color: var(--accent);
+    }
+
+    .sub {
+      font-family: var(--font-sans);
+      font-size: clamp(14px, 2vw, 16px);
+      color: var(--text-dim);
+      line-height: 1.75;
+      max-width: 460px;
+      margin-bottom: 52px;
+      opacity: 0;
+      animation: fadeUp 0.8s ease forwards 0.65s;
+    }
+
+    .cta-row {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      justify-content: center;
+      flex-wrap: wrap;
+      opacity: 0;
+      animation: fadeUp 0.8s ease forwards 0.85s;
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: #0a0a0a;
+      border: none;
+      padding: 13px 30px;
+      border-radius: var(--radius);
+      font-family: var(--font-sans);
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: none;
+      transition: opacity 0.15s;
+      letter-spacing: 0.01em;
+    }
+    .btn-primary:hover { opacity: 0.85; }
+
+    .btn-secondary {
+      background: none;
+      color: var(--text-dim);
+      border: 1px solid var(--border);
+      padding: 13px 24px;
+      border-radius: var(--radius);
+      font-family: var(--font-sans);
+      font-size: 15px;
+      cursor: pointer;
+      text-decoration: none;
+      transition: border-color 0.15s, color 0.15s;
+    }
+    .btn-secondary:hover { border-color: var(--accent-dim); color: var(--text); }
+
+    .note {
+      margin-top: 20px;
+      font-family: var(--font-sans);
+      font-size: 12px;
+      color: var(--text-faint);
+      opacity: 0;
+      animation: fadeUp 0.8s ease forwards 1.0s;
+    }
+
+    /* Thin rule above/below, evokes the topbar style */
+    .rule {
+      position: fixed;
+      left: 0; right: 0;
+      height: 1px;
+      background: var(--border);
+      z-index: 3;
+    }
+    .rule.top { top: 0; }
+    .rule.bottom { bottom: 0; }
+
+    /* Wordmark in top-left corner (subtle) */
+    .corner-mark {
+      position: fixed;
+      top: 18px;
+      left: 28px;
+      font-family: var(--font-sans);
+      font-size: 10px;
+      letter-spacing: 0.3em;
+      text-transform: uppercase;
+      color: var(--text-faint);
+      z-index: 4;
+    }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(16px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+
+<canvas id="bg"></canvas>
+<div class="vignette"></div>
+
+<div class="rule top"></div>
+<div class="rule bottom"></div>
+<div class="corner-mark">Voice</div>
+
+<div class="hero">
+  <div class="wordmark">V O I C E</div>
+
+  <h1>Every writer has a voice.<br>Most never teach it to <em>anything</em>.</h1>
+
+  <p class="sub">
+    Build a precise model of how you write — your rhythm, your rules,
+    your way of seeing. Generate in it. Analyze against it. Export it anywhere.
+  </p>
+
+  <div class="cta-row">
+    <a href="/app" class="btn-primary">Start free →</a>
+    <a href="/app?signin=1" class="btn-secondary">Sign in</a>
+  </div>
+
+  <div class="note">No account required to start</div>
+</div>
+
+<script>
+const canvas = document.getElementById('bg');
+const ctx = canvas.getContext('2d');
+
+// ── Character set ──
+// Latin, Greek, Cyrillic, punctuation — the breadth of written language
+const CHARS = (
+  'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz' +
+  'αβγδεζηθικλμνξπρστυφχψω' +
+  'АБВГДЖЗИЙКЛМНОПРСТУФХЦШ' +
+  '.,;:\'"—…!?'
+).split('');
+
+const FONT_SIZE = 14;
+const [R, G, B] = [200, 164, 110]; // --accent
+
+// ── Grid state ──
+let grid = [], COLS = 0, ROWS = 0;
+
+function init() {
+  canvas.width  = window.innerWidth;
+  canvas.height = window.innerHeight;
+  ctx.font = `${FONT_SIZE}px "SF Mono", "Fira Code", Consolas, monospace`;
+
+  COLS = Math.ceil(canvas.width  / FONT_SIZE) + 1;
+  ROWS = Math.ceil(canvas.height / FONT_SIZE) + 1;
+
+  // Each cell stores the character and a slow-change timer
+  grid = Array.from({ length: ROWS }, () =>
+    Array.from({ length: COLS }, () => ({
+      char: CHARS[Math.floor(Math.random() * CHARS.length)],
+      tick: Math.floor(Math.random() * 60), // stagger change times
+    }))
+  );
+}
+
+// ── Two overlapping sine waves sweep brightness across the grid ──
+// Together they create organic, slowly-moving pools of attention.
+function glowAt(col, row, time) {
+  const w1 = Math.sin(time * 0.25 + col * 0.18) * 0.5 + 0.5;
+  const w2 = Math.sin(time * 0.10 + row * 0.12 + col * 0.06) * 0.5 + 0.5;
+  const w3 = Math.sin(time * 0.40 - col * 0.09 + row * 0.04) * 0.5 + 0.5;
+  // Multiply waves → bright only where all three peak together
+  return Math.pow(w1 * w2 * w3, 2.8);
+}
+
+let frameCount = 0;
+
+function draw() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  const time = frameCount * 0.016; // ~60fps → seconds
+
+  for (let row = 0; row < ROWS; row++) {
+    for (let col = 0; col < COLS; col++) {
+      const cell = grid[row][col];
+
+      // Randomly update characters — dim cells change faster (scanning),
+      // bright cells linger (focusing).
+      const glow = glowAt(col, row, time);
+      cell.tick++;
+      const changeRate = Math.floor(8 + (1 - glow) * 52); // 8–60 frames
+      if (cell.tick >= changeRate) {
+        cell.char = CHARS[Math.floor(Math.random() * CHARS.length)];
+        cell.tick = 0;
+      }
+
+      // Alpha: very dim baseline, peaks at ~0.75 in bright zones
+      const alpha = 0.035 + glow * 0.72;
+
+      ctx.fillStyle = `rgba(${R},${G},${B},${alpha})`;
+      ctx.fillText(cell.char, col * FONT_SIZE, row * FONT_SIZE + FONT_SIZE);
+    }
+  }
+
+  frameCount++;
+  requestAnimationFrame(draw);
+}
+
+init();
+window.addEventListener('resize', init);
+draw();
+</script>
+
+</body>
+</html>

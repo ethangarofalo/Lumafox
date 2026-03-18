@@ -1266,6 +1266,14 @@ function App() {
 
   const isGuest = user?.user_id?.startsWith("guest-");
 
+  // Open auth modal immediately if landing page sent ?signin=1
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get("signin") === "1") {
+      setShowAuth(true);
+      window.history.replaceState({}, "", "/app");
+    }
+  }, []);
+
   // Auto-create guest session if no token on first visit
   useEffect(() => {
     if (!getToken()) {
