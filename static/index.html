@@ -1720,22 +1720,38 @@ const COUNCIL_VERBS = [
   "reflecting", "arguing", "weighing", "responding",
 ];
 
-function CouncilDeliberating({ thinkers }) {
+const SWARM_TRADITIONS = [
+  "Platonist", "Aristotelian", "Stoic", "Christian", "Islamic", "Jewish",
+  "Hedonist", "Nihilist", "Postmodern", "Early Modernity", "Late Modernity",
+  "High Modernity", "Contemporary American",
+];
+
+function CouncilDeliberating({ thinkers, swarm = false }) {
   const [activeThinker, setActiveThinker] = React.useState(0);
   const [verb, setVerb] = React.useState(COUNCIL_VERBS[0]);
   const [fade, setFade] = React.useState(true);
+  const [round, setRound] = React.useState(1);
+
+  const displayNames = swarm ? SWARM_TRADITIONS : thinkers;
 
   React.useEffect(() => {
     const cycle = setInterval(() => {
       setFade(false);
       setTimeout(() => {
-        setActiveThinker(i => (i + 1) % thinkers.length);
+        setActiveThinker(i => (i + 1) % displayNames.length);
         setVerb(COUNCIL_VERBS[Math.floor(Math.random() * COUNCIL_VERBS.length)]);
         setFade(true);
       }, 300);
-    }, 1800);
+    }, swarm ? 1200 : 1800);
     return () => clearInterval(cycle);
-  }, [thinkers.length]);
+  }, [displayNames.length, swarm]);
+
+  // Swarm: cycle round indicator between 1 and 2
+  React.useEffect(() => {
+    if (!swarm) return;
+    const t = setTimeout(() => setRound(2), 18000); // ~18s into deliberation
+    return () => clearTimeout(t);
+  }, [swarm]);
 
   return (
     <div style={{
@@ -1743,7 +1759,7 @@ function CouncilDeliberating({ thinkers }) {
       alignItems: "center", justifyContent: "center",
       minHeight: 420, gap: 0,
     }}>
-      <NeuralCanvas thinkers={thinkers} size={380} active={true} />
+      <NeuralCanvas thinkers={swarm ? SWARM_TRADITIONS : thinkers} size={380} active={true} />
 
       {/* Thinker status line */}
       <div style={{
@@ -1756,7 +1772,7 @@ function CouncilDeliberating({ thinkers }) {
           opacity: fade ? 1 : 0,
           transition: "opacity 0.3s ease",
         }}>
-          {thinkers[activeThinker]}
+          {displayNames[activeThinker]}
         </span>
         <span style={{
           fontFamily: "var(--font-sans)", fontSize: "0.8rem",
@@ -1770,7 +1786,7 @@ function CouncilDeliberating({ thinkers }) {
 
       {/* Round indicator dots */}
       <div style={{ display: "flex", gap: 6, marginTop: 16 }}>
-        {thinkers.map((_, i) => (
+        {displayNames.map((_, i) => (
           <div key={i} style={{
             width: 5, height: 5, borderRadius: "50%",
             background: i === activeThinker ? "var(--accent)" : "var(--border)",
@@ -1785,7 +1801,9 @@ function CouncilDeliberating({ thinkers }) {
         color: "var(--text-faint)", letterSpacing: "0.2em",
         textTransform: "uppercase",
       }}>
-        The council convenes
+        {swarm
+          ? `Swarm intelligence · Round ${round} of 2 · 40 agents`
+          : "The council convenes"}
       </div>
     </div>
   );
@@ -1797,6 +1815,7 @@ function CouncilView({ isGuest, onNeedAuth }) {
   const [prose, setProse] = useState("");
   const [writingInputMode, setWritingInputMode] = useState("question"); // "question" | "prose"
   const [thinkers, setThinkers] = useState(new Set(ALL_THINKERS));
+  const [swarmMode, setSwarmMode] = useState(false);
   const [deliberating, setDeliberating] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState("");
@@ -1829,7 +1848,12 @@ function CouncilView({ isGuest, onNeedAuth }) {
     setDeliberating(true);
     setResult(null);
     try {
-      const body = { question: q || "Please read and respond to this passage.", mode, thinkers: [...thinkers] };
+      const body = {
+        question: q || "Please read and respond to this passage.",
+        mode,
+        thinkers: [...thinkers],
+        swarm: swarmMode,
+      };
       if (mode === "writing" && p) body.prose = p;
       const r = await api("/council", { method: "POST", body: JSON.stringify(body) });
       setResult(r);
@@ -1837,11 +1861,86 @@ function CouncilView({ isGuest, onNeedAuth }) {
     setDeliberating(false);
   };
 
+  const handleReset = () => { setResult(null); setQuestion(""); setProse(""); };
+
   if (deliberating) {
-    return <CouncilDeliberating thinkers={[...thinkers]} />;
+    return <CouncilDeliberating thinkers={[...thinkers]} swarm={swarmMode} />;
   }
 
   if (result) {
+    // ── Swarm result layout ──────────────────────────────────────────────────
+    if (result.swarm) {
+      return (
+        <div className="write-container">
+          <div className="write-section">
+
+            {/* Header bar */}
+            <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 28 }}>
+              <div className="write-label" style={{ color: "var(--accent)", fontSize: 10, letterSpacing: "0.3em" }}>
+                SWARM INTELLIGENCE
+              </div>
+              <div style={{
+                padding: "3px 12px", borderRadius: 20,
+                border: "1px solid var(--accent-dim)",
+                fontFamily: "var(--font-sans)", fontSize: 11, color: "var(--accent)",
+                letterSpacing: "0.06em",
+              }}>
+                {result.shift_percentage}% shifted between rounds
+              </div>
+              <div style={{
+                fontFamily: "var(--font-sans)", fontSize: 11, color: "var(--text-faint)",
+              }}>
+                {result.n_agents} agents · 2 rounds
+              </div>
+            </div>
+
+            {/* Synthesis */}
+            <div style={{ marginBottom: 28, padding: "24px 28px", background: "var(--bg-elevated)", borderRadius: "var(--radius)", border: "1px solid var(--border)" }}>
+              <div className="write-label" style={{ marginBottom: 12, fontSize: 10 }}>THE POPULATION SPEAKS</div>
+              <p style={{ fontFamily: "var(--font)", fontSize: "1.05rem", color: "var(--text)", lineHeight: 1.85 }}>
+                {result.synthesis}
+              </p>
+            </div>
+
+            {/* Fault lines + What shifted */}
+            {(result.fault_lines || result.what_shifted) && (
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 28 }}>
+                {result.fault_lines && (
+                  <div style={{ padding: "16px 18px", background: "var(--bg-elevated)", borderRadius: "var(--radius)", border: "1px solid var(--border)" }}>
+                    <div className="write-label" style={{ marginBottom: 10, fontSize: 10 }}>Fault Lines</div>
+                    <p style={{ fontFamily: "var(--font-sans)", fontSize: 13, color: "var(--text-dim)", lineHeight: 1.65 }}>
+                      {result.fault_lines}
+                    </p>
+                  </div>
+                )}
+                {result.what_shifted && (
+                  <div style={{ padding: "16px 18px", background: "var(--bg-elevated)", borderRadius: "var(--radius)", border: "1px solid var(--border)" }}>
+                    <div className="write-label" style={{ marginBottom: 10, fontSize: 10 }}>What Shifted</div>
+                    <p style={{ fontFamily: "var(--font-sans)", fontSize: 13, color: "var(--text-dim)", lineHeight: 1.65 }}>
+                      {result.what_shifted}
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Tradition breakdown grid */}
+            <div className="write-label" style={{ marginBottom: 14 }}>Tradition Breakdown</div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 10, marginBottom: 32 }}>
+              {result.thinkers.map(t => (
+                <SwarmTraditionCard key={t.name} card={t} />
+              ))}
+            </div>
+
+            <button className="action-btn" onClick={handleReset}>
+              Ask another question
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    // ── Original council result layout ───────────────────────────────────────
     return (
       <div className="write-container">
         <div className="write-section">
@@ -1893,7 +1992,7 @@ function CouncilView({ isGuest, onNeedAuth }) {
             </div>
           )}
 
-          <button className="action-btn" onClick={() => { setResult(null); setQuestion(""); setProse(""); }}>
+          <button className="action-btn" onClick={handleReset}>
             Ask another question
           </button>
         </div>
@@ -1994,31 +2093,65 @@ function CouncilView({ isGuest, onNeedAuth }) {
           </>
         )}
 
-        {/* Thinker selector */}
-        <div style={{ marginBottom: 20 }}>
-          <div style={{ fontFamily: "var(--font-sans)", fontSize: 11, letterSpacing: "0.2em", textTransform: "uppercase", color: "var(--text-faint)", marginBottom: 10 }}>
-            Council Members
-          </div>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-            {ALL_THINKERS.map(name => (
-              <button key={name} onClick={() => toggleThinker(name)} style={{
-                padding: "5px 13px", borderRadius: 20,
-                border: `1px solid ${thinkers.has(name) ? "var(--accent-dim)" : "var(--border)"}`,
-                background: thinkers.has(name) ? "rgba(200,164,110,0.1)" : "none",
-                color: thinkers.has(name) ? "var(--text)" : "var(--text-faint)",
-                fontFamily: "var(--font-sans)", fontSize: 12, cursor: "pointer", transition: "all 0.15s",
-              }}>
-                {name}
-                <span style={{ marginLeft: 5, fontSize: 10, color: "var(--text-faint)" }}>
-                  {TRADITION_LABEL[name]}
-                </span>
-              </button>
-            ))}
-          </div>
-          <div style={{ marginTop: 6, fontFamily: "var(--font-sans)", fontSize: 11, color: "var(--text-faint)" }}>
-            {thinkers.size} thinker{thinkers.size !== 1 ? "s" : ""} selected · minimum 2
-          </div>
+        {/* Swarm / Panel toggle */}
+        <div style={{ display: "flex", alignItems: "center", gap: 0, marginBottom: 20, borderRadius: "var(--radius)", border: "1px solid var(--border)", overflow: "hidden", width: "fit-content" }}>
+          <button onClick={() => setSwarmMode(false)} style={{
+            padding: "8px 18px",
+            background: !swarmMode ? "rgba(217,168,60,0.12)" : "none",
+            border: "none",
+            borderRight: "1px solid var(--border)",
+            color: !swarmMode ? "var(--accent)" : "var(--text-faint)",
+            fontFamily: "var(--font-sans)", fontSize: 12, cursor: "pointer",
+            letterSpacing: "0.06em",
+          }}>
+            ◈ Panel — 6 thinkers
+          </button>
+          <button onClick={() => setSwarmMode(true)} style={{
+            padding: "8px 18px",
+            background: swarmMode ? "rgba(217,168,60,0.12)" : "none",
+            border: "none",
+            color: swarmMode ? "var(--accent)" : "var(--text-faint)",
+            fontFamily: "var(--font-sans)", fontSize: 12, cursor: "pointer",
+            letterSpacing: "0.06em",
+          }}>
+            ◉ Swarm — 40 agents
+          </button>
         </div>
+
+        {swarmMode && (
+          <p style={{ fontFamily: "var(--font-sans)", fontSize: 13, color: "var(--text-faint)", marginBottom: 20, lineHeight: 1.7 }}>
+            40 people drawn from 14 philosophical and theological traditions deliberate in two rounds.
+            You see where the population actually lands — not a panel of experts, but a world.
+          </p>
+        )}
+
+        {/* Thinker selector — panel mode only */}
+        {!swarmMode && (
+          <div style={{ marginBottom: 20 }}>
+            <div style={{ fontFamily: "var(--font-sans)", fontSize: 11, letterSpacing: "0.2em", textTransform: "uppercase", color: "var(--text-faint)", marginBottom: 10 }}>
+              Council Members
+            </div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+              {ALL_THINKERS.map(name => (
+                <button key={name} onClick={() => toggleThinker(name)} style={{
+                  padding: "5px 13px", borderRadius: 20,
+                  border: `1px solid ${thinkers.has(name) ? "var(--accent-dim)" : "var(--border)"}`,
+                  background: thinkers.has(name) ? "rgba(200,164,110,0.1)" : "none",
+                  color: thinkers.has(name) ? "var(--text)" : "var(--text-faint)",
+                  fontFamily: "var(--font-sans)", fontSize: 12, cursor: "pointer", transition: "all 0.15s",
+                }}>
+                  {name}
+                  <span style={{ marginLeft: 5, fontSize: 10, color: "var(--text-faint)" }}>
+                    {TRADITION_LABEL[name]}
+                  </span>
+                </button>
+              ))}
+            </div>
+            <div style={{ marginTop: 6, fontFamily: "var(--font-sans)", fontSize: 11, color: "var(--text-faint)" }}>
+              {thinkers.size} thinker{thinkers.size !== 1 ? "s" : ""} selected · minimum 2
+            </div>
+          </div>
+        )}
 
         {error && <div style={{ color: "#e07070", fontFamily: "var(--font-sans)", fontSize: 13, marginBottom: 12 }}>{error}</div>}
 
@@ -2031,10 +2164,58 @@ function CouncilView({ isGuest, onNeedAuth }) {
           </div>
         ) : (
           <button className="action-btn" onClick={handleSubmit}>
-            Convene the Council →
+            {swarmMode ? "Deploy the Swarm →" : "Convene the Council →"}
           </button>
         )}
       </div>
+    </div>
+  );
+}
+
+// Swarm result card — one per tradition cluster
+function SwarmTraditionCard({ card }) {
+  const [expanded, setExpanded] = useState(false);
+  const isSplit = card.position && card.position.startsWith("split");
+  return (
+    <div style={{
+      background: "var(--bg-elevated)", border: "1px solid var(--border)",
+      borderRadius: "var(--radius)", padding: "14px 16px",
+    }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
+        <div style={{ fontFamily: "var(--font)", fontSize: "0.9rem", color: "var(--text)" }}>
+          {card.name}
+        </div>
+        <div style={{
+          fontFamily: "var(--font-sans)", fontSize: 10, color: "var(--text-faint)",
+          background: "var(--bg)", border: "1px solid var(--border)",
+          borderRadius: 20, padding: "2px 8px", whiteSpace: "nowrap", marginLeft: 8,
+        }}>
+          {card.agent_count} {card.agent_count === 1 ? "agent" : "agents"}
+        </div>
+      </div>
+      <div style={{
+        fontFamily: "var(--font-sans)", fontSize: 12,
+        color: isSplit ? "var(--text-faint)" : "var(--accent)",
+        letterSpacing: "0.04em", marginBottom: 8,
+      }}>
+        {card.position}
+      </div>
+      {card.argument && (
+        <>
+          <button onClick={() => setExpanded(e => !e)} style={{
+            background: "none", border: "none", cursor: "pointer",
+            fontFamily: "var(--font-sans)", fontSize: 11, color: "var(--text-faint)",
+            padding: 0, letterSpacing: "0.05em",
+          }}>
+            {expanded ? "▲ Less" : "▼ Sample reasoning"}
+          </button>
+          {expanded && (
+            <p style={{ fontFamily: "var(--font-sans)", fontSize: 12, color: "var(--text-dim)", lineHeight: 1.65, marginTop: 8 }}>
+              "{card.argument}"
+            </p>
+          )}
+        </>
+      )}
     </div>
   );
 }

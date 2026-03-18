@@ -48,6 +48,7 @@ from voice_engine import (
 from llm import make_claude_caller, make_mock_caller
 from council import COUNCIL_NAMES, VALID_MODES
 from council_agents import run_council_agents
+from council_swarm import run_council_swarm
 
 
 def make_voice_mock_caller():
@@ -725,6 +726,9 @@ class CouncilRequest(BaseModel):
     thinkers: list[str] = Field(default_factory=lambda: list(COUNCIL_NAMES))
     # For writing mode with prose critique — prepend as context
     prose: str = Field(default="", max_length=4000)
+    # Swarm mode: 40-agent philosophical population instead of 6 named thinkers
+    swarm: bool = Field(default=False)
+    n_agents: int = Field(default=40, ge=10, le=60)
 
 
 @app.post("/council")
@@ -735,11 +739,6 @@ async def convene_council(
 
     if req.mode not in VALID_MODES:
         raise HTTPException(400, f"mode must be one of {sorted(VALID_MODES)}")
-    if not (2 <= len(req.thinkers) <= 6):
-        raise HTTPException(400, "Select between 2 and 6 thinkers")
-    unknown = [n for n in req.thinkers if n not in COUNCIL_NAMES]
-    if unknown:
-        raise HTTPException(400, f"Unknown thinkers: {unknown}")
 
     # For writing mode: if prose is provided, fold it into the question
     question = req.question
@@ -753,11 +752,27 @@ async def convene_council(
         )
 
     try:
-        result = await run_council_agents(
-            question=question,
-            mode=req.mode,
-            thinker_names=req.thinkers,
-        )
+        if req.swarm:
+            # 40-agent philosophical population swarm
+            result = await run_council_swarm(
+                question=question,
+                mode=req.mode,
+                n_agents=req.n_agents,
+            )
+        else:
+            # Original 6-thinker named council
+            if not (2 <= len(req.thinkers) <= 6):
+                raise HTTPException(400, "Select between 2 and 6 thinkers")
+            unknown = [n for n in req.thinkers if n not in COUNCIL_NAMES]
+            if unknown:
+                raise HTTPException(400, f"Unknown thinkers: {unknown}")
+            result = await run_council_agents(
+                question=question,
+                mode=req.mode,
+                thinker_names=req.thinkers,
+            )
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(500, f"Council deliberation failed: {e}")
 
