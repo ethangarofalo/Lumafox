@@ -42,6 +42,9 @@ from voice_engine import (
     ingest_writing_samples,
     update_profile_metadata,
     ensure_dirs,
+    save_conversation_session,
+    list_conversation_sessions,
+    load_conversation_session,
 )
 
 # ── LLM Setup ──
@@ -456,6 +459,62 @@ async def get_refinements(
     return {"profile_id": profile_id, "refinements": refinements, "count": len(refinements)}
 
 
+# ── Conversation Sessions ──
+
+class ConversationSaveRequest(BaseModel):
+    session_id: str
+    messages: list
+
+
+@app.post("/profiles/{profile_id}/conversations")
+async def save_conversation(
+    profile_id: str,
+    req: ConversationSaveRequest,
+    user_id: str = Depends(get_current_user),
+):
+    """Save (or update) a conversation session for a profile."""
+    profile = load_profile(profile_id)
+    if not profile:
+        raise HTTPException(status_code=404, detail="Profile not found")
+    if profile.owner_id != user_id:
+        raise HTTPException(status_code=403, detail="Not your profile")
+    save_conversation_session(profile_id, req.session_id, req.messages)
+    return {"saved": True, "session_id": req.session_id}
+
+
+@app.get("/profiles/{profile_id}/conversations")
+async def list_conversations(
+    profile_id: str,
+    user_id: str = Depends(get_current_user),
+):
+    """List all conversation sessions for a profile."""
+    profile = load_profile(profile_id)
+    if not profile:
+        raise HTTPException(status_code=404, detail="Profile not found")
+    if profile.owner_id != user_id:
+        raise HTTPException(status_code=403, detail="Not your profile")
+    sessions = list_conversation_sessions(profile_id)
+    return {"sessions": sessions, "count": len(sessions)}
+
+
+@app.get("/profiles/{profile_id}/conversations/{session_id}")
+async def get_conversation(
+    profile_id: str,
+    session_id: str,
+    user_id: str = Depends(get_current_user),
+):
+    """Load a specific conversation session."""
+    profile = load_profile(profile_id)
+    if not profile:
+        raise HTTPException(status_code=404, detail="Profile not found")
+    if profile.owner_id != user_id:
+        raise HTTPException(status_code=403, detail="Not your profile")
+    session = load_conversation_session(profile_id, session_id)
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+    return session
+
+
 # ── File Upload (Bring Your Voice) ──
 
 from fastapi import UploadFile, File
@@ -561,7 +620,7 @@ async def teach_voice(
         raise HTTPException(status_code=403, detail="Not your profile")
 
     valid_commands = {
-        "dialogue", "examine", "demo", "try",
+        "auto", "dialogue", "examine", "demo", "try",
         "correct", "example", "principle", "voice", "never",
     }
     if req.command not in valid_commands:

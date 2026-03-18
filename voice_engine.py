@@ -149,6 +149,67 @@ def save_refinement(profile_id: str, refinement: dict):
         update_profile_metadata(profile)
 
 
+# ── Conversation Sessions ──
+
+def _conversations_dir(profile_id: str) -> Path:
+    """Return (and create) the conversations directory for a profile."""
+    d = PROFILES_DIR / profile_id / "conversations"
+    d.mkdir(exist_ok=True)
+    return d
+
+
+def save_conversation_session(profile_id: str, session_id: str, messages: list) -> None:
+    """Persist a conversation session as a JSON file."""
+    d = _conversations_dir(profile_id)
+    session_file = d / f"{session_id}.json"
+    # Derive title from the first user message
+    first_user = next((m["content"] for m in messages if m.get("role") == "user"), "")
+    title = (first_user[:60] + "…") if len(first_user) > 60 else first_user
+    if not title:
+        title = "Conversation"
+    data = {
+        "session_id": session_id,
+        "profile_id": profile_id,
+        "title": title,
+        "created_at": session_id,  # session_id encodes the start timestamp
+        "updated_at": datetime.now().isoformat(),
+        "message_count": len(messages),
+        "messages": messages,
+    }
+    session_file.write_text(json.dumps(data, indent=2))
+
+
+def list_conversation_sessions(profile_id: str) -> list:
+    """List all conversation sessions for a profile, most-recent first."""
+    d = _conversations_dir(profile_id)
+    sessions = []
+    for f in sorted(d.glob("*.json"), reverse=True):
+        try:
+            data = json.loads(f.read_text())
+            sessions.append({
+                "session_id": data["session_id"],
+                "title": data.get("title", "Conversation"),
+                "created_at": data.get("created_at", ""),
+                "updated_at": data.get("updated_at", ""),
+                "message_count": data.get("message_count", 0),
+            })
+        except Exception:
+            continue
+    return sessions
+
+
+def load_conversation_session(profile_id: str, session_id: str) -> Optional[dict]:
+    """Load a specific conversation session by ID."""
+    d = _conversations_dir(profile_id)
+    session_file = d / f"{session_id}.json"
+    if not session_file.exists():
+        return None
+    try:
+        return json.loads(session_file.read_text())
+    except Exception:
+        return None
+
+
 def build_refinement_context(refinements: list[dict]) -> str:
     """Build a prompt-ready summary of all refinements.
 
@@ -559,7 +620,77 @@ TOPIC: {message}
 
 Write 2-3 paragraphs in this voice."""
 
-    else:  # dialogue (default)
+    elif command == "auto":
+        # ── Auto mode: natural dialogue + passive teaching detection ──
+        # The LLM responds as the voice, then appends a TEACH: classification tag.
+        # The tag is stripped from the visible response and used to auto-save refinements.
+        prompt = f"""You are learning and embodying a voice called "{voice_name}".
+
+{voice_text}
+
+{history_text}
+
+The teacher is talking to you. Respond naturally as this voice would — the way this
+specific person thinks and expresses themselves at their best. Be specific; use their
+rhythm, their words, their way of structuring thought. Respond in 2-4 paragraphs.
+
+After your full response, on a completely new line, write exactly one of these classification
+tags — nothing else after it:
+  TEACH:none         — pure conversation, exploration, questions
+  TEACH:correction   — they corrected something you wrote or said
+  TEACH:principle    — they stated a writing rule, habit, or approach this voice follows
+  TEACH:example      — they shared a writing sample or passage as a model
+  TEACH:voice        — they described a tone, register, or feeling they want
+  TEACH:never        — they described something this voice should always avoid
+
+TEACHER: {message}"""
+
+        raw = llm_call(prompt).strip()
+
+        # Parse and strip the TEACH tag
+        lines = raw.split("\n")
+        last = lines[-1].strip() if lines else ""
+        detected_type = None
+        if last.startswith("TEACH:"):
+            tag = last[6:].strip().lower()
+            response_text = "\n".join(lines[:-1]).strip()
+            _type_map = {
+                "correction": "correction",
+                "principle": "principle",
+                "example": "example",
+                "voice": "voice_note",
+                "never": "anti_pattern",
+            }
+            if tag in _type_map:
+                detected_type = _type_map[tag]
+                # Injection check before auto-saving
+                if not any(marker in _msg_lower for marker in _INJECTION_MARKERS):
+                    context = ""
+                    if tag == "correction" and conversation_history:
+                        for msg in reversed(conversation_history):
+                            if msg["role"] == "agent":
+                                context = msg["content"][:200]
+                                break
+                    refinement = {
+                        "type": detected_type,
+                        "content": message,
+                        "context": context,
+                        "timestamp": datetime.now().isoformat(),
+                        "session": load_profile(profile_id).refinement_count,
+                        "auto_detected": True,
+                    }
+                    save_refinement(profile_id, refinement)
+                    return {
+                        "response": response_text,
+                        "refinement_saved": True,
+                        "refinement_type": detected_type,
+                    }
+        else:
+            response_text = raw
+
+        return {"response": response_text, "refinement_saved": False, "refinement_type": None}
+
+    else:  # dialogue (explicit — kept for power users / advanced mode)
         prompt = f"""You are learning and embodying a voice called "{voice_name}".
 
 {voice_text}

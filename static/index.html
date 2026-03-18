@@ -98,8 +98,156 @@
     .content { flex: 1; display: flex; flex-direction: column; overflow: hidden; position: relative; }
 
     /* ── Chat / Teach ── */
-    .chat-container { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
-    .chat-messages { flex: 1; overflow-y: auto; padding: 24px 32px; }
+    .chat-container { flex: 1; display: flex; flex-direction: column; overflow: hidden; position: relative; }
+
+    /* ── Tools nav dropdown ── */
+    .topbar-nav { display: flex; align-items: center; gap: 4px; }
+    .tools-menu-wrap { position: relative; }
+    .tools-dropdown {
+      position: absolute; top: calc(100% + 6px); left: 0;
+      background: var(--bg-elevated); border: 1px solid var(--border);
+      border-radius: var(--radius); min-width: 120px; z-index: 200;
+      overflow: hidden; box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+    }
+    .tools-dropdown-item {
+      display: block; width: 100%; text-align: left;
+      background: none; border: none; padding: 10px 16px;
+      font-family: var(--font-sans); font-size: 13px;
+      color: var(--text-dim); cursor: pointer; transition: all 0.12s;
+    }
+    .tools-dropdown-item:hover { background: var(--bg-surface); color: var(--text); }
+    .tools-dropdown-item.active { color: var(--accent); }
+
+    /* ── Chat empty state ── */
+    .chat-empty {
+      position: absolute; top: 50%; left: 50%; transform: translate(-50%, -60%);
+      text-align: center; pointer-events: none; user-select: none;
+    }
+    .chat-empty-title {
+      font-size: 22px; color: var(--text-faint); font-family: var(--font);
+      margin-bottom: 12px; opacity: 0.7;
+    }
+    .chat-empty-hint {
+      font-size: 13px; color: var(--text-faint); font-family: var(--font-sans);
+      line-height: 1.7; opacity: 0.5; max-width: 340px;
+    }
+
+    /* ── Advanced toggle + footer ── */
+    .chat-input-footer {
+      display: flex; justify-content: flex-end; margin-top: 6px;
+    }
+    .chat-advanced-toggle {
+      background: none; border: none; cursor: pointer;
+      font-size: 11px; font-family: var(--font-sans);
+      color: var(--text-faint); padding: 0; letter-spacing: 0.03em;
+      transition: color 0.15s;
+    }
+    .chat-advanced-toggle:hover { color: var(--accent); }
+
+    /* ── Chat topbar (history / new) ── */
+    .chat-topbar {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 8px 32px 0; border-bottom: 1px solid var(--border);
+      background: var(--bg-surface);
+    }
+    .chat-history-btn, .chat-new-btn {
+      background: none; border: none; cursor: pointer;
+      font-size: 12px; font-family: var(--font-sans);
+      color: var(--text-faint); padding: 6px 0; transition: color 0.15s;
+    }
+    .chat-history-btn:hover, .chat-new-btn:hover { color: var(--accent); }
+    .chat-new-btn { color: var(--text-dim); }
+
+    /* ── Save-as-refinement inline button ── */
+    .msg-save-btn {
+      display: inline-block; margin-top: 8px;
+      background: none; border: 1px solid var(--border);
+      color: var(--text-faint); font-size: 11px; font-family: var(--font-sans);
+      padding: 3px 10px; border-radius: 10px; cursor: pointer;
+      transition: all 0.15s; letter-spacing: 0.03em;
+    }
+    .msg-save-btn:hover { border-color: var(--accent-dim); color: var(--accent); }
+
+    /* ── Save-as-refinement picker modal ── */
+    .refine-picker-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.55);
+      display: flex; align-items: center; justify-content: center; z-index: 300;
+    }
+    .refine-picker {
+      background: var(--bg-elevated); border: 1px solid var(--border);
+      border-radius: 12px; padding: 28px; width: 480px; max-width: 90vw;
+    }
+    .refine-picker-title {
+      font-size: 13px; font-family: var(--font-sans); font-weight: 600;
+      text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-faint);
+      margin-bottom: 16px;
+    }
+    .refine-picker-textarea {
+      width: 100%; box-sizing: border-box;
+      background: var(--bg-surface); border: 1px solid var(--border);
+      color: var(--text); padding: 12px 14px; border-radius: var(--radius);
+      font-family: var(--font); font-size: 14px; line-height: 1.6;
+      resize: vertical; outline: none; margin-bottom: 16px;
+    }
+    .refine-picker-textarea:focus { border-color: var(--accent-dim); }
+    .refine-picker-types { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
+    .refine-type-btn {
+      display: flex; align-items: baseline; gap: 10px;
+      background: var(--bg-surface); border: 1px solid var(--border);
+      padding: 10px 14px; border-radius: var(--radius); cursor: pointer;
+      text-align: left; transition: all 0.15s;
+    }
+    .refine-type-btn:hover { border-color: var(--accent-dim); background: var(--accent-glow); }
+    .refine-type-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .refine-type-label { font-size: 13px; font-weight: 600; color: var(--text); font-family: var(--font-sans); min-width: 90px; }
+    .refine-type-desc { font-size: 12px; color: var(--text-faint); font-family: var(--font-sans); }
+    .refine-picker-cancel {
+      background: none; border: none; cursor: pointer;
+      font-size: 12px; font-family: var(--font-sans); color: var(--text-faint);
+    }
+    .refine-picker-cancel:hover { color: var(--text-dim); }
+
+    /* ── Past conversations panel ── */
+    .past-conv-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.55);
+      display: flex; align-items: flex-start; justify-content: flex-end; z-index: 300;
+    }
+    .past-conv-panel {
+      background: var(--bg-elevated); border-left: 1px solid var(--border);
+      width: 360px; max-width: 90vw; height: 100vh;
+      display: flex; flex-direction: column; overflow: hidden;
+    }
+    .past-conv-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 20px 20px 16px; border-bottom: 1px solid var(--border);
+      font-size: 13px; font-family: var(--font-sans); font-weight: 600;
+      color: var(--text); text-transform: uppercase; letter-spacing: 0.07em;
+    }
+    .past-conv-close {
+      background: none; border: none; cursor: pointer;
+      color: var(--text-faint); font-size: 14px; padding: 2px 6px;
+    }
+    .past-conv-close:hover { color: var(--text); }
+    .past-conv-list { flex: 1; overflow-y: auto; padding: 8px 0; }
+    .past-conv-empty {
+      padding: 24px 20px; font-size: 13px; color: var(--text-faint);
+      font-family: var(--font-sans); line-height: 1.6;
+    }
+    .past-conv-item {
+      display: block; width: 100%; text-align: left;
+      background: none; border: none; border-bottom: 1px solid var(--border);
+      padding: 14px 20px; cursor: pointer; transition: background 0.12s;
+    }
+    .past-conv-item:hover { background: var(--bg-surface); }
+    .past-conv-item-title {
+      font-size: 14px; color: var(--text); margin-bottom: 4px;
+      font-family: var(--font); line-height: 1.4;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .past-conv-item-meta {
+      font-size: 11px; color: var(--text-faint); font-family: var(--font-sans);
+    }
+    .chat-messages { flex: 1; overflow-y: auto; padding: 24px 32px; position: relative; }
 
     .msg { margin-bottom: 24px; max-width: 720px; }
     .msg.user .msg-content { color: var(--text); }
@@ -863,38 +1011,194 @@ That's the version I'm trying to learn. Not how you write every day, but how you
 
 Tell me about a piece you're proud of — or describe how you want to sound when you're writing at your best. What does that version of your writing do that most writing doesn't?`;
 
+// ── Save-as-Refinement picker ──
+const REFINEMENT_TYPES = [
+  { key: "correct", label: "correction", desc: "Something I'd say differently" },
+  { key: "example", label: "example", desc: "A passage that shows my voice" },
+  { key: "principle", label: "principle", desc: "A rule I always follow" },
+  { key: "voice", label: "voice note", desc: "How I want to sound" },
+  { key: "never", label: "anti-pattern", desc: "Something to never do" },
+];
+
+function SaveRefinementPicker({ agentMsg, userMsg, profileId, onSaved, onClose }) {
+  const [saving, setSaving] = useState(false);
+  const [note, setNote] = useState(agentMsg || "");
+
+  const save = async (rtype) => {
+    setSaving(true);
+    try {
+      // Build a context-aware message: if userMsg available, prepend it
+      const fullMsg = userMsg
+        ? `Context — what I wrote or said: "${userMsg}"\n\nWhat I'd prefer / correction:\n${note}`
+        : note;
+      const history = userMsg
+        ? [{ role: "user", content: userMsg }, { role: "agent", content: agentMsg }]
+        : [];
+      const result = await api(`/profiles/${profileId}/teach`, {
+        method: "POST",
+        body: JSON.stringify({ message: fullMsg, command: rtype, conversation_history: history }),
+      });
+      toastSuccess(`${result.refinement_type} saved · ${result.refinement_count} total`);
+      onSaved && onSaved(result.refinement_count);
+      onClose();
+    } catch (e) {
+      toastError(e.message);
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="refine-picker-overlay" onClick={onClose}>
+      <div className="refine-picker" onClick={e => e.stopPropagation()}>
+        <div className="refine-picker-title">Save as refinement</div>
+        <textarea
+          className="refine-picker-textarea"
+          value={note}
+          onChange={e => setNote(e.target.value)}
+          placeholder="Edit to show exactly how you'd say it…"
+          rows={4}
+        />
+        <div className="refine-picker-types">
+          {REFINEMENT_TYPES.map(r => (
+            <button key={r.key} className="refine-type-btn" onClick={() => save(r.key)} disabled={saving}>
+              <span className="refine-type-label">{r.label}</span>
+              <span className="refine-type-desc">{r.desc}</span>
+            </button>
+          ))}
+        </div>
+        <button className="refine-picker-cancel" onClick={onClose}>cancel</button>
+      </div>
+    </div>
+  );
+}
+
+// ── Past Conversations panel ──
+function PastConversationsPanel({ profileId, onLoad, onClose }) {
+  const [sessions, setSessions] = useState(null);
+
+  useEffect(() => {
+    api(`/profiles/${profileId}/conversations`)
+      .then(r => setSessions(r.sessions))
+      .catch(() => setSessions([]));
+  }, [profileId]);
+
+  const load = async (sessionId) => {
+    try {
+      const data = await api(`/profiles/${profileId}/conversations/${sessionId}`);
+      onLoad(data.messages, sessionId);
+      onClose();
+    } catch (e) {
+      toastError("Couldn't load conversation");
+    }
+  };
+
+  const formatDate = (iso) => {
+    if (!iso) return "";
+    try {
+      return new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+    } catch { return iso.slice(0, 16).replace("T", " "); }
+  };
+
+  return (
+    <div className="past-conv-overlay" onClick={onClose}>
+      <div className="past-conv-panel" onClick={e => e.stopPropagation()}>
+        <div className="past-conv-header">
+          <span>Past conversations</span>
+          <button className="past-conv-close" onClick={onClose}>✕</button>
+        </div>
+        <div className="past-conv-list">
+          {sessions === null && <div className="past-conv-empty">Loading…</div>}
+          {sessions && sessions.length === 0 && (
+            <div className="past-conv-empty">No saved conversations yet. They'll appear here after your first exchange.</div>
+          )}
+          {sessions && sessions.map(s => (
+            <button key={s.session_id} className="past-conv-item" onClick={() => load(s.session_id)}>
+              <div className="past-conv-item-title">{s.title || "Conversation"}</div>
+              <div className="past-conv-item-meta">{formatDate(s.updated_at)} · {s.message_count} messages</div>
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function TeachView({ profileId, profileName, refinementCount, onRefinementSaved }) {
   const isNew = refinementCount === 0;
 
-  const [messages, setMessages] = useState(() =>
-    isNew ? [{ role: "agent", content: ONBOARDING_GREETING, isGreeting: true }] : []
-  );
+  // ── Session ID — one per mount, encodes start time ──
+  const [sessionId] = useState(() => new Date().toISOString().replace(/[:.]/g, "-"));
+
+  // ── Restore from localStorage on mount; reset when profile changes ──
+  const [messages, setMessages] = useState(() => {
+    try {
+      const saved = localStorage.getItem(`voice_conv_${profileId}`);
+      if (saved) {
+        const { sid, msgs } = JSON.parse(saved);
+        if (msgs && msgs.length > 0) return msgs;
+      }
+    } catch {}
+    return isNew ? [{ role: "agent", content: ONBOARDING_GREETING, isGreeting: true }] : [];
+  });
+
   const [input, setInput] = useState("");
-  const [command, setCommand] = useState("dialogue");
+  const [command, setCommand] = useState("auto");   // "auto" is the natural default
   const [loading, setLoading] = useState(false);
   const [showGuide, setShowGuide] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
+  const [advancedMode, setAdvancedMode] = useState(false);  // hidden by default
+  const [savingPicker, setSavingPicker] = useState(null); // { agentMsg, userMsg, idx }
   const messagesEnd = useRef(null);
   const textareaRef = useRef(null);
 
   // Count only real user turns (not the greeting)
   const userTurns = messages.filter(m => m.role === "user").length;
-  // Show command buttons once they've had a real exchange and the voice isn't brand new
-  const showCommands = !isNew || userTurns >= 3;
+  // Advanced mode shows explicit commands; in normal mode everything goes through "auto"
+  const effectiveCommand = advancedMode ? command : "auto";
 
+  // ── Scroll to bottom ──
   useEffect(() => { messagesEnd.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
+
+  // ── Reset on profile switch ──
   useEffect(() => {
-    const newIsNew = refinementCount === 0;
-    setMessages(newIsNew ? [{ role: "agent", content: ONBOARDING_GREETING, isGreeting: true }] : []);
+    try {
+      const saved = localStorage.getItem(`voice_conv_${profileId}`);
+      if (saved) {
+        const { msgs } = JSON.parse(saved);
+        if (msgs && msgs.length > 0) { setMessages(msgs); return; }
+      }
+    } catch {}
+    setMessages(refinementCount === 0 ? [{ role: "agent", content: ONBOARDING_GREETING, isGreeting: true }] : []);
   }, [profileId]);
+
+  // ── Persist to localStorage whenever messages change ──
+  useEffect(() => {
+    if (messages.length === 0) return;
+    try {
+      localStorage.setItem(`voice_conv_${profileId}`, JSON.stringify({ sid: sessionId, msgs: messages }));
+    } catch {}
+  }, [messages, profileId, sessionId]);
+
+  // ── Save to server (fire-and-forget after each AI response) ──
+  const saveToServer = (msgs) => {
+    const serializable = msgs
+      .filter(m => !m.isGreeting)
+      .map(m => ({ role: m.role, content: m.content, command: m.command || null }));
+    if (serializable.length === 0) return;
+    api(`/profiles/${profileId}/conversations`, {
+      method: "POST",
+      body: JSON.stringify({ session_id: sessionId, messages: serializable }),
+    }).catch(() => {}); // silent fail — localStorage is the safety net
+  };
 
   const send = async () => {
     if (!input.trim() || loading) return;
     const text = input.trim();
     setInput("");
 
-    // During onboarding keep command as dialogue
-    const activeCommand = showCommands ? command : "dialogue";
-    setMessages(prev => [...prev, { role: "user", content: text, command: activeCommand }]);
+    const activeCommand = effectiveCommand;
+    const nextMessages = [...messages, { role: "user", content: text, command: activeCommand }];
+    setMessages(nextMessages);
     setLoading(true);
 
     try {
@@ -903,7 +1207,6 @@ function TeachView({ profileId, profileName, refinementCount, onRefinementSaved 
         .slice(-8)
         .map(m => ({ role: m.role === "user" ? "user" : "agent", content: m.content }));
 
-      // Include the greeting in context so the AI knows what was asked
       if (isNew && userTurns === 0) {
         history.unshift({ role: "agent", content: ONBOARDING_GREETING });
       }
@@ -913,16 +1216,21 @@ function TeachView({ profileId, profileName, refinementCount, onRefinementSaved 
         body: JSON.stringify({ message: text, command: activeCommand, conversation_history: history }),
       });
       const saved = result.refinement_saved ? result.refinement_type : null;
-      setMessages(prev => [...prev, {
+      const withResponse = [...nextMessages, {
         role: "agent", content: result.response,
         refinement: saved, count: result.refinement_count,
-      }]);
+        // track the preceding user message index for save-as-refinement
+        prevUserIdx: nextMessages.length - 1,
+      }];
+      setMessages(withResponse);
+      saveToServer(withResponse);
       if (saved) {
         toastSuccess(`${saved} saved — ${result.refinement_count} total refinements`);
         onRefinementSaved && onRefinementSaved(result.refinement_count);
       }
     } catch (e) {
-      setMessages(prev => [...prev, { role: "agent", content: `Error: ${e.message}` }]);
+      const withErr = [...nextMessages, { role: "agent", content: `Error: ${e.message}` }];
+      setMessages(withErr);
       toastError(e.message);
     }
     setLoading(false);
@@ -939,22 +1247,76 @@ function TeachView({ profileId, profileName, refinementCount, onRefinementSaved 
     e.target.style.height = Math.min(e.target.scrollHeight, 200) + "px";
   };
 
+  const startNewConversation = () => {
+    // Save current session first, then reset
+    saveToServer(messages);
+    setMessages(refinementCount === 0 ? [{ role: "agent", content: ONBOARDING_GREETING, isGreeting: true }] : []);
+    localStorage.removeItem(`voice_conv_${profileId}`);
+  };
+
+  const loadSession = (msgs, sid) => {
+    // Hydrate loaded messages
+    const hydrated = msgs.map(m => ({ ...m, isGreeting: false }));
+    setMessages(hydrated);
+    try {
+      localStorage.setItem(`voice_conv_${profileId}`, JSON.stringify({ sid, msgs: hydrated }));
+    } catch {}
+  };
+
   return (
     <div className="chat-container">
+      {/* ── Top bar with history / new conversation ── */}
+      <div className="chat-topbar">
+        <button className="chat-history-btn" onClick={() => setShowHistory(true)}>
+          ↩ Past conversations
+        </button>
+        <button className="chat-new-btn" onClick={startNewConversation}>
+          + New
+        </button>
+      </div>
+
       <div className="chat-messages">
-        {messages.map((m, i) => (
-          <div key={i} className={`msg ${m.role}`}>
-            <div className="msg-label">
-              {m.role === "user"
-                ? (showCommands && m.command && m.command !== "dialogue" ? `/${m.command}` : "you")
-                : (m.isGreeting ? profileName : "voice")}
+        {/* Empty state — visible beneath the particle field */}
+        {messages.length === 0 && (
+          <div className="chat-empty">
+            <div className="chat-empty-title">Talk to this voice</div>
+            <div className="chat-empty-hint">
+              Tell it something — a line you love, a tone you want, a habit to avoid.<br />
+              It will listen, respond, and learn from what you say.
             </div>
-            <div className="msg-content" style={m.isGreeting ? { whiteSpace: "pre-line" } : {}}>
-              {m.content}
-            </div>
-            {m.refinement && <span className="msg-badge">{m.refinement} saved · {m.count} total</span>}
           </div>
-        ))}
+        )}
+        {messages.map((m, i) => {
+          const precedingUserMsg = m.prevUserIdx != null ? messages[m.prevUserIdx]?.content : null;
+          return (
+            <div key={i} className={`msg ${m.role}`}>
+              <div className="msg-label">
+                {m.role === "user"
+                  ? (advancedMode && m.command && m.command !== "auto" && m.command !== "dialogue" ? `/${m.command}` : "you")
+                  : (m.isGreeting ? profileName : "voice")}
+              </div>
+              <div className="msg-content" style={m.isGreeting ? { whiteSpace: "pre-line" } : {}}>
+                {m.content}
+              </div>
+              {m.refinement && (
+                <span className="msg-badge">
+                  {m.refinement === "saved" ? "noted" : `${m.refinement.replace("_", " ")} noted`}
+                  {m.count ? ` · ${m.count} total` : ""}
+                </span>
+              )}
+              {/* Save-as-refinement button — on agent messages that weren't already auto-saved */}
+              {m.role === "agent" && !m.isGreeting && !m.refinement && (
+                <button
+                  className="msg-save-btn"
+                  title="Save as a voice refinement"
+                  onClick={() => setSavingPicker({ agentMsg: m.content, userMsg: precedingUserMsg, idx: i })}
+                >
+                  save as refinement
+                </button>
+              )}
+            </div>
+          );
+        })}
         {loading && (
           <div className="msg agent">
             <div className="msg-label">voice</div>
@@ -965,44 +1327,45 @@ function TeachView({ profileId, profileName, refinementCount, onRefinementSaved 
       </div>
 
       <div className="chat-input-area">
-        {showCommands && (
-          <div>
-            <button className="cmd-guide-toggle" onClick={() => setShowGuide(g => !g)}>
-              {showGuide ? "hide command guide" : "what do these commands mean?"}
-            </button>
-            {showGuide && (
-              <div className="cmd-guide">
-                {COMMAND_GUIDE.map(c => (
-                  <div key={c.key} style={{ marginBottom: 4 }}>
-                    <strong>/{c.label}</strong> — {c.desc}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-        {showCommands && (
-          <div className="chat-commands">
-            {COMMAND_GUIDE.map(c => (
-              <button
-                key={c.key}
-                className={`cmd-btn ${command === c.key ? "active" : ""}`}
-                onClick={() => setCommand(c.key)}
-                title={c.desc}
-              >
-                /{c.label}
+        {/* Advanced mode: explicit command controls */}
+        {advancedMode && (
+          <>
+            <div className="chat-commands">
+              {COMMAND_GUIDE.map(c => (
+                <button
+                  key={c.key}
+                  className={`cmd-btn ${command === c.key ? "active" : ""}`}
+                  onClick={() => setCommand(c.key)}
+                  title={c.desc}
+                >
+                  /{c.label}
+                </button>
+              ))}
+            </div>
+            <div style={{ marginBottom: 8 }}>
+              <button className="cmd-guide-toggle" onClick={() => setShowGuide(g => !g)}>
+                {showGuide ? "hide guide" : "command guide"}
               </button>
-            ))}
-          </div>
+              {showGuide && (
+                <div className="cmd-guide">
+                  {COMMAND_GUIDE.map(c => (
+                    <div key={c.key} style={{ marginBottom: 4 }}>
+                      <strong>/{c.label}</strong> — {c.desc}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </>
         )}
         <div className="chat-input-row">
           <textarea
             ref={textareaRef}
             className="chat-textarea" rows={1}
             placeholder={
-              !showCommands
-                ? "Describe your writing, paste a sentence you love, or tell me what you never want to sound like…"
-                : command === "dialogue" ? "Talk to this voice..." : `/${command}: describe what you're teaching...`
+              advancedMode && command !== "auto" && command !== "dialogue"
+                ? `/${command}: describe what you're teaching...`
+                : "Talk to this voice…"
             }
             value={input} onChange={handleInput} onKeyDown={handleKeyDown}
           />
@@ -1010,7 +1373,35 @@ function TeachView({ profileId, profileName, refinementCount, onRefinementSaved 
             Send
           </button>
         </div>
+        <div className="chat-input-footer">
+          <button className="chat-advanced-toggle" onClick={() => { setAdvancedMode(a => !a); setCommand("auto"); }}>
+            {advancedMode ? "← natural mode" : "advanced ↗"}
+          </button>
+        </div>
       </div>
+
+      {showHistory && (
+        <PastConversationsPanel
+          profileId={profileId}
+          onLoad={loadSession}
+          onClose={() => setShowHistory(false)}
+        />
+      )}
+      {savingPicker && (
+        <SaveRefinementPicker
+          agentMsg={savingPicker.agentMsg}
+          userMsg={savingPicker.userMsg}
+          profileId={profileId}
+          onSaved={(count) => {
+            onRefinementSaved && onRefinementSaved(count);
+            // Mark the message as saved so the button disappears
+            setMessages(prev => prev.map((m, i) =>
+              i === savingPicker.idx ? { ...m, refinement: "saved", count } : m
+            ));
+          }}
+          onClose={() => setSavingPicker(null)}
+        />
+      )}
     </div>
   );
 }
@@ -2608,6 +2999,56 @@ function ParticleField() {
   );
 }
 
+// ── Tools Nav — primary tabs + Tools dropdown ──
+const TOOLS_TABS = [
+  { key: "analyze", label: "Analyze" },
+  { key: "upload",  label: "Upload" },
+  { key: "export",  label: "Export" },
+];
+
+function ToolsNav({ mode, setMode }) {
+  const [toolsOpen, setToolsOpen] = useState(false);
+  const toolsRef = React.useRef(null);
+  const toolsModeActive = TOOLS_TABS.some(t => t.key === mode);
+
+  // Close dropdown on outside click
+  React.useEffect(() => {
+    if (!toolsOpen) return;
+    const handler = (e) => { if (toolsRef.current && !toolsRef.current.contains(e.target)) setToolsOpen(false); };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [toolsOpen]);
+
+  return (
+    <div className="topbar-nav">
+      <button className={`topbar-btn ${mode === "home" ? "active" : ""}`} onClick={() => setMode("home")} title="Home">⌂</button>
+      <button className={`topbar-btn ${mode === "teach" ? "active" : ""}`} onClick={() => setMode("teach")}>Teach</button>
+      <button className={`topbar-btn ${mode === "write" ? "active" : ""}`} onClick={() => setMode("write")}>Write</button>
+      <div className="tools-menu-wrap" ref={toolsRef}>
+        <button
+          className={`topbar-btn ${toolsModeActive ? "active" : ""}`}
+          onClick={() => setToolsOpen(o => !o)}
+        >
+          Tools {toolsOpen ? "▲" : "▾"}
+        </button>
+        {toolsOpen && (
+          <div className="tools-dropdown">
+            {TOOLS_TABS.map(t => (
+              <button
+                key={t.key}
+                className={`tools-dropdown-item ${mode === t.key ? "active" : ""}`}
+                onClick={() => { setMode(t.key); setToolsOpen(false); }}
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ── Main App ──
 function App() {
   const [user, setUserState] = useState(getUser);
@@ -2731,14 +3172,7 @@ function App() {
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: "clamp(8px, 2vw, 24px)" }}>
           {activeProfile && !showCouncil && (
-            <div className="topbar-nav">
-              <button className={`topbar-btn ${mode === "home" ? "active" : ""}`} onClick={() => setMode("home")} title="Home">⌂</button>
-              <button className={`topbar-btn ${mode === "teach" ? "active" : ""}`} onClick={() => setMode("teach")}>Teach</button>
-              <button className={`topbar-btn ${mode === "write" ? "active" : ""}`} onClick={() => setMode("write")}>Write</button>
-              <button className={`topbar-btn ${mode === "analyze" ? "active" : ""}`} onClick={() => setMode("analyze")}>Analyze</button>
-              <button className={`topbar-btn ${mode === "upload" ? "active" : ""}`} onClick={() => setMode("upload")}>Upload</button>
-              <button className={`topbar-btn ${mode === "export" ? "active" : ""}`} onClick={() => setMode("export")}>Export</button>
-            </div>
+            <ToolsNav mode={mode} setMode={setMode} />
           )}
           <button
             className={`topbar-btn ${showCouncil ? "active" : ""}`}
