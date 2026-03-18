@@ -857,8 +857,16 @@ const COMMAND_GUIDE = [
 ];
 
 // ── Teach View (Chat) ──
-function TeachView({ profileId, onRefinementSaved }) {
-  const [messages, setMessages] = useState([]);
+const ONBOARDING_GREETING = `Before I can write like you, I need to understand how you think.
+
+Tell me about a piece of writing you're proud of — yours, not someone else's. Or if nothing comes to mind, just describe how you want to sound when you're writing at your best. What does your writing do that most writing doesn't?`;
+
+function TeachView({ profileId, profileName, refinementCount, onRefinementSaved }) {
+  const isNew = refinementCount === 0;
+
+  const [messages, setMessages] = useState(() =>
+    isNew ? [{ role: "agent", content: ONBOARDING_GREETING, isGreeting: true }] : []
+  );
   const [input, setInput] = useState("");
   const [command, setCommand] = useState("dialogue");
   const [loading, setLoading] = useState(false);
@@ -866,23 +874,41 @@ function TeachView({ profileId, onRefinementSaved }) {
   const messagesEnd = useRef(null);
   const textareaRef = useRef(null);
 
-  const commands = COMMAND_GUIDE;
+  // Count only real user turns (not the greeting)
+  const userTurns = messages.filter(m => m.role === "user").length;
+  // Show command buttons once they've had a real exchange and the voice isn't brand new
+  const showCommands = !isNew || userTurns >= 3;
 
   useEffect(() => { messagesEnd.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
-  useEffect(() => { setMessages([]); }, [profileId]);
+  useEffect(() => {
+    const newIsNew = refinementCount === 0;
+    setMessages(newIsNew ? [{ role: "agent", content: ONBOARDING_GREETING, isGreeting: true }] : []);
+  }, [profileId]);
 
   const send = async () => {
     if (!input.trim() || loading) return;
     const text = input.trim();
     setInput("");
-    setMessages(prev => [...prev, { role: "user", content: text, command }]);
+
+    // During onboarding keep command as dialogue
+    const activeCommand = showCommands ? command : "dialogue";
+    setMessages(prev => [...prev, { role: "user", content: text, command: activeCommand }]);
     setLoading(true);
 
     try {
-      const history = messages.slice(-6).map(m => ({ role: m.role === "user" ? "user" : "agent", content: m.content }));
+      const history = messages
+        .filter(m => !m.isGreeting)
+        .slice(-8)
+        .map(m => ({ role: m.role === "user" ? "user" : "agent", content: m.content }));
+
+      // Include the greeting in context so the AI knows what was asked
+      if (isNew && userTurns === 0) {
+        history.unshift({ role: "agent", content: ONBOARDING_GREETING });
+      }
+
       const result = await api(`/profiles/${profileId}/teach`, {
         method: "POST",
-        body: JSON.stringify({ message: text, command, conversation_history: history }),
+        body: JSON.stringify({ message: text, command: activeCommand, conversation_history: history }),
       });
       const saved = result.refinement_saved ? result.refinement_type : null;
       setMessages(prev => [...prev, {
@@ -905,7 +931,6 @@ function TeachView({ profileId, onRefinementSaved }) {
     if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); }
   };
 
-  // Auto-resize textarea
   const handleInput = (e) => {
     setInput(e.target.value);
     e.target.style.height = "auto";
@@ -915,25 +940,16 @@ function TeachView({ profileId, onRefinementSaved }) {
   return (
     <div className="chat-container">
       <div className="chat-messages">
-        {messages.length === 0 && (
-          <div style={{ padding: "40px 0", maxWidth: 600 }}>
-            <div style={{ color: "var(--text-dim)", marginBottom: 16, fontSize: 15 }}>
-              Teach this voice by telling it what makes your writing yours.
-            </div>
-            <div style={{ color: "var(--text-faint)", fontSize: 14, lineHeight: 1.7, fontFamily: "var(--font-sans)" }}>
-              Start with a <strong style={{ color: "var(--text-dim)" }}>/principle</strong> ("Sentences should be short and declarative"),
-              a <strong style={{ color: "var(--text-dim)" }}>/never</strong> ("Never use 'however' or transitional machinery"),
-              or an <strong style={{ color: "var(--text-dim)" }}>/example</strong> (paste a sentence you love).
-              Use <strong style={{ color: "var(--text-dim)" }}>/demo</strong> any time to see the voice in action.
-            </div>
-          </div>
-        )}
         {messages.map((m, i) => (
           <div key={i} className={`msg ${m.role}`}>
             <div className="msg-label">
-              {m.role === "user" ? (m.command ? `/${m.command}` : "you") : "voice"}
+              {m.role === "user"
+                ? (showCommands && m.command && m.command !== "dialogue" ? `/${m.command}` : "you")
+                : (m.isGreeting ? profileName : "voice")}
             </div>
-            <div className="msg-content">{m.content}</div>
+            <div className="msg-content" style={m.isGreeting ? { whiteSpace: "pre-line" } : {}}>
+              {m.content}
+            </div>
             {m.refinement && <span className="msg-badge">{m.refinement} saved · {m.count} total</span>}
           </div>
         ))}
@@ -947,37 +963,45 @@ function TeachView({ profileId, onRefinementSaved }) {
       </div>
 
       <div className="chat-input-area">
-        <div>
-          <button className="cmd-guide-toggle" onClick={() => setShowGuide(g => !g)}>
-            {showGuide ? "hide command guide" : "what do these commands mean?"}
-          </button>
-          {showGuide && (
-            <div className="cmd-guide">
-              {COMMAND_GUIDE.map(c => (
-                <div key={c.key} style={{ marginBottom: 4 }}>
-                  <strong>/{c.label}</strong> — {c.desc}
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-        <div className="chat-commands">
-          {commands.map(c => (
-            <button
-              key={c.key}
-              className={`cmd-btn ${command === c.key ? "active" : ""}`}
-              onClick={() => setCommand(c.key)}
-              title={c.desc}
-            >
-              /{c.label}
+        {showCommands && (
+          <div>
+            <button className="cmd-guide-toggle" onClick={() => setShowGuide(g => !g)}>
+              {showGuide ? "hide command guide" : "what do these commands mean?"}
             </button>
-          ))}
-        </div>
+            {showGuide && (
+              <div className="cmd-guide">
+                {COMMAND_GUIDE.map(c => (
+                  <div key={c.key} style={{ marginBottom: 4 }}>
+                    <strong>/{c.label}</strong> — {c.desc}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+        {showCommands && (
+          <div className="chat-commands">
+            {COMMAND_GUIDE.map(c => (
+              <button
+                key={c.key}
+                className={`cmd-btn ${command === c.key ? "active" : ""}`}
+                onClick={() => setCommand(c.key)}
+                title={c.desc}
+              >
+                /{c.label}
+              </button>
+            ))}
+          </div>
+        )}
         <div className="chat-input-row">
           <textarea
             ref={textareaRef}
             className="chat-textarea" rows={1}
-            placeholder={command === "dialogue" ? "Talk to this voice..." : `/${command}: describe what you're teaching...`}
+            placeholder={
+              !showCommands
+                ? "Describe your writing, paste a sentence you love, or tell me what you never want to sound like…"
+                : command === "dialogue" ? "Talk to this voice..." : `/${command}: describe what you're teaching...`
+            }
             value={input} onChange={handleInput} onKeyDown={handleKeyDown}
           />
           <button className="send-btn" onClick={send} disabled={loading || !input.trim()}>
@@ -2573,7 +2597,7 @@ function App() {
                 <HomeView profile={activeProfile} onMode={setMode} />
               )}
               <div style={{ display: mode === "teach" ? "contents" : "none", position: "relative", zIndex: 1 }}>
-                <TeachView profileId={activeProfile.profile_id} onRefinementSaved={handleRefinementSaved} />
+                <TeachView profileId={activeProfile.profile_id} profileName={activeProfile.name} refinementCount={activeProfile.refinement_count} onRefinementSaved={handleRefinementSaved} />
               </div>
               <div style={{ display: mode === "write" ? "contents" : "none", position: "relative", zIndex: 1 }}>
                 <WriteView profileId={activeProfile.profile_id} profileName={activeProfile.name} />
