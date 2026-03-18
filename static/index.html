@@ -857,9 +857,11 @@ const COMMAND_GUIDE = [
 ];
 
 // ── Teach View (Chat) ──
-const ONBOARDING_GREETING = `Before I can write like you, I need to understand how you think.
+const ONBOARDING_GREETING = `Most writers have a ceiling — a version of themselves that shows up when everything clicks. Your best sentence, your clearest paragraph, the piece you re-read and thought: that's actually what I meant.
 
-Tell me about a piece of writing you're proud of — yours, not someone else's. Or if nothing comes to mind, just describe how you want to sound when you're writing at your best. What does your writing do that most writing doesn't?`;
+That's the version I'm trying to learn. Not how you write every day, but how you write at your best.
+
+Tell me about a piece you're proud of — or describe how you want to sound when you're writing at your best. What does that version of your writing do that most writing doesn't?`;
 
 function TeachView({ profileId, profileName, refinementCount, onRefinementSaved }) {
   const isNew = refinementCount === 0;
