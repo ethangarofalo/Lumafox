@@ -19,7 +19,7 @@ from fastapi.responses import FileResponse
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel, Field
 
-from auth import register, login, verify_token, create_token, ensure_dirs as ensure_auth_dirs
+from auth import register, login, verify_token, create_token, refresh_token, ensure_dirs as ensure_auth_dirs
 from billing import (
     get_subscription, get_plan_limits, create_checkout_session,
     create_portal_session, handle_webhook,
@@ -243,6 +243,26 @@ async def get_me(user_id: str = Depends(get_current_user)):
     sub = get_subscription(user_id)
     limits = get_plan_limits(sub["plan"])
     return {"user_id": user_id, "plan": sub["plan"], "limits": limits}
+
+
+@app.post("/auth/refresh")
+async def refresh_session(
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+):
+    """Silently refresh a valid JWT token, extending the session.
+
+    Called on every page load. If the token is still valid, returns a new one
+    with a fresh expiry window. Front-end stores the new token, so the user
+    stays logged in indefinitely as long as they visit within the expiry window.
+    No auth dependency — the token IS the credential here.
+    """
+    token = credentials.token if credentials else None
+    if not token:
+        raise HTTPException(status_code=401, detail="No token provided")
+    result = refresh_token(token)
+    if not result:
+        raise HTTPException(status_code=401, detail="Token invalid or expired")
+    return result
 
 
 # ── Billing Endpoints ──

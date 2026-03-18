@@ -18,7 +18,7 @@ import jwt
 # ── Config ──
 
 SECRET_KEY = os.environ.get("JWT_SECRET", "voice-dev-secret-change-in-prod!")  # 32 bytes
-TOKEN_EXPIRY_HOURS = int(os.environ.get("TOKEN_EXPIRY_HOURS", "72"))
+TOKEN_EXPIRY_HOURS = int(os.environ.get("TOKEN_EXPIRY_HOURS", "720"))  # 30 days default
 ALGORITHM = "HS256"
 
 DATA_DIR = Path(os.environ.get("VOICE_DATA_DIR", Path(__file__).parent / "data"))
@@ -115,6 +115,29 @@ def verify_token(token: str) -> Optional[dict]:
         return None
     except jwt.InvalidTokenError:
         return None
+
+
+def refresh_token(token: str) -> Optional[dict]:
+    """Issue a fresh token for a still-valid existing token.
+
+    Returns {token, user_id, email} or None if the token is invalid/expired.
+    This is called silently on every page load to keep sessions alive indefinitely
+    as long as the user visits at least once per TOKEN_EXPIRY_HOURS window.
+    """
+    payload = verify_token(token)
+    if not payload:
+        return None
+    user_id = payload.get("sub")
+    email = payload.get("email")
+    if not user_id or not email:
+        return None
+    new_token = create_token(user_id, email)
+    # Load user record so we can return current profile info
+    user = _load_user(email)
+    user_public = {k: v for k, v in user.items() if k != "password_hash"} if user else {
+        "user_id": user_id, "email": email, "name": email.split("@")[0], "plan": "free"
+    }
+    return {"token": new_token, "user": user_public}
 
 
 # ── Convenience ──

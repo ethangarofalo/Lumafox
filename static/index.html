@@ -3074,14 +3074,41 @@ function App() {
     }
   }, []);
 
-  // Auto-create guest session if no token on first visit
+  // On every page load: silently refresh a real user's token to keep them logged in.
+  // If the token is missing or expired, fall back to a guest session instead.
   useEffect(() => {
-    if (!getToken()) {
+    const existing = getToken();
+    const storedUser = getUser();
+    const isRealUser = storedUser && !storedUser.user_id?.startsWith("guest-");
+
+    if (existing && isRealUser) {
+      // Silently refresh — extends expiry window so the session stays alive
+      fetch(`${API}/auth/refresh`, {
+        method: "POST",
+        headers: { "Authorization": `Bearer ${existing}`, "Content-Type": "application/json" },
+      })
+        .then(r => r.ok ? r.json() : Promise.reject(r.status))
+        .then(data => {
+          setToken(data.token);
+          setUser(data.user);
+          setUserState(data.user);
+        })
+        .catch(() => {
+          // Token expired or invalid — clear and create a guest session
+          clearToken(); clearUser();
+          fetch(`${API}/auth/guest`, { method: "POST", headers: { "Content-Type": "application/json" } })
+            .then(r => r.json())
+            .then(data => { setToken(data.token); setUser(data.user); setUserState(data.user); })
+            .catch(console.error);
+        });
+    } else if (!existing) {
+      // No token at all — create guest session
       fetch(`${API}/auth/guest`, { method: "POST", headers: { "Content-Type": "application/json" } })
         .then(r => r.json())
         .then(data => { setToken(data.token); setUser(data.user); setUserState(data.user); })
         .catch(console.error);
     }
+    // If existing token is a guest session, leave it as-is
   }, []);
 
   const loadProfiles = useCallback(async () => {
