@@ -155,6 +155,51 @@
       animation: fadeUp 0.8s ease forwards 1.0s;
     }
 
+    /* ── Swipe hint ── */
+    .swipe-hint {
+      position: fixed;
+      bottom: 28px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      z-index: 3;
+      opacity: 0;
+      animation: fadeUp 0.8s ease forwards 1.4s;
+      pointer-events: none;
+    }
+    .swipe-hint span {
+      font-family: var(--font-sans);
+      font-size: 10px;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--text-faint);
+    }
+    .swipe-arrow {
+      width: 18px;
+      height: 18px;
+      border-right: 1.5px solid var(--text-faint);
+      border-bottom: 1.5px solid var(--text-faint);
+      transform: rotate(45deg);
+      animation: bounce 1.6s ease-in-out infinite;
+    }
+    @keyframes bounce {
+      0%, 100% { transform: rotate(45deg) translateY(0); }
+      50%       { transform: rotate(45deg) translateY(5px); }
+    }
+
+    /* ── Page-exit slide ── */
+    @keyframes slideUp {
+      from { transform: translateY(0); opacity: 1; }
+      to   { transform: translateY(-60px); opacity: 0; }
+    }
+    body.exiting {
+      animation: slideUp 0.38s ease forwards;
+      pointer-events: none;
+    }
+
     /* Thin rule above/below, evokes the topbar style */
     .rule {
       position: fixed;
@@ -210,6 +255,11 @@
   </div>
 
   <div class="note">No account required to start</div>
+</div>
+
+<div class="swipe-hint">
+  <span>scroll</span>
+  <div class="swipe-arrow"></div>
 </div>
 
 <script>
@@ -293,6 +343,33 @@ function draw() {
 init();
 window.addEventListener('resize', init);
 draw();
+
+// ── Swipe / scroll to enter ──
+function goToApp() {
+  if (document.body.classList.contains('exiting')) return;
+  document.body.classList.add('exiting');
+  setTimeout(() => { window.location.href = '/app'; }, 360);
+}
+
+// Mouse wheel — single intentional downward scroll triggers it
+let wheelDelta = 0, wheelTimer;
+window.addEventListener('wheel', (e) => {
+  if (e.deltaY <= 0) { wheelDelta = 0; return; }
+  wheelDelta += e.deltaY;
+  clearTimeout(wheelTimer);
+  wheelTimer = setTimeout(() => { wheelDelta = 0; }, 400);
+  if (wheelDelta > 80) goToApp();
+}, { passive: true });
+
+// Touch swipe down → up gesture
+let touchStartY = null;
+window.addEventListener('touchstart', (e) => { touchStartY = e.touches[0].clientY; }, { passive: true });
+window.addEventListener('touchend', (e) => {
+  if (touchStartY === null) return;
+  const dy = touchStartY - e.changedTouches[0].clientY;
+  touchStartY = null;
+  if (dy > 60) goToApp(); // swiped up by 60px → navigate
+});
 </script>
 
 </body>
