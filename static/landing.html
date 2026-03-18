@@ -356,6 +356,53 @@
       text-decoration: none;
     }
 
+    /* ── Top nav ── */
+    .top-nav {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      height: 48px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 28px;
+      z-index: 11;
+      pointer-events: none;
+    }
+    .top-nav-links {
+      display: flex;
+      gap: 28px;
+      align-items: center;
+      pointer-events: all;
+      margin-left: auto;
+      margin-right: 0;
+    }
+    .top-nav-link {
+      font-family: var(--font-sans);
+      font-size: 10px;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: var(--text-faint);
+      text-decoration: none;
+      transition: color 0.15s;
+      cursor: pointer;
+      background: none;
+      border: none;
+      padding: 0;
+    }
+    .top-nav-link:hover { color: var(--accent); }
+    .top-nav-link.cta {
+      color: var(--accent);
+      border: 1px solid var(--accent-dim);
+      padding: 5px 14px;
+      border-radius: 20px;
+      letter-spacing: 0.15em;
+    }
+    .top-nav-link.cta:hover { background: var(--accent-glow, rgba(217,168,60,0.1)); }
+    @media (max-width: 560px) {
+      .top-nav-links { gap: 16px; }
+      .top-nav-link:not(.cta) { display: none; }
+    }
+
     @keyframes fadeUp {
       from { opacity: 0; transform: translateY(16px); }
       to   { opacity: 1; transform: translateY(0); }
@@ -573,7 +620,16 @@
 <div class="rule top"></div>
 <a href="/" class="corner-mark">Voice</a>
 
-<div class="hero">
+<nav class="top-nav">
+  <div class="top-nav-links">
+    <a href="#hero" class="top-nav-link">Introduction</a>
+    <a href="#use-cases" class="top-nav-link">Use Cases</a>
+    <a href="#about" class="top-nav-link">About</a>
+    <a href="/app" class="top-nav-link cta">Start free →</a>
+  </div>
+</nav>
+
+<div class="hero" id="hero">
   <div class="wordmark">V O I C E</div>
 
   <h1>Every writer has a voice.<br>Most never teach it to <em>anything</em>.</h1>
