@@ -2999,52 +2999,51 @@ function ParticleField() {
   );
 }
 
-// ── Tools Nav — primary tabs + Tools dropdown ──
-const TOOLS_TABS = [
-  { key: "analyze", label: "Analyze" },
-  { key: "upload",  label: "Upload" },
-  { key: "export",  label: "Export" },
+// ── Voice Nav — top-level dropdown, one of two halves of Lumafox ──
+const VOICE_MODES = [
+  { key: "teach",   label: "Teach",   desc: "Train the voice" },
+  { key: "write",   label: "Write",   desc: "Write in your voice" },
+  { key: "analyze", label: "Analyze", desc: "Score a draft" },
+  { key: "upload",  label: "Upload",  desc: "Import your writing" },
+  { key: "export",  label: "Export",  desc: "Export voice profile" },
 ];
 
-function ToolsNav({ mode, setMode }) {
-  const [toolsOpen, setToolsOpen] = useState(false);
-  const toolsRef = React.useRef(null);
-  const toolsModeActive = TOOLS_TABS.some(t => t.key === mode);
+function VoiceNav({ mode, setMode }) {
+  const [open, setOpen] = useState(false);
+  const ref = React.useRef(null);
+  const active = VOICE_MODES.some(m => m.key === mode) || mode === "home";
 
-  // Close dropdown on outside click
   React.useEffect(() => {
-    if (!toolsOpen) return;
-    const handler = (e) => { if (toolsRef.current && !toolsRef.current.contains(e.target)) setToolsOpen(false); };
+    if (!open) return;
+    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
-  }, [toolsOpen]);
+  }, [open]);
 
   return (
-    <div className="topbar-nav">
-      <button className={`topbar-btn ${mode === "home" ? "active" : ""}`} onClick={() => setMode("home")} title="Home">⌂</button>
-      <button className={`topbar-btn ${mode === "teach" ? "active" : ""}`} onClick={() => setMode("teach")}>Teach</button>
-      <button className={`topbar-btn ${mode === "write" ? "active" : ""}`} onClick={() => setMode("write")}>Write</button>
-      <div className="tools-menu-wrap" ref={toolsRef}>
-        <button
-          className={`topbar-btn ${toolsModeActive ? "active" : ""}`}
-          onClick={() => setToolsOpen(o => !o)}
-        >
-          Tools {toolsOpen ? "▲" : "▾"}
-        </button>
-        {toolsOpen && (
-          <div className="tools-dropdown">
-            {TOOLS_TABS.map(t => (
-              <button
-                key={t.key}
-                className={`tools-dropdown-item ${mode === t.key ? "active" : ""}`}
-                onClick={() => { setMode(t.key); setToolsOpen(false); }}
-              >
-                {t.label}
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
+    <div className="tools-menu-wrap" ref={ref} style={{ position: "relative" }}>
+      <button
+        className={`topbar-btn ${active ? "active" : ""}`}
+        onClick={() => setOpen(o => !o)}
+        style={{ letterSpacing: "0.04em" }}
+      >
+        Voice {open ? "▲" : "▾"}
+      </button>
+      {open && (
+        <div className="tools-dropdown" style={{ minWidth: 160 }}>
+          {VOICE_MODES.map(m => (
+            <button
+              key={m.key}
+              className={`tools-dropdown-item ${mode === m.key ? "active" : ""}`}
+              onClick={() => { setMode(m.key); setOpen(false); }}
+              style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 1 }}
+            >
+              <span>{m.label}</span>
+              <span style={{ fontSize: 10, opacity: 0.5, fontWeight: 400 }}>{m.desc}</span>
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -3198,38 +3197,19 @@ function App() {
           </button>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: "clamp(8px, 2vw, 24px)" }}>
-          {activeProfile && !showCouncil && (
-            <ToolsNav mode={mode} setMode={setMode} />
-          )}
-          {activeProfile && (
-            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              {showCouncil && (
-                <button
-                  className="topbar-btn"
-                  onClick={() => { setShowCouncil(false); setMobileSidebarOpen(false); }}
-                >
-                  Voice
-                </button>
-              )}
-              <span style={{ color: "var(--border)", fontSize: 16, fontWeight: 100, userSelect: "none", opacity: 0.6 }}>|</span>
-              <button
-                className={`topbar-btn ${showCouncil ? "active" : ""}`}
-                onClick={() => { setShowCouncil(c => !c); setMobileSidebarOpen(false); }}
-                style={{ fontStyle: "italic" }}
-              >
-                Council
-              </button>
-            </div>
-          )}
-          {!activeProfile && (
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            {activeProfile && (
+              <VoiceNav mode={mode} setMode={(m) => { setMode(m); setShowCouncil(false); setMobileSidebarOpen(false); }} />
+            )}
+            <span style={{ color: "var(--border)", fontSize: 16, fontWeight: 100, userSelect: "none", opacity: 0.4 }}>|</span>
             <button
               className={`topbar-btn ${showCouncil ? "active" : ""}`}
               onClick={() => { setShowCouncil(c => !c); setMobileSidebarOpen(false); }}
-              style={{ fontStyle: "italic" }}
+              style={{ fontStyle: "italic", letterSpacing: "0.04em" }}
             >
               Council
             </button>
-          )}
+          </div>
           {isGuest ? (
             <div className="user-badge">
               <span className="topbar-guest-label" style={{ color: "var(--text-faint)" }}>Guest</span>
