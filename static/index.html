@@ -4,6 +4,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Lumafox</title>
+  <link rel="icon" type="image/x-icon" href="/static/favicon.ico">
+  <link rel="apple-touch-icon" href="/static/lumafox-icon.png">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.9/babel.min.js"></script>
@@ -2196,7 +2198,10 @@ function AuthPage({ onAuth }) {
   return (
     <div className="auth-page">
       <div className="auth-card">
-        <div className="auth-logo">Lumafox</div>
+        <div className="auth-logo" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10 }}>
+          <img src="/static/lumafox-icon.png" alt="Lumafox" style={{ height: 42, width: "auto" }} />
+          <span>Lumafox</span>
+        </div>
         <div className="auth-sub">
           {isLogin ? "Sign in to your account" : "Create your account"}
         </div>
@@ -3696,7 +3701,10 @@ function App() {
       {/* Top bar */}
       <div className="topbar">
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <div className="topbar-logo">Lumafox</div>
+          <div className="topbar-logo" style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <img src="/static/lumafox-icon.png" alt="Lumafox" style={{ height: 34, width: "auto", display: "block" }} />
+            <span>Lumafox</span>
+          </div>
           {/* Mobile: toggle sidebar */}
           <button
             className={`mobile-voices-btn ${mobileSidebarOpen ? "open" : ""}`}
