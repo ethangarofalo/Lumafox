@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Luxa</title>
+  <title>Lumafox</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.9/babel.min.js"></script>
@@ -1931,7 +1931,7 @@ function AuthPage({ onAuth }) {
   return (
     <div className="auth-page">
       <div className="auth-card">
-        <div className="auth-logo">Luxa</div>
+        <div className="auth-logo">Lumafox</div>
         <div className="auth-sub">
           {isLogin ? "Sign in to your account" : "Create your account"}
         </div>
@@ -3188,7 +3188,7 @@ function App() {
       {/* Top bar */}
       <div className="topbar">
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <div className="topbar-logo">Luxa</div>
+          <div className="topbar-logo">Lumafox</div>
           {/* Mobile: toggle sidebar */}
           <button
             className={`mobile-voices-btn ${mobileSidebarOpen ? "open" : ""}`}
@@ -3201,13 +3201,35 @@ function App() {
           {activeProfile && !showCouncil && (
             <ToolsNav mode={mode} setMode={setMode} />
           )}
-          <button
-            className={`topbar-btn ${showCouncil ? "active" : ""}`}
-            onClick={() => { setShowCouncil(c => !c); setMobileSidebarOpen(false); }}
-            style={{ fontStyle: "italic" }}
-          >
-            Council
-          </button>
+          {activeProfile && (
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              {showCouncil && (
+                <button
+                  className="topbar-btn"
+                  onClick={() => { setShowCouncil(false); setMobileSidebarOpen(false); }}
+                >
+                  Voice
+                </button>
+              )}
+              <span style={{ color: "var(--border)", fontSize: 16, fontWeight: 100, userSelect: "none", opacity: 0.6 }}>|</span>
+              <button
+                className={`topbar-btn ${showCouncil ? "active" : ""}`}
+                onClick={() => { setShowCouncil(c => !c); setMobileSidebarOpen(false); }}
+                style={{ fontStyle: "italic" }}
+              >
+                Council
+              </button>
+            </div>
+          )}
+          {!activeProfile && (
+            <button
+              className={`topbar-btn ${showCouncil ? "active" : ""}`}
+              onClick={() => { setShowCouncil(c => !c); setMobileSidebarOpen(false); }}
+              style={{ fontStyle: "italic" }}
+            >
+              Council
+            </button>
+          )}
           {isGuest ? (
             <div className="user-badge">
               <span className="topbar-guest-label" style={{ color: "var(--text-faint)" }}>Guest</span>
@@ -3235,7 +3257,10 @@ function App() {
         {/* Sidebar */}
         <div className={`sidebar ${mobileSidebarOpen ? "mobile-open" : ""}`}>
           <div className="sidebar-header">
-            <div className="sidebar-title">Voices</div>
+            <div className="sidebar-title" style={{ letterSpacing: "0.05em" }}>
+              <span style={{ color: "var(--accent)", opacity: 0.7, fontSize: 10, textTransform: "uppercase", letterSpacing: "0.15em", display: "block", marginBottom: 2 }}>Lumafox</span>
+              Voice
+            </div>
           </div>
           <div className="sidebar-list">
             {profiles.map(p => (
