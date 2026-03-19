@@ -77,20 +77,10 @@
       align-items: center;
       justify-content: center;
       text-align: center;
-      padding: 40px 24px;
+      padding: 80px 24px 40px;
     }
 
-    .wordmark {
-      font-family: var(--font-sans);
-      font-size: 11px;
-      font-weight: 500;
-      letter-spacing: 0.45em;
-      text-transform: uppercase;
-      color: var(--accent);
-      margin-bottom: 52px;
-      opacity: 0;
-      animation: fadeUp 0.8s ease forwards 0.2s;
-    }
+    .wordmark { display: none; }
 
     h1 {
       font-family: var(--font);
@@ -357,13 +347,14 @@
 
     .corner-mark {
       position: fixed;
-      top: 18px;
+      top: 16px;
       left: 28px;
       font-family: var(--font-sans);
-      font-size: 10px;
-      letter-spacing: 0.3em;
+      font-size: 14px;
+      font-weight: 600;
+      letter-spacing: 0.22em;
       text-transform: uppercase;
-      color: var(--text-faint);
+      color: var(--accent);
       z-index: 11;
       text-decoration: none;
     }
@@ -948,7 +939,7 @@ function draw() {
         cell.char = CHARS[Math.floor(Math.random() * CHARS.length)];
         cell.tick = 0;
       }
-      const alpha = 0.045 + glow * 0.88;
+      const alpha = 0.10 + glow * 0.92;
       ctx.fillStyle = `rgba(${R},${G},${B},${alpha})`;
       ctx.fillText(cell.char, col * FONT_SIZE, row * FONT_SIZE + FONT_SIZE);
     }
