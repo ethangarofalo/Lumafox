@@ -75,6 +75,35 @@
       display: flex; justify-content: space-between; align-items: center;
     }
     .sidebar-title { font-size: 13px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.1em; font-family: var(--font-sans); }
+
+    /* ── Sidebar product tabs ── */
+    .sidebar-product-tabs {
+      display: flex; border-bottom: 1px solid var(--border); padding: 0 8px; gap: 4px;
+    }
+    .sidebar-product-tab {
+      flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px;
+      padding: 12px 4px; background: none; border: none;
+      border-bottom: 2px solid transparent; color: var(--text-dim);
+      font-size: 11px; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase;
+      cursor: pointer; transition: color 0.2s, border-color 0.2s; margin-bottom: -1px;
+      font-family: var(--font-sans);
+    }
+    .sidebar-product-tab:hover { color: var(--text); }
+    .sidebar-product-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+    /* ── Council graph tooltip ── */
+    .council-graph-wrap { position: relative; display: inline-block; }
+    .council-node-tooltip {
+      position: absolute; background: rgba(16,14,10,0.97); border: 1px solid var(--accent-dim);
+      border-radius: 8px; padding: 10px 14px; pointer-events: none; z-index: 20;
+      min-width: 190px; max-width: 250px; box-shadow: 0 4px 24px rgba(0,0,0,0.6);
+    }
+    .council-node-tooltip-name { font-size: 13px; font-weight: 600; color: var(--accent); margin-bottom: 2px; }
+    .council-node-tooltip-meta { font-size: 10px; color: var(--text-dim); margin-bottom: 6px; letter-spacing: 0.05em; text-transform: uppercase; font-family: var(--font-sans); }
+    .council-node-tooltip-quote { font-size: 11px; color: var(--text); line-height: 1.55; font-style: italic; opacity: 0.85; }
+
+    /* ── Voice wave background overlay ── */
+    .voice-wave-bg { pointer-events: none; position: absolute; inset: 0; overflow: hidden; z-index: 0; opacity: 0.5; }
     .sidebar-list { flex: 1; overflow-y: auto; padding: 8px; }
 
     .profile-card {
@@ -688,6 +717,81 @@
     @media (min-width: 641px) {
       .sidebar-backdrop { display: none !important; }
     }
+
+    /* ── Sidebar product tabs (Voice / Council) ── */
+    .sidebar-product-tabs {
+      display: flex;
+      border-bottom: 1px solid var(--border);
+      padding: 0 8px;
+      gap: 4px;
+    }
+    .sidebar-product-tab {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 12px 4px;
+      background: none;
+      border: none;
+      border-bottom: 2px solid transparent;
+      color: var(--text-dim);
+      font-size: 12px;
+      font-weight: 500;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: color 0.2s, border-color 0.2s;
+      margin-bottom: -1px;
+    }
+    .sidebar-product-tab:hover { color: var(--text); }
+    .sidebar-product-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+    /* ── Council graph wrap & tooltip ── */
+    .council-graph-wrap { position: relative; display: inline-block; }
+    .council-node-tooltip {
+      position: absolute;
+      background: rgba(20,18,14,0.95);
+      border: 1px solid var(--accent-dim);
+      border-radius: 8px;
+      padding: 10px 14px;
+      pointer-events: none;
+      z-index: 10;
+      min-width: 180px;
+      max-width: 240px;
+    }
+    .council-node-tooltip-name { font-size: 13px; font-weight: 600; color: var(--accent); margin-bottom: 2px; }
+    .council-node-tooltip-meta { font-size: 10px; color: var(--text-dim); margin-bottom: 6px; letter-spacing: 0.05em; }
+    .council-node-tooltip-quote { font-size: 11px; color: var(--text); line-height: 1.5; font-style: italic; }
+
+    /* ── Voice content area wave background ── */
+    .voice-content-bg::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1200' height='200' viewBox='0 0 1200 200'%3E%3Cpath d='M0,100 C150,60 300,140 450,100 C600,60 750,140 900,100 C1050,60 1150,140 1200,100' stroke='%23c8a46e' stroke-width='0.5' fill='none' opacity='0.06'/%3E%3Cpath d='M0,100 C100,70 200,130 300,100 C400,70 500,130 600,100 C700,70 800,130 900,100 C1000,70 1100,130 1200,100' stroke='%23c8a46e' stroke-width='0.3' fill='none' opacity='0.04'/%3E%3C/svg%3E");
+      background-repeat: repeat-x;
+      background-position: 50% 85%;
+      z-index: 0;
+    }
+
+    /* ── Inline Council panel (summon the council) ── */
+    .inline-council-panel {
+      margin: 16px 0;
+      padding: 16px 18px;
+      background: var(--bg-elevated);
+      border: 1px solid var(--accent-dim);
+      border-radius: var(--radius-lg);
+    }
+    .inline-council-label {
+      font-size: 10px; font-family: var(--font-sans); text-transform: uppercase;
+      letter-spacing: 0.2em; color: var(--accent); margin-bottom: 10px;
+    }
+    .inline-council-result {
+      font-family: var(--font); font-size: 14px; color: var(--text);
+      line-height: 1.75; white-space: pre-wrap; margin-top: 12px;
+    }
   </style>
 </head>
 <body>
@@ -1010,6 +1114,69 @@ const COMMAND_GUIDE = [
   { key: "examine", label: "examine", desc: "Paste text and ask the voice to analyze it against your style." },
 ];
 
+// ── Inline Council Panel — summoned from Voice chat ──
+function InlineCouncilPanel({ question, onClose }) {
+  const [q, setQ] = React.useState(question || "");
+  const [result, setResult] = React.useState(null);
+  const [loading, setLoading] = React.useState(false);
+  const [error, setError] = React.useState("");
+
+  const convene = async () => {
+    if (!q.trim()) return;
+    setLoading(true); setError(""); setResult(null);
+    try {
+      const r = await api("/council", {
+        method: "POST",
+        body: JSON.stringify({ question: q, mode: "ethics", thinkers: ["Socrates", "Aristotle", "Machiavelli", "John Locke", "Jesus", "William James"] }),
+      });
+      setResult(r);
+    } catch (e) {
+      setError(e.limitData ? e.limitData.message : e.message);
+    }
+    setLoading(false);
+  };
+
+  return (
+    <div style={{ margin: "0 32px 12px", border: "1px solid var(--accent-dim)", borderRadius: 10, background: "rgba(200,164,110,0.04)", overflow: "hidden" }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 16px", borderBottom: "1px solid var(--border)" }}>
+        <span style={{ fontSize: 11, color: "var(--accent)", letterSpacing: "0.12em", textTransform: "uppercase", fontFamily: "var(--font-sans)" }}>
+          ⚖️ Council summoned
+        </span>
+        <button onClick={onClose} style={{ background: "none", border: "none", color: "var(--text-dim)", cursor: "pointer", fontSize: 16 }}>×</button>
+      </div>
+      {!result && (
+        <div style={{ padding: "12px 16px", display: "flex", gap: 8 }}>
+          <input
+            value={q} onChange={e => setQ(e.target.value)}
+            onKeyDown={e => e.key === "Enter" && convene()}
+            placeholder="What should the council deliberate on?"
+            style={{ flex: 1, background: "var(--bg-hover)", border: "1px solid var(--border)", borderRadius: 6, padding: "8px 12px", color: "var(--text)", fontSize: 13, fontFamily: "var(--font-sans)" }}
+          />
+          <button onClick={convene} disabled={loading}
+            style={{ background: "var(--accent)", color: "#000", border: "none", borderRadius: 6, padding: "8px 16px", cursor: loading ? "default" : "pointer", fontSize: 13, fontWeight: 600, fontFamily: "var(--font-sans)" }}>
+            {loading ? "…" : "Convene →"}
+          </button>
+        </div>
+      )}
+      {error && <div style={{ padding: "10px 16px", color: "var(--error, #e07070)", fontSize: 12 }}>{error}</div>}
+      {result && (
+        <div style={{ padding: "12px 16px", maxHeight: 280, overflowY: "auto" }}>
+          <div style={{ fontSize: 13, color: "var(--text)", lineHeight: 1.65, marginBottom: 10 }}>{result.synthesis}</div>
+          {result.thinkers?.slice(0, 3).map((t, i) => (
+            <div key={i} style={{ marginBottom: 8, padding: "8px 10px", background: "var(--bg-hover)", borderRadius: 6 }}>
+              <div style={{ fontSize: 11, color: "var(--accent)", marginBottom: 3, fontFamily: "var(--font-sans)" }}>{t.name}</div>
+              <div style={{ fontSize: 12, color: "var(--text-dim)", lineHeight: 1.5 }}>{t.position}</div>
+            </div>
+          ))}
+          <button onClick={() => { setResult(null); setQ(""); }} style={{ marginTop: 4, background: "none", border: "none", color: "var(--text-dim)", fontSize: 11, cursor: "pointer", fontFamily: "var(--font-sans)" }}>
+            Ask again
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Teach View (Chat) ──
 const ONBOARDING_GREETING = `Most writers have a ceiling — a version of themselves that shows up when everything clicks. Your best sentence, your clearest paragraph, the piece you re-read and thought: that's actually what I meant.
 
@@ -1154,6 +1321,7 @@ function TeachView({ profileId, profileName, refinementCount, onRefinementSaved 
   const [showHistory, setShowHistory] = useState(false);
   const [advancedMode, setAdvancedMode] = useState(false);  // hidden by default
   const [savingPicker, setSavingPicker] = useState(null); // { agentMsg, userMsg, idx }
+  const [inlineCouncil, setInlineCouncil] = useState(null); // { question } — triggered by "summon the council"
   const messagesEnd = useRef(null);
   const textareaRef = useRef(null);
 
@@ -1201,6 +1369,18 @@ function TeachView({ profileId, profileName, refinementCount, onRefinementSaved 
     if (!input.trim() || loading) return;
     const text = input.trim();
     setInput("");
+
+    // ── "Summon the council" intercept ──
+    const councilTrigger = /summon\s+the\s+council(?:\s+on\s+this)?/i;
+    if (councilTrigger.test(text)) {
+      const question = text.replace(councilTrigger, "").replace(/^[\s,.:]+|[\s,.:]+$/g, "").trim();
+      setInlineCouncil({ question: question || text });
+      const summonMsg = [...messages, { role: "user", content: text, command: "auto" },
+        { role: "agent", content: "⚖️ The council has been summoned.", isSummon: true }];
+      setMessages(summonMsg);
+      setLoading(false);
+      return;
+    }
 
     const activeCommand = effectiveCommand;
     const nextMessages = [...messages, { role: "user", content: text, command: activeCommand }];
@@ -1331,6 +1511,14 @@ function TeachView({ profileId, profileName, refinementCount, onRefinementSaved 
         )}
         <div ref={messagesEnd} />
       </div>
+
+      {/* ── Inline Council Panel — summoned from chat ── */}
+      {inlineCouncil && (
+        <InlineCouncilPanel
+          question={inlineCouncil.question}
+          onClose={() => setInlineCouncil(null)}
+        />
+      )}
 
       <div className="chat-input-area">
         {/* Advanced mode: explicit command controls */}
@@ -1987,10 +2175,22 @@ const TRADITION_LABEL = {
   "William James": "Pragmatist",
 };
 
+const THINKER_BIOS = {
+  "Socrates":      { dates: "470–399 BC", tradition: "Socratic · Athens", quote: "The unexamined life is not worth living." },
+  "Aristotle":     { dates: "384–322 BC", tradition: "Aristotelian · Athens", quote: "We are what we repeatedly do. Excellence is a habit." },
+  "Machiavelli":   { dates: "1469–1527", tradition: "Political Realism · Florence", quote: "It is better to be feared than loved, if you cannot be both." },
+  "John Locke":    { dates: "1632–1704", tradition: "Liberal Empiricism · England", quote: "No man's knowledge can go beyond his experience." },
+  "Jesus":         { dates: "c. 4 BC–AD 30", tradition: "Christian Ethics · Galilee", quote: "Love your neighbor as yourself." },
+  "William James": { dates: "1842–1910", tradition: "Pragmatism · Harvard", quote: "Act as if what you do makes a difference. It does." },
+};
+
 function NeuralCanvas({ thinkers, size = 340, active = false }) {
   const canvasRef = React.useRef(null);
   const animRef = React.useRef(null);
   const stateRef = React.useRef(null);
+  const [hoveredNode, setHoveredNode] = React.useState(null);
+  const [focusedNode, setFocusedNode] = React.useState(null);
+  const [tooltipPos, setTooltipPos] = React.useState({ x: 0, y: 0 });
 
   React.useEffect(() => {
     const canvas = canvasRef.current;
@@ -2017,7 +2217,7 @@ function NeuralCanvas({ thinkers, size = 340, active = false }) {
       };
     });
 
-    // All edges between nodes
+    // All edges between nodes — with draw-in animation progress
     const edges = [];
     for (let i = 0; i < nodes.length; i++) {
       for (let j = i + 1; j < nodes.length; j++) {
@@ -2026,7 +2226,7 @@ function NeuralCanvas({ thinkers, size = 340, active = false }) {
         const dist = Math.sqrt(dx * dx + dy * dy);
         // Skip edges that cross the center too far (keeps it from looking like a web)
         if (dist < R * 2.1) {
-          edges.push({ a: i, b: j, dist });
+          edges.push({ a: i, b: j, dist, drawProgress: 0 });
         }
       }
     }
@@ -2061,14 +2261,21 @@ function NeuralCanvas({ thinkers, size = 340, active = false }) {
       // Spawn new signals periodically
       if (frame % (active ? 18 : 60) === 0) spawnSignal();
 
-      // Draw edges
-      edges.forEach(({ a, b }) => {
-        const na = nodes[a], nb = nodes[b];
+      // Draw edges — animate draw-in for first ~60 frames
+      edges.forEach(edge => {
+        if (edge.drawProgress < 1) edge.drawProgress = Math.min(1, edge.drawProgress + 0.028);
+        const na = nodes[edge.a], nb = nodes[edge.b];
+        const tx = na.x + (nb.x - na.x) * edge.drawProgress;
+        const ty = na.y + (nb.y - na.y) * edge.drawProgress;
         ctx.beginPath();
         ctx.moveTo(na.x, na.y);
-        ctx.lineTo(nb.x, nb.y);
-        ctx.strokeStyle = "rgba(60,55,50,0.55)";
-        ctx.lineWidth = 0.8;
+        ctx.lineTo(tx, ty);
+        // Gold tint while drawing in, then fade to dim
+        const goldFade = 1 - edge.drawProgress;
+        ctx.strokeStyle = goldFade > 0
+          ? `rgba(200,164,110,${0.6 * goldFade + 0.12})`
+          : "rgba(60,55,50,0.55)";
+        ctx.lineWidth = goldFade > 0 ? 1.2 : 0.8;
         ctx.stroke();
       });
 
@@ -2111,11 +2318,17 @@ function NeuralCanvas({ thinkers, size = 340, active = false }) {
       }
 
       // Draw nodes
-      nodes.forEach(node => {
+      const hIdx = stateRef.current?.hoveredNodeIdx ?? -1;
+      const fIdx = stateRef.current?.focusedNodeIdx ?? -1;
+      nodes.forEach((node, ni) => {
         node.pulsePhase += node.pulseSpeed;
         const pulse = Math.sin(node.pulsePhase) * 0.5 + 0.5;
         node.glowIntensity = Math.max(0, node.glowIntensity - 0.02);
-        const glow = node.glowIntensity + (active ? pulse * 0.4 : pulse * 0.15);
+        const isHovered = ni === hIdx;
+        const isFocused = ni === fIdx;
+        const boost = isHovered ? 0.7 : isFocused ? 0.9 : 0;
+        if (isFocused) node.glowIntensity = Math.min(1, node.glowIntensity + 0.05);
+        const glow = node.glowIntensity + (active ? pulse * 0.4 : pulse * 0.15) + boost;
 
         // Outer glow ring
         const outerR = node.radius + 4 + glow * 6;
@@ -2148,9 +2361,70 @@ function NeuralCanvas({ thinkers, size = 340, active = false }) {
     return () => { if (animRef.current) cancelAnimationFrame(animRef.current); };
   }, [thinkers.join(","), active, size]);
 
+  const handleMouseMove = (e) => {
+    if (!stateRef.current) return;
+    const canvas = canvasRef.current;
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = size / rect.width;
+    const scaleY = size / rect.height;
+    const mx = (e.clientX - rect.left) * scaleX;
+    const my = (e.clientY - rect.top) * scaleY;
+    const nodes = stateRef.current.nodes;
+    let closest = -1, closestDist = 22;
+    nodes.forEach((n, i) => {
+      const d = Math.sqrt((n.x - mx) ** 2 + (n.y - my) ** 2);
+      if (d < closestDist) { closestDist = d; closest = i; }
+    });
+    stateRef.current.hoveredNodeIdx = closest;
+    setHoveredNode(closest === -1 ? null : closest);
+    if (closest !== -1) {
+      const n = nodes[closest];
+      const sx = n.x / scaleX / (size / rect.width);
+      const sy = n.y / scaleY / (size / rect.height);
+      setTooltipPos({ x: rect.left + n.x * (rect.width / size), y: rect.top + n.y * (rect.height / size) });
+    }
+  };
+
+  const handleMouseLeave = () => {
+    if (stateRef.current) stateRef.current.hoveredNodeIdx = -1;
+    setHoveredNode(null);
+  };
+
+  const handleClick = () => {
+    if (hoveredNode === null) { setFocusedNode(null); if (stateRef.current) stateRef.current.focusedNodeIdx = -1; return; }
+    const newFocus = focusedNode === hoveredNode ? null : hoveredNode;
+    setFocusedNode(newFocus);
+    if (stateRef.current) stateRef.current.focusedNodeIdx = newFocus ?? -1;
+  };
+
+  const bio = hoveredNode !== null ? THINKER_BIOS[thinkers[hoveredNode]] : null;
+  const canvas = canvasRef.current;
+  const rect = canvas ? canvas.getBoundingClientRect() : null;
+
   return (
-    <canvas ref={canvasRef} width={size} height={size}
-      style={{ display: "block", margin: "0 auto", opacity: 0.92 }} />
+    <div className="council-graph-wrap" style={{ display: "block", margin: "0 auto", width: size }}>
+      <canvas ref={canvasRef} width={size} height={size}
+        onMouseMove={handleMouseMove}
+        onMouseLeave={handleMouseLeave}
+        onClick={handleClick}
+        style={{ display: "block", opacity: 0.92, cursor: hoveredNode !== null ? "pointer" : "default" }} />
+      {hoveredNode !== null && rect && (
+        <div className="council-node-tooltip" style={{
+          left: canvasRef.current ? (stateRef.current?.nodes[hoveredNode]?.x ?? 0) * (rect.width / size) + 12 : 0,
+          top:  canvasRef.current ? (stateRef.current?.nodes[hoveredNode]?.y ?? 0) * (rect.height / size) - 40 : 0,
+        }}>
+          <div className="council-node-tooltip-name">{thinkers[hoveredNode]}</div>
+          {bio && <div className="council-node-tooltip-meta">{bio.dates} · {bio.tradition}</div>}
+          {bio && <div className="council-node-tooltip-quote">"{bio.quote}"</div>}
+          {!bio && <div className="council-node-tooltip-meta">Click to amplify</div>}
+        </div>
+      )}
+      {focusedNode !== null && (
+        <div style={{ textAlign: "center", marginTop: 8, fontSize: 11, color: "var(--accent)", letterSpacing: "0.08em", fontFamily: "var(--font-sans)" }}>
+          {thinkers[focusedNode]} amplified · click again to release
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -3318,11 +3592,35 @@ function App() {
       <div className="main">
         {/* Sidebar */}
         <div className={`sidebar ${mobileSidebarOpen ? "mobile-open" : ""}`}>
-          <div className="sidebar-header">
-            <div className="sidebar-title" style={{ letterSpacing: "0.05em" }}>
-              <span style={{ color: "var(--accent)", opacity: 0.7, fontSize: 10, textTransform: "uppercase", letterSpacing: "0.15em", display: "block", marginBottom: 2 }}>Lumafox</span>
+          {/* Product tabs — Voice and Council as equal siblings */}
+          <div className="sidebar-product-tabs">
+            <button
+              className={`sidebar-product-tab ${!showCouncil ? "active" : ""}`}
+              onClick={() => { setShowCouncil(false); setMobileSidebarOpen(false); }}
+            >
+              <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
+                <rect x="0" y="5" width="2" height="4" rx="1" fill="currentColor" opacity="0.6"/>
+                <rect x="3" y="2" width="2" height="10" rx="1" fill="currentColor"/>
+                <rect x="6" y="4" width="2" height="6" rx="1" fill="currentColor" opacity="0.8"/>
+                <rect x="9" y="1" width="2" height="12" rx="1" fill="currentColor"/>
+                <rect x="12" y="4" width="2" height="6" rx="1" fill="currentColor" opacity="0.7"/>
+              </svg>
               Voice
-            </div>
+            </button>
+            <button
+              className={`sidebar-product-tab ${showCouncil ? "active" : ""}`}
+              onClick={() => { setShowCouncil(true); setMobileSidebarOpen(false); }}
+            >
+              <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
+                <circle cx="7" cy="2" r="1.5" fill="currentColor"/>
+                <circle cx="2" cy="11" r="1.5" fill="currentColor"/>
+                <circle cx="12" cy="11" r="1.5" fill="currentColor"/>
+                <line x1="7" y1="2" x2="2" y2="11" stroke="currentColor" strokeWidth="0.8" opacity="0.5"/>
+                <line x1="7" y1="2" x2="12" y2="11" stroke="currentColor" strokeWidth="0.8" opacity="0.5"/>
+                <line x1="2" y1="11" x2="12" y2="11" stroke="currentColor" strokeWidth="0.8" opacity="0.5"/>
+              </svg>
+              Council
+            </button>
           </div>
           <div className="sidebar-list">
             {profiles.map(p => (
