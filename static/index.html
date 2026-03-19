@@ -3094,6 +3094,14 @@ function App() {
     }
   }, []);
 
+  // Jump straight to Council if landing page sent ?council=1
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get("council") === "1") {
+      setShowCouncil(true);
+      window.history.replaceState({}, "", "/app");
+    }
+  }, []);
+
   // On every page load: silently refresh a real user's token to keep them logged in.
   // If the token is missing or expired, fall back to a guest session instead.
   useEffect(() => {
