@@ -2,9 +2,9 @@
 Billing — Stripe integration for subscription management.
 
 Plans:
-  - free: 1 voice profile, 50 teaches/month
-  - starter ($15/mo): 3 profiles, 500 teaches/month
-  - pro ($30/mo): unlimited profiles, unlimited teaches
+  - free: 1 voice profile, 50 teaches/month, 1 council/week
+  - starter ($15/mo): 3 profiles, 500 teaches/month, 5 councils/week
+  - pro ($30/mo): unlimited profiles, unlimited teaches, 5 councils/week
 
 Set STRIPE_SECRET_KEY and STRIPE_WEBHOOK_SECRET in environment.
 Create products/prices in Stripe Dashboard, then set STRIPE_STARTER_PRICE_ID
@@ -13,6 +13,7 @@ and STRIPE_PRO_PRICE_ID.
 
 import json
 import os
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
@@ -25,23 +26,65 @@ STRIPE_PRO_PRICE_ID = os.environ.get("STRIPE_PRO_PRICE_ID", "price_pro")
 
 DATA_DIR = Path(os.environ.get("VOICE_DATA_DIR", Path(__file__).parent / "data"))
 SUBS_DIR = DATA_DIR / "subscriptions"
+COUNCIL_USAGE_DIR = DATA_DIR / "council_usage"
 
 
 def ensure_dirs():
     SUBS_DIR.mkdir(parents=True, exist_ok=True)
+    COUNCIL_USAGE_DIR.mkdir(parents=True, exist_ok=True)
 
 
 # ── Plan Limits ──
 
 PLAN_LIMITS = {
-    "free": {"profiles": 1, "teaches_per_month": 50, "write": True, "analyze": True, "export": True},
-    "starter": {"profiles": 3, "teaches_per_month": 500, "write": True, "analyze": True, "export": True},
-    "pro": {"profiles": 999, "teaches_per_month": 999999, "write": True, "analyze": True, "export": True},
+    "free":    {"profiles": 1,   "teaches_per_month": 50,     "write": True, "analyze": True, "export": True, "council_per_week": 1},
+    "starter": {"profiles": 3,   "teaches_per_month": 500,    "write": True, "analyze": True, "export": True, "council_per_week": 5},
+    "pro":     {"profiles": 999, "teaches_per_month": 999999, "write": True, "analyze": True, "export": True, "council_per_week": 5},
 }
 
 
 def get_plan_limits(plan: str) -> dict:
     return PLAN_LIMITS.get(plan, PLAN_LIMITS["free"])
+
+
+# ── Council weekly usage tracking ──
+
+def _week_key() -> str:
+    """ISO year-week string, resets every Monday UTC."""
+    today = datetime.now(timezone.utc).date()
+    iso = today.isocalendar()
+    return f"{iso[0]}-W{iso[1]:02d}"
+
+
+def _council_usage_path(user_id: str) -> Path:
+    safe = user_id.replace("/", "_").replace("..", "_")
+    return COUNCIL_USAGE_DIR / f"{safe}.json"
+
+
+def get_council_usage(user_id: str) -> int:
+    path = _council_usage_path(user_id)
+    if not path.exists():
+        return 0
+    data = json.loads(path.read_text())
+    return data.get(_week_key(), 0)
+
+
+def increment_council_usage(user_id: str) -> int:
+    """Increment and return the new weekly count."""
+    COUNCIL_USAGE_DIR.mkdir(parents=True, exist_ok=True)
+    path = _council_usage_path(user_id)
+    data = json.loads(path.read_text()) if path.exists() else {}
+    week = _week_key()
+    data[week] = data.get(week, 0) + 1
+    path.write_text(json.dumps(data, indent=2))
+    return data[week]
+
+
+def check_council_limit(user_id: str, plan: str) -> dict:
+    """Returns allowed, used, limit for this user's current week."""
+    limit = get_plan_limits(plan)["council_per_week"]
+    used = get_council_usage(user_id)
+    return {"allowed": used < limit, "used": used, "limit": limit}
 
 
 # ── Subscription Storage (file-based for MVP) ──

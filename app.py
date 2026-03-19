@@ -22,6 +22,7 @@ from pydantic import BaseModel, Field
 from auth import register, login, verify_token, create_token, refresh_token, ensure_dirs as ensure_auth_dirs
 from billing import (
     get_subscription, get_plan_limits, create_checkout_session,
+    check_council_limit, increment_council_usage,
     create_portal_session, handle_webhook,
     ensure_dirs as ensure_billing_dirs,
 )
@@ -907,6 +908,28 @@ async def convene_council(
     req: CouncilRequest,
     user_id: str = Depends(get_current_user),
 ):
+    # ── Weekly usage gate ──
+    sub = get_subscription(user_id)
+    limit_check = check_council_limit(user_id, sub["plan"])
+    if not limit_check["allowed"]:
+        is_guest = user_id.startswith("guest-")
+        if is_guest:
+            msg = (
+                "You've used your free Council session this week. "
+                "Create a free account to keep your session and come back next week — "
+                "or upgrade for 5 sessions per week."
+            )
+        else:
+            limit = limit_check["limit"]
+            msg = (
+                f"You've used all {limit} Council session{'s' if limit != 1 else ''} "
+                f"this week. Upgrade to unlock more."
+            )
+        raise HTTPException(
+            status_code=429,
+            detail={"message": msg, "used": limit_check["used"],
+                    "limit": limit_check["limit"], "is_guest": is_guest},
+        )
 
     if req.mode not in VALID_MODES:
         raise HTTPException(400, f"mode must be one of {sorted(VALID_MODES)}")
@@ -947,6 +970,7 @@ async def convene_council(
     except Exception as e:
         raise HTTPException(500, f"Council deliberation failed: {e}")
 
+    increment_council_usage(user_id)
     return result
 
 

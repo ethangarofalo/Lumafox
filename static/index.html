@@ -862,6 +862,12 @@ async function api(path, opts = {}) {
     window.location.reload();
     throw new Error("Session expired");
   }
+  if (res.status === 429) {
+    const err = await res.json().catch(() => ({ detail: { message: "Limit reached." } }));
+    const e = new Error("limit");
+    e.limitData = typeof err.detail === "object" ? err.detail : { message: err.detail };
+    throw e;
+  }
   if (!res.ok) {
     const err = await res.json().catch(() => ({ detail: res.statusText }));
     throw new Error(err.detail || "API error");
@@ -2253,6 +2259,7 @@ function CouncilView({ isGuest, onNeedAuth }) {
   const [deliberating, setDeliberating] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState("");
+  const [limitData, setLimitData] = useState(null);
 
   const toggleThinker = (name) => {
     setThinkers(prev => {
@@ -2291,11 +2298,57 @@ function CouncilView({ isGuest, onNeedAuth }) {
       if (mode === "writing" && p) body.prose = p;
       const r = await api("/council", { method: "POST", body: JSON.stringify(body) });
       setResult(r);
-    } catch (e) { setError(e.message || "The council could not convene. Try again."); }
+    } catch (e) {
+      if (e.limitData) {
+        setLimitData(e.limitData);
+      } else {
+        setError(e.message || "The council could not convene. Try again.");
+      }
+    }
     setDeliberating(false);
   };
 
   const handleReset = () => { setResult(null); setQuestion(""); setProse(""); };
+
+  if (limitData) {
+    return (
+      <div className="write-container" style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: 400 }}>
+        <div style={{ textAlign: "center", maxWidth: 420, padding: "0 24px" }}>
+          <div style={{ fontSize: 32, marginBottom: 16 }}>⚖️</div>
+          <div style={{ fontSize: 20, fontWeight: 600, color: "var(--text)", marginBottom: 12 }}>
+            The council has adjourned for the week.
+          </div>
+          <div style={{ fontSize: 14, color: "var(--text-dim)", lineHeight: 1.6, marginBottom: 28 }}>
+            {limitData.message}
+          </div>
+          <div style={{ display: "flex", gap: 10, justifyContent: "center", flexWrap: "wrap" }}>
+            {limitData.is_guest ? (
+              <>
+                <button className="empty-cta-primary" onClick={() => onNeedAuth && onNeedAuth()}>
+                  Create free account →
+                </button>
+                <button className="empty-cta-secondary" onClick={() => setLimitData(null)}>
+                  Back
+                </button>
+              </>
+            ) : (
+              <>
+                <button className="empty-cta-primary" onClick={() => window.location.href = "/app?upgrade=1"}>
+                  Upgrade →
+                </button>
+                <button className="empty-cta-secondary" onClick={() => setLimitData(null)}>
+                  Back
+                </button>
+              </>
+            )}
+          </div>
+          <div style={{ marginTop: 16, fontSize: 11, color: "var(--text-dim)", opacity: 0.6 }}>
+            Usage resets every Monday. {limitData.used}/{limitData.limit} used this week.
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (deliberating) {
     return <CouncilDeliberating thinkers={[...thinkers]} swarm={swarmMode} />;
