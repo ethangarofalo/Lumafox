@@ -967,6 +967,112 @@ async def export_profile_as_skill(
     return {"filename": filename, "content": skill_content, "profile_name": profile.name}
 
 
+async def _synthesize_style_guide(profile, voice_text: str, refinement_count: int) -> str:
+    """Synthesize a structured AI Style Guide from a voice profile."""
+    client = _anthropic.AsyncAnthropic()
+
+    prompt = f"""You are converting a writing voice profile into a structured AI Style Guide —
+a portable document the writer can use with any AI tool to make it write like them.
+
+VOICE NAME: {profile.name}
+REFINEMENTS: {refinement_count} teaching sessions
+
+FULL VOICE SPECIFICATION:
+{voice_text}
+
+---
+
+Produce a complete, well-organized Style Guide with exactly these 8 sections.
+For each section, synthesize from the voice specification above. Be concrete and specific —
+no vague adjectives like "nuanced" or "distinctive." Every bullet should be actionable.
+
+# AI Style Guide: {profile.name}
+
+## 1. Voice & Tone
+How this writing should feel at its best. Describe with tensions and boundaries,
+not flattering adjectives. Cover: formality level, emotional temperature, humor,
+whether the voice is reportorial / essayistic / intimate / skeptical / lyrical, etc.
+Write 5–8 bullets.
+
+## 2. Structure
+How pieces in this voice typically move. How do they open? How quickly do they reach
+the point? What is the arc — anecdote to argument, tension to resolution, concrete to abstract?
+Write 4–6 bullets.
+
+## 3. Sentence-Level Preferences
+What makes a sentence sound right in this voice? Sentence length, rhythm,
+tolerance for abstraction, diction choices, punctuation tendencies.
+Include positive and negative examples where possible. Write 5–8 bullets.
+
+## 4. Signature Moves
+What does this voice do especially well? Name 2–4 recurring patterns or techniques
+with a brief description of each.
+
+## 5. Anti-Patterns / Blacklist
+What the model must avoid. Be specific — name exact patterns and their fixes.
+Format as a list of "Pattern → Fix" entries. Include at least 5.
+
+## 6. Positive Examples
+2–3 short passages (real or synthesized from the specification) that demonstrate
+the voice working well. For each, add one sentence explaining why it works.
+
+## 7. Negative Examples
+2–3 short passages showing what this voice should NOT sound like.
+For each, explain what feels wrong.
+
+## 8. Revision Checklist
+5–8 yes/no questions to evaluate whether a draft captures this voice.
+Each question should test for a specific quality from the sections above.
+
+Rules:
+- Write every instruction as a direct command, not a description.
+- Be ruthlessly specific. If the voice specification names real preferences, use them.
+- If the specification is thin on a section, extrapolate faithfully from what IS present,
+  but mark extrapolations with "(inferred)" so the writer can verify.
+- Do not pad with commentary. Output only the style guide."""
+
+    response = await client.messages.create(
+        model="claude-opus-4-5",
+        max_tokens=3000,
+        messages=[{"role": "user", "content": prompt}],
+    )
+    return response.content[0].text.strip()
+
+
+@app.get("/profiles/{profile_id}/export/style-guide")
+async def export_profile_as_style_guide(
+    profile_id: str,
+    user_id: str = Depends(get_current_user),
+):
+    """Synthesize and export a voice profile as a structured AI Style Guide.
+
+    Organizes the voice into 8 sections: voice & tone, structure, sentence preferences,
+    signature moves, anti-patterns, positive examples, negative examples, revision checklist.
+    Portable to any AI tool.
+    """
+    profile = load_profile(profile_id)
+    if not profile:
+        raise HTTPException(status_code=404, detail="Profile not found")
+    if profile.owner_id != user_id:
+        raise HTTPException(status_code=403, detail="Not your profile")
+    if profile.refinement_count == 0:
+        raise HTTPException(
+            status_code=400,
+            detail="Teach the voice at least one refinement before generating a style guide.",
+        )
+
+    voice_text = get_full_voice_text(profile_id)
+    refinements = load_refinements(profile_id)
+
+    guide_content = await _synthesize_style_guide(profile, voice_text, len(refinements))
+
+    safe_name = "".join(c if c.isalnum() or c in "- " else "" for c in profile.name)
+    safe_name = safe_name.strip().replace(" ", "-").lower() or "voice"
+    filename = f"{safe_name}-style-guide.md"
+
+    return {"filename": filename, "content": guide_content, "profile_name": profile.name}
+
+
 # ── Voice Text (for debugging / advanced use) ──
 
 @app.get("/profiles/{profile_id}/voice-text")

@@ -1923,75 +1923,118 @@ function ExportView({ profileId }) {
   const [markdown, setMarkdown] = useState("");
   const [loading, setLoading] = useState(true);
   const [skillLoading, setSkillLoading] = useState(false);
+  const [guideLoading, setGuideLoading] = useState(false);
+  const [guideContent, setGuideContent] = useState(null);
 
   useEffect(() => {
     setLoading(true);
+    setGuideContent(null);
     api(`/profiles/${profileId}/export`)
       .then(r => setMarkdown(r.markdown))
       .catch(e => setMarkdown(`Error: ${e.message}`))
       .finally(() => setLoading(false));
   }, [profileId]);
 
+  const downloadFile = (content, filename) => {
+    const blob = new Blob([content], { type: "text/markdown" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click();
+    document.body.removeChild(a); URL.revokeObjectURL(url);
+  };
+
   const downloadSkill = async () => {
     setSkillLoading(true);
     try {
       const r = await api(`/profiles/${profileId}/export/skill`);
-      const blob = new Blob([r.content], { type: "text/markdown" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = r.filename;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    } catch (e) {
-      toastError(e.message || "Could not generate skill file.");
-    }
+      downloadFile(r.content, r.filename);
+    } catch (e) { toastError(e.message || "Could not generate skill file."); }
     setSkillLoading(false);
   };
+
+  const generateStyleGuide = async () => {
+    setGuideLoading(true);
+    try {
+      const r = await api(`/profiles/${profileId}/export/style-guide`);
+      setGuideContent(r);
+      toastSuccess("Style guide generated");
+    } catch (e) { toastError(e.message || "Could not generate style guide."); }
+    setGuideLoading(false);
+  };
+
+  const cardStyle = { marginBottom: 24, padding: "24px 28px", background: "var(--bg-elevated)", borderRadius: "var(--radius)", border: "1px solid var(--border)" };
+  const labelStyle = { marginBottom: 8, fontSize: 10, letterSpacing: "0.3em", fontFamily: "var(--font-sans)", textTransform: "uppercase" };
+  const descStyle = { fontFamily: "var(--font-sans)", fontSize: 14, color: "var(--text-dim)", marginBottom: 16, lineHeight: 1.75 };
 
   return (
     <div className="export-view">
       <div style={{ maxWidth: 720, margin: "0 auto" }}>
 
-        {/* Claude Skill export — primary action */}
-        <div style={{ marginBottom: 36, padding: "24px 28px", background: "var(--bg-elevated)", borderRadius: "var(--radius)", border: "1px solid var(--accent-dim)" }}>
-          <div className="write-label" style={{ marginBottom: 10, color: "var(--accent)", fontSize: 10, letterSpacing: "0.3em" }}>
-            CLAUDE SKILL FILE
-          </div>
-          <p style={{ fontFamily: "var(--font-sans)", fontSize: 14, color: "var(--text-dim)", marginBottom: 16, lineHeight: 1.75 }}>
-            Generates a synthesized <code style={{ fontFamily: "monospace", fontSize: 13, color: "var(--text)" }}>SKILL.md</code> — a concise, directly-instructional file
-            Claude Code reads automatically when you write in your voice.
-            Drop it into <code style={{ fontFamily: "monospace", fontSize: 13, color: "var(--text)" }}>~/.claude/skills/</code> or paste it as a Claude Projects system prompt.
+        {/* Style Guide export — flagship */}
+        <div style={{ ...cardStyle, border: "1px solid var(--accent-dim)" }}>
+          <div style={{ ...labelStyle, color: "var(--accent)" }}>AI STYLE GUIDE</div>
+          <p style={descStyle}>
+            Generates a structured style guide from your voice — organized into
+            8 sections: voice & tone, structure, sentence preferences, signature moves,
+            anti-patterns, examples, and a revision checklist.
+            Portable to <em>any</em> AI tool.
           </p>
-          <button
-            className="action-btn"
-            onClick={downloadSkill}
-            disabled={skillLoading}
-          >
+          {guideContent ? (
+            <div>
+              <div style={{
+                background: "#111", borderRadius: 8, padding: "20px 24px", marginBottom: 16,
+                maxHeight: 400, overflowY: "auto", border: "1px solid var(--border-light)",
+                fontFamily: "var(--font-sans)", fontSize: 13, color: "var(--text-dim)",
+                lineHeight: 1.8, whiteSpace: "pre-wrap",
+              }}>{guideContent.content}</div>
+              <div style={{ display: "flex", gap: 10 }}>
+                <button className="action-btn" onClick={() => downloadFile(guideContent.content, guideContent.filename)}>
+                  ↓ Download .md
+                </button>
+                <button className="action-btn" style={{ background: "none", border: "1px solid var(--border-light)", color: "var(--text)" }}
+                  onClick={() => { copyText(guideContent.content); toastSuccess("Copied"); }}>
+                  Copy to clipboard
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button className="action-btn" onClick={generateStyleGuide} disabled={guideLoading}>
+              {guideLoading ? <>Generating style guide<LoadingDots /></> : "✦ Generate AI Style Guide"}
+            </button>
+          )}
+        </div>
+
+        {/* Claude Skill export */}
+        <div style={cardStyle}>
+          <div style={{ ...labelStyle, color: "var(--text-dim)" }}>CLAUDE SKILL FILE</div>
+          <p style={descStyle}>
+            A concise <code style={{ fontFamily: "monospace", fontSize: 13, color: "var(--text)" }}>SKILL.md</code> for
+            Claude Code — drop into <code style={{ fontFamily: "monospace", fontSize: 13, color: "var(--text)" }}>~/.claude/skills/</code> or
+            paste as a Claude Projects system prompt.
+          </p>
+          <button className="action-btn" onClick={downloadSkill} disabled={skillLoading}>
             {skillLoading ? <>Synthesizing skill<LoadingDots /></> : "↓ Download as Claude Skill"}
           </button>
         </div>
 
-        {/* Raw markdown export — secondary */}
-        <div className="write-label" style={{ marginBottom: 10 }}>Raw Voice Profile</div>
-        <p style={{ color: "var(--text-faint)", fontSize: 13, marginBottom: 14, fontFamily: "var(--font-sans)" }}>
-          The full voice specification — paste directly into any AI tool or system prompt.
-        </p>
-        {loading ? (
-          <div style={{ color: "var(--text-faint)", padding: 40 }}>Loading<LoadingDots /></div>
-        ) : (
-          <>
-            <div className="export-content">{markdown}</div>
-            <button
-              className="action-btn" style={{ marginTop: 16 }}
-              onClick={() => copyText(markdown)}
-            >
-              Copy to clipboard
-            </button>
-          </>
-        )}
+        {/* Raw markdown export */}
+        <div style={cardStyle}>
+          <div style={{ ...labelStyle, color: "var(--text-dim)" }}>RAW VOICE PROFILE</div>
+          <p style={descStyle}>
+            The full voice specification — every refinement, unprocessed. Paste directly into any system prompt.
+          </p>
+          {loading ? (
+            <div style={{ color: "var(--text-faint)", padding: 40 }}>Loading<LoadingDots /></div>
+          ) : (
+            <>
+              <div className="export-content" style={{ maxHeight: 300, overflowY: "auto" }}>{markdown}</div>
+              <button className="action-btn" style={{ marginTop: 16 }} onClick={() => copyText(markdown)}>
+                Copy to clipboard
+              </button>
+            </>
+          )}
+        </div>
       </div>
     </div>
   );
