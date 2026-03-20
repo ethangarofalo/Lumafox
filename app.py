@@ -502,6 +502,28 @@ async def delete_voice_profile(
     return {"deleted": True, "profile_id": profile_id}
 
 
+@app.patch("/profiles/{profile_id}/name")
+async def rename_profile(
+    profile_id: str,
+    user_id: str = Depends(get_current_user),
+    name: str = Body(..., embed=True),
+):
+    """Rename a voice profile."""
+    name = name.strip()
+    if not name:
+        raise HTTPException(400, "Name cannot be empty")
+    if len(name) > 60:
+        raise HTTPException(400, "Name too long (max 60 chars)")
+    profile = load_profile(profile_id)
+    if not profile:
+        raise HTTPException(404, "Profile not found")
+    if profile.owner_id != user_id:
+        raise HTTPException(403, "Not your profile")
+    profile.name = name
+    update_profile_metadata(profile)
+    return {"name": name}
+
+
 @app.patch("/profiles/{profile_id}/avatar")
 async def set_profile_avatar(
     profile_id: str,

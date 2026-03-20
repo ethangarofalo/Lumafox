@@ -174,7 +174,9 @@
       transition: all 0.15s; margin-bottom: 4px;
     }
     .profile-card:hover { background: var(--bg-hover); }
+    .profile-card:hover .rename-btn { opacity: 1 !important; }
     .profile-card.active { background: var(--accent-glow); border-left: 2px solid var(--accent); }
+    .profile-card.active .rename-btn { color: var(--accent) !important; }
     .profile-card-name { font-size: 15px; color: var(--text); margin-bottom: 4px; }
     .profile-card-meta { font-size: 12px; color: var(--text-dim); font-family: var(--font-sans); }
 
@@ -3253,6 +3255,81 @@ function ThinkerCard({ thinker }) {
 }
 
 
+// ── Profile Card with inline rename ──
+function ProfileCard({ p, active, onSelect, onRenamed }) {
+  const [editing, setEditing] = React.useState(false);
+  const [draft, setDraft] = React.useState(p.name);
+  const inputRef = React.useRef(null);
+
+  React.useEffect(() => {
+    if (editing) { setDraft(p.name); setTimeout(() => inputRef.current?.select(), 30); }
+  }, [editing]);
+
+  async function commitRename() {
+    const name = draft.trim();
+    if (!name || name === p.name) { setEditing(false); return; }
+    try {
+      const res = await api(`/profiles/${p.profile_id}/name`, {
+        method: "PATCH",
+        body: JSON.stringify({ name }),
+      });
+      onRenamed(res.name);
+    } catch(e) { toast("Couldn't rename — try again", "error"); }
+    setEditing(false);
+  }
+
+  function handleKeyDown(e) {
+    if (e.key === "Enter") commitRename();
+    if (e.key === "Escape") setEditing(false);
+  }
+
+  return (
+    <div
+      className={`profile-card ${active ? "active" : ""}`}
+      onClick={() => { if (!editing) onSelect(); }}
+      style={{ display: "flex", alignItems: "center", gap: 10, position: "relative" }}
+    >
+      <ProfileAvatar avatar={p.avatar} size={28} style={{ "data-profile-id": p.profile_id }} />
+      <div style={{ flex: 1, minWidth: 0 }}>
+        {editing ? (
+          <input
+            ref={inputRef}
+            value={draft}
+            onChange={e => setDraft(e.target.value)}
+            onBlur={commitRename}
+            onKeyDown={handleKeyDown}
+            onClick={e => e.stopPropagation()}
+            maxLength={60}
+            style={{
+              width: "100%", background: "var(--bg-hover)", border: "1px solid var(--accent)",
+              borderRadius: 4, padding: "2px 6px", color: "var(--text)",
+              fontFamily: "var(--font-serif)", fontSize: 15, outline: "none",
+            }}
+          />
+        ) : (
+          <div className="profile-card-name" style={{ display: "flex", alignItems: "center", gap: 5 }}>
+            <span style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.name}</span>
+          </div>
+        )}
+        <div className="profile-card-meta">{p.refinement_count} refinements</div>
+      </div>
+      {!editing && (
+        <button
+          onClick={e => { e.stopPropagation(); setEditing(true); }}
+          title="Rename"
+          style={{
+            background: "none", border: "none", cursor: "pointer",
+            color: "var(--text-dim)", padding: "2px 4px", borderRadius: 4,
+            opacity: 0, transition: "opacity 0.15s",
+            fontSize: 12, lineHeight: 1, flexShrink: 0,
+          }}
+          className="rename-btn"
+        >✎</button>
+      )}
+    </div>
+  );
+}
+
 // ── Avatar Picker ──
 const AVATAR_PRESETS = [
   { key: "🦉", label: "Scholarly" },
@@ -4072,18 +4149,16 @@ function App() {
             <>
               <div className="sidebar-list">
                 {profiles.map(p => (
-                  <div
+                  <ProfileCard
                     key={p.profile_id}
-                    className={`profile-card ${activeProfile?.profile_id === p.profile_id ? "active" : ""}`}
-                    onClick={() => { setActiveProfile(p); setMode("home"); setMobileSidebarOpen(false); }}
-                    style={{ display: "flex", alignItems: "center", gap: 10 }}
-                  >
-                    <ProfileAvatar avatar={p.avatar} size={28} style={{ "data-profile-id": p.profile_id }} />
-                    <div>
-                      <div className="profile-card-name">{p.name}</div>
-                      <div className="profile-card-meta">{p.refinement_count} refinements</div>
-                    </div>
-                  </div>
+                    p={p}
+                    active={activeProfile?.profile_id === p.profile_id}
+                    onSelect={() => { setActiveProfile(p); setMode("home"); setMobileSidebarOpen(false); }}
+                    onRenamed={(newName) => {
+                      setProfiles(prev => prev.map(x => x.profile_id === p.profile_id ? {...x, name: newName} : x));
+                      if (activeProfile?.profile_id === p.profile_id) setActiveProfile(prev => ({...prev, name: newName}));
+                    }}
+                  />
                 ))}
               </div>
               {activeProfile && (
