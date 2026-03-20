@@ -1081,8 +1081,8 @@ async function api(path, opts = {}) {
   if (token) headers["Authorization"] = `Bearer ${token}`;
   const res = await fetch(`${API}${path}`, { headers, ...opts });
   if (res.status === 401) {
-    clearToken(); clearUser();
-    window.location.reload();
+    // Don't nuke the session on every 401 — only clear if this wasn't a
+    // background/secondary call. The refresh flow handles real expiry.
     throw new Error("Session expired");
   }
   if (res.status === 429) {
@@ -3943,6 +3943,7 @@ function App() {
   const [showAvatarPicker, setShowAvatarPicker] = useState(false);
 
   const isGuest = user?.user_id?.startsWith("guest-");
+  const [sessionReady, setSessionReady] = useState(false);
 
   // Open auth modal immediately if landing page sent ?signin=1
   useEffect(() => {
@@ -3966,7 +3967,8 @@ function App() {
   }, []);
 
   // On every page load: silently refresh a real user's token to keep them logged in.
-  // If the token is missing or expired, fall back to a guest session instead.
+  // IMPORTANT: sessionReady gates all downstream API calls (loadProfiles, etc.)
+  // so they don't fire with a stale token and trigger a false 401 → logout.
   useEffect(() => {
     const existing = getToken();
     const storedUser = getUser();
@@ -3978,28 +3980,42 @@ function App() {
         method: "POST",
         headers: { "Authorization": `Bearer ${existing}`, "Content-Type": "application/json" },
       })
-        .then(r => r.ok ? r.json() : Promise.reject(r.status))
+        .then(r => {
+          if (r.ok) return r.json();
+          // Only treat 401 as a real auth failure — everything else is transient
+          if (r.status === 401) return Promise.reject("auth_expired");
+          return Promise.reject("transient");
+        })
         .then(data => {
           setToken(data.token);
           setUser(data.user);
           setUserState(data.user);
+          setSessionReady(true);
         })
-        .catch(() => {
-          // Token expired or invalid — clear and create a guest session
-          clearToken(); clearUser();
-          fetch(`${API}/auth/guest`, { method: "POST", headers: { "Content-Type": "application/json" } })
-            .then(r => r.json())
-            .then(data => { setToken(data.token); setUser(data.user); setUserState(data.user); })
-            .catch(console.error);
+        .catch(err => {
+          if (err === "auth_expired") {
+            // Token truly expired or invalid — clear and create a guest session
+            clearToken(); clearUser();
+            fetch(`${API}/auth/guest`, { method: "POST", headers: { "Content-Type": "application/json" } })
+              .then(r => r.json())
+              .then(data => { setToken(data.token); setUser(data.user); setUserState(data.user); setSessionReady(true); })
+              .catch(() => setSessionReady(true));
+          } else {
+            // Network error, server restarting, cold start — keep existing session intact
+            console.warn("Token refresh failed (transient), keeping existing session");
+            setSessionReady(true);
+          }
         });
     } else if (!existing) {
       // No token at all — create guest session
       fetch(`${API}/auth/guest`, { method: "POST", headers: { "Content-Type": "application/json" } })
         .then(r => r.json())
-        .then(data => { setToken(data.token); setUser(data.user); setUserState(data.user); })
-        .catch(console.error);
+        .then(data => { setToken(data.token); setUser(data.user); setUserState(data.user); setSessionReady(true); })
+        .catch(() => setSessionReady(true));
+    } else {
+      // Existing guest token — just proceed
+      setSessionReady(true);
     }
-    // If existing token is a guest session, leave it as-is
   }, []);
 
   const loadProfiles = useCallback(async () => {
@@ -4011,7 +4027,8 @@ function App() {
     setLoaded(true);
   }, []);
 
-  useEffect(() => { if (user) loadProfiles(); }, [user, loadProfiles]);
+  // Gate downstream API calls behind sessionReady so we never fire with a stale token
+  useEffect(() => { if (user && sessionReady) loadProfiles(); }, [user, sessionReady, loadProfiles]);
 
   const handleAuth = async (u) => {
     setUserState(u);
