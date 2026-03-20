@@ -4096,10 +4096,10 @@ function App() {
       {/* Top bar */}
       <div className="topbar">
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <div className="topbar-logo" style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <a href="/?home=1" className="topbar-logo" style={{ display: "flex", alignItems: "center", gap: 8, textDecoration: "none", color: "inherit" }}>
             <img src="/static/lumafox-icon.png" alt="Lumafox" style={{ height: 34, width: "auto", display: "block" }} />
             <span>Lumafox</span>
-          </div>
+          </a>
           {/* Mobile: toggle sidebar */}
           <button
             className={`mobile-voices-btn ${mobileSidebarOpen ? "open" : ""}`}

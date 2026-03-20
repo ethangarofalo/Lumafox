@@ -20,10 +20,11 @@
   <link rel="icon" type="image/x-icon" href="/static/favicon.ico" />
   <link rel="apple-touch-icon" href="/static/lumafox-icon.png" />
 
-  <!-- Auto-redirect logged-in users straight to the app -->
+  <!-- Auto-redirect logged-in users straight to the app (skip with ?home=1) -->
   <script>
     (function() {
       try {
+        if (new URLSearchParams(window.location.search).get("home") === "1") return;
         const token = localStorage.getItem("voice_token");
         const user = JSON.parse(localStorage.getItem("voice_user") || "null");
         const isReal = user && !user.user_id?.startsWith("guest-");
@@ -729,6 +730,127 @@
       background: var(--bg);
       letter-spacing: 0.02em;
     }
+
+    /* ── Voice Library ── */
+    .voice-library {
+      position: relative; z-index: 2;
+      background: var(--bg-section);
+      padding: 100px 40px 80px;
+    }
+    .voice-library-inner { max-width: 960px; margin: 0 auto; }
+
+    .library-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 20px;
+    }
+
+    .library-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-card);
+      border-radius: var(--radius);
+      padding: 28px 24px;
+      transition: border-color 0.2s, transform 0.2s;
+    }
+    .library-card:hover {
+      border-color: var(--accent-dim);
+      transform: translateY(-2px);
+    }
+    .library-avatar {
+      font-size: 28px;
+      margin-bottom: 12px;
+    }
+    .library-name {
+      font-family: var(--font);
+      font-size: 17px;
+      color: var(--text);
+      margin-bottom: 8px;
+    }
+    .library-desc {
+      font-family: var(--font-sans);
+      font-size: 13px;
+      color: var(--text-dim);
+      line-height: 1.7;
+      margin-bottom: 12px;
+    }
+    .library-meta {
+      font-family: var(--font-sans);
+      font-size: 11px;
+      color: var(--text-faint);
+      letter-spacing: 0.04em;
+    }
+
+    /* ── Footer ── */
+    .site-footer {
+      position: relative; z-index: 2;
+      background: var(--bg);
+      border-top: 1px solid var(--border);
+      padding: 60px 40px 0;
+    }
+    .footer-inner {
+      max-width: 960px;
+      margin: 0 auto;
+      display: flex;
+      justify-content: space-between;
+      gap: 60px;
+      flex-wrap: wrap;
+    }
+    .footer-brand { max-width: 280px; }
+    .footer-logo {
+      font-family: var(--font-sans);
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--accent);
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+    .footer-tagline {
+      font-family: var(--font);
+      font-size: 14px;
+      font-style: italic;
+      color: var(--text-dim);
+      line-height: 1.6;
+    }
+    .footer-links {
+      display: flex;
+      gap: 60px;
+      flex-wrap: wrap;
+    }
+    .footer-col { display: flex; flex-direction: column; gap: 8px; }
+    .footer-col-label {
+      font-family: var(--font-sans);
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.3em;
+      text-transform: uppercase;
+      color: var(--text-faint);
+      margin-bottom: 4px;
+    }
+    .footer-link {
+      font-family: var(--font-sans);
+      font-size: 13px;
+      color: var(--text-dim);
+      text-decoration: none;
+      transition: color 0.15s;
+    }
+    .footer-link:hover { color: var(--text); }
+    .footer-bottom {
+      max-width: 960px;
+      margin: 40px auto 0;
+      padding: 20px 0;
+      border-top: 1px solid var(--border);
+      font-family: var(--font-sans);
+      font-size: 12px;
+      color: var(--text-faint);
+      text-align: center;
+    }
+
+    @media (max-width: 640px) {
+      .voice-library { padding: 60px 20px 40px; }
+      .footer-inner { flex-direction: column; gap: 32px; }
+      .footer-links { gap: 32px; }
+    }
   </style>
 </head>
 <body>
@@ -744,7 +866,9 @@
   <div class="top-nav-links">
     <a href="#hero" class="top-nav-link">Introduction</a>
     <a href="#use-cases" class="top-nav-link">Use Cases</a>
+    <a href="#library" class="top-nav-link">Voice Library</a>
     <a href="#about" class="top-nav-link">About</a>
+    <a href="#faq" class="top-nav-link">Common Questions</a>
     <a href="/app" class="top-nav-link cta">Start free →</a>
   </div>
 </nav>
@@ -784,7 +908,7 @@
 
   <div class="card-grid">
 
-    <div class="card reveal">
+    <div class="card reveal" id="uc-articles">
       <div class="card-category">Journalism / Editorial</div>
       <div class="card-title">Articles & Essays</div>
       <p class="card-body">
@@ -793,7 +917,7 @@
       </p>
     </div>
 
-    <div class="card reveal">
+    <div class="card reveal" id="uc-brand">
       <div class="card-category">Brand / Marketing</div>
       <div class="card-title">Company Brand Voice</div>
       <p class="card-body">
@@ -802,7 +926,7 @@
       </p>
     </div>
 
-    <div class="card reveal">
+    <div class="card reveal" id="uc-self">
       <div class="card-category">Personal / Reflective</div>
       <div class="card-title">Self-Discovery</div>
       <p class="card-body">
@@ -811,7 +935,7 @@
       </p>
     </div>
 
-    <div class="card reveal">
+    <div class="card reveal" id="uc-fiction">
       <div class="card-category">Fiction / Narrative</div>
       <div class="card-title">Characters & Personas</div>
       <p class="card-body">
@@ -820,7 +944,7 @@
       </p>
     </div>
 
-    <div class="card reveal">
+    <div class="card reveal" id="uc-academic">
       <div class="card-category">Academic / Research</div>
       <div class="card-title">Scholarly Writing</div>
       <p class="card-body">
@@ -829,7 +953,7 @@
       </p>
     </div>
 
-    <div class="card reveal">
+    <div class="card reveal" id="uc-newsletters">
       <div class="card-category">Content / Media</div>
       <div class="card-title">Newsletters & Dispatches</div>
       <p class="card-body">
@@ -976,7 +1100,7 @@
     <!-- Council callout -->
     <div class="about-council reveal">
       <div>
-        <div class="about-council-label">Lumafox Council</div>
+        <div class="about-council-label">Lumafox Council <span style="display:inline-block;background:var(--accent);color:#0a0a0a;font-size:9px;font-weight:700;padding:2px 8px;border-radius:10px;margin-left:8px;letter-spacing:0.04em;vertical-align:middle;">NEW: BETA</span></div>
         <div class="about-council-title">
           History's sharpest minds —<br>
           pointed at your <em>future</em>.
@@ -1005,6 +1129,61 @@
       </div>
     </div>
 
+  </div>
+</section>
+
+<!-- ── Voice Library Preview ── -->
+<section class="voice-library" id="library">
+  <div class="voice-library-inner">
+    <div class="section-eyebrow">Coming Soon</div>
+    <h2 class="section-heading">Voice Library</h2>
+    <p class="section-sub" style="margin-bottom:48px;">
+      Browse public voices: Melville mode, Academic tone, Friendly newsletter style.<br>
+      Explore a plethora of personalities and then train your own.
+    </p>
+
+    <div class="library-grid">
+      <div class="library-card reveal">
+        <div class="library-avatar">🐋</div>
+        <div class="library-name">Melville Mode</div>
+        <div class="library-desc">Long, rhythmic sentences with maritime metaphor. Subordinate clauses that build like waves. Philosophical weight in every paragraph.</div>
+        <div class="library-meta">42 refinements · Literary</div>
+      </div>
+      <div class="library-card reveal">
+        <div class="library-avatar">🏛️</div>
+        <div class="library-name">Academic Tone</div>
+        <div class="library-desc">Precise, hedged, citational. Thesis-driven structure with careful qualifications. Formal without being stiff.</div>
+        <div class="library-meta">38 refinements · Scholarly</div>
+      </div>
+      <div class="library-card reveal">
+        <div class="library-avatar">✉️</div>
+        <div class="library-name">Friendly Newsletter</div>
+        <div class="library-desc">Warm, first-person, conversational. Short paragraphs. Reads like a smart friend's email. Hooks early, delivers value fast.</div>
+        <div class="library-meta">31 refinements · Content</div>
+      </div>
+      <div class="library-card reveal">
+        <div class="library-avatar">⚡</div>
+        <div class="library-name">Startup Sharp</div>
+        <div class="library-desc">Direct, punchy, zero fluff. Active voice only. Gets to the point in sentence one. Designed for founders writing updates and pitches.</div>
+        <div class="library-meta">27 refinements · Business</div>
+      </div>
+      <div class="library-card reveal">
+        <div class="library-avatar">🌙</div>
+        <div class="library-name">Lyrical Essay</div>
+        <div class="library-desc">Essayistic, meditative, image-driven. Fragments welcome. Moves by association rather than argument. Endings that linger.</div>
+        <div class="library-meta">35 refinements · Creative</div>
+      </div>
+      <div class="library-card reveal">
+        <div class="library-avatar">🔬</div>
+        <div class="library-name">Technical Explainer</div>
+        <div class="library-desc">Clear, precise, jargon-aware. Explains complex ideas without condescension. Uses analogies. Shows, then tells.</div>
+        <div class="library-meta">29 refinements · Technical</div>
+      </div>
+    </div>
+
+    <div style="text-align:center; margin-top:40px;">
+      <a href="/app" class="btn-secondary" style="font-size:14px;">Build your own voice →</a>
+    </div>
   </div>
 </section>
 
@@ -1067,7 +1246,7 @@
 </section>
 
 <!-- ── FAQ ── -->
-<section class="faq">
+<section class="faq" id="faq">
   <div class="faq-inner">
     <div class="section-eyebrow" style="text-align:left;">Common questions</div>
     <h2 class="section-heading" style="text-align:left; margin-bottom:40px;">
@@ -1146,6 +1325,38 @@
   </div>
   <div class="bottom-note">No account required — start instantly.</div>
 </section>
+
+<!-- ── Footer ── -->
+<footer class="site-footer">
+  <div class="footer-inner">
+    <div class="footer-brand">
+      <div class="footer-logo">Lumafox</div>
+      <div class="footer-tagline">Voice your writing. Council your decisions.</div>
+    </div>
+    <div class="footer-links">
+      <div class="footer-col">
+        <div class="footer-col-label">Product</div>
+        <a href="/app" class="footer-link">Voice</a>
+        <a href="/app?council=1" class="footer-link">Council</a>
+        <a href="#library" class="footer-link">Voice Library</a>
+      </div>
+      <div class="footer-col">
+        <div class="footer-col-label">Company</div>
+        <a href="#about" class="footer-link">About</a>
+        <a href="#faq" class="footer-link">FAQ</a>
+        <a href="mailto:ethandgarofalo@gmail.com" class="footer-link">Contact</a>
+      </div>
+      <div class="footer-col">
+        <div class="footer-col-label">Legal</div>
+        <a href="#" class="footer-link">Privacy Policy</a>
+        <a href="#" class="footer-link">Terms of Service</a>
+      </div>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <span>&copy; 2026 Lumafox. All rights reserved.</span>
+  </div>
+</footer>
 
 <script>
 const canvas = document.getElementById('bg');
