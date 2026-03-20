@@ -12,7 +12,7 @@ from typing import Optional
 from pathlib import Path
 import anthropic as _anthropic
 
-from fastapi import FastAPI, HTTPException, Depends, Header, Request
+from fastapi import FastAPI, HTTPException, Depends, Header, Request, UploadFile, File, Body
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
@@ -618,8 +618,6 @@ async def get_conversation(
 
 
 # ── File Upload (Bring Your Voice) ──
-
-from fastapi import UploadFile, File
 
 @app.post("/profiles/{profile_id}/upload")
 async def upload_writing_sample(
