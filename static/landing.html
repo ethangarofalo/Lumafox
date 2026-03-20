@@ -4,6 +4,36 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Lumafox — Voice your writing. Council your decisions.</title>
+
+  <!-- Open Graph / link preview -->
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://lumafox.ai/" />
+  <meta property="og:title" content="Lumafox — Voice your writing. Council your decisions." />
+  <meta property="og:description" content="Build a precise model of how you write at your best. Summon history's sharpest minds on any decision. Two tools. One examined life." />
+  <meta property="og:image" content="https://lumafox.ai/static/lumafox-icon.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Lumafox" />
+  <meta name="twitter:description" content="Voice your writing. Council your decisions." />
+  <meta name="twitter:image" content="https://lumafox.ai/static/lumafox-icon.png" />
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/x-icon" href="/static/favicon.ico" />
+  <link rel="apple-touch-icon" href="/static/lumafox-icon.png" />
+
+  <!-- Auto-redirect logged-in users straight to the app -->
+  <script>
+    (function() {
+      try {
+        const token = localStorage.getItem("voice_token");
+        const user = JSON.parse(localStorage.getItem("voice_user") || "null");
+        const isReal = user && !user.user_id?.startsWith("guest-");
+        if (token && isReal) {
+          const dest = localStorage.getItem("lumafox_home") || "voice";
+          window.location.replace("/app" + (dest === "council" ? "?council=1" : ""));
+        }
+      } catch(e) {}
+    })();
+  </script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 

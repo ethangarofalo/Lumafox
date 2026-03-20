@@ -4,8 +4,15 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Lumafox</title>
-  <link rel="icon" type="image/x-icon" href="/static/favicon.ico">
-  <link rel="apple-touch-icon" href="/static/lumafox-icon.png">
+  <link rel="icon" type="image/x-icon" href="/static/favicon.ico" />
+  <link rel="apple-touch-icon" href="/static/lumafox-icon.png" />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://lumafox.ai/" />
+  <meta property="og:title" content="Lumafox — Voice your writing. Council your decisions." />
+  <meta property="og:description" content="Build a precise model of how you write at your best. Summon history's sharpest minds on any decision." />
+  <meta property="og:image" content="https://lumafox.ai/static/lumafox-icon.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:image" content="https://lumafox.ai/static/lumafox-icon.png" />
   <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.9/babel.min.js"></script>
@@ -3755,7 +3762,16 @@ function App() {
             </div>
           ) : (
             <div className="user-badge">
-              <span>{user.name || user.email}</span>
+              <span style={{ fontSize: 12, color: "var(--text-dim)" }}>{user.name || user.email}</span>
+              <select
+                title="Set your home screen"
+                value={localStorage.getItem("lumafox_home") || "voice"}
+                onChange={e => localStorage.setItem("lumafox_home", e.target.value)}
+                style={{ background: "none", border: "none", color: "var(--text-dim)", fontSize: 11, fontFamily: "var(--font-sans)", cursor: "pointer", outline: "none" }}
+              >
+                <option value="voice">↩ Home: Voice</option>
+                <option value="council">↩ Home: Council</option>
+              </select>
               <button className="logout-btn" onClick={handleLogout}>Sign out</button>
             </div>
           )}
