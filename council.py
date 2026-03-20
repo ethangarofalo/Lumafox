@@ -54,9 +54,20 @@ def _load_tradition(name: str) -> str:
         import json
         lines = [json.loads(l) for l in refinements_path.read_text().splitlines() if l.strip()]
         if lines:
-            text += "\n\n## Accumulated Refinements\n"
-            for r in lines:
-                text += f"- [{r.get('type', 'note')}] {r.get('content', '')}\n"
+            esoteric = [r for r in lines if r.get('type') == 'esoteric']
+            other = [r for r in lines if r.get('type') != 'esoteric']
+            if other:
+                text += "\n\n## Accumulated Refinements\n"
+                for r in other:
+                    text += f"- [{r.get('type', 'note')}] {r.get('content', '')}\n"
+            if esoteric:
+                text += "\n\n## Esoteric Principles — The Gap Between Speech and Thought\n"
+                text += "These entries describe the distance between what you say and what you mean. "
+                text += "Your speech is always calibrated to your audience. What you tell one interlocutor "
+                text += "you would never tell another. Use these principles to determine not just what is true "
+                text += "but what this particular questioner needs to hear.\n\n"
+                for r in esoteric:
+                    text += f"- {r.get('content', '')}\n\n"
     return text
 
 
