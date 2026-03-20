@@ -294,11 +294,19 @@
       border: 1px solid var(--border-card);
       border-radius: 12px;
       padding: 28px 26px 30px;
-      transition: border-color 0.2s, background 0.2s;
+      transition: border-color 0.3s, background 0.3s, transform 0.3s, box-shadow 0.3s;
     }
     .card:hover {
-      border-color: #333;
+      border-color: var(--accent-dim);
       background: #181818;
+      transform: translateY(-4px);
+      box-shadow: 0 12px 32px rgba(0,0,0,0.3);
+    }
+
+    .card-icon {
+      font-size: 28px;
+      margin-bottom: 16px;
+      display: block;
     }
 
     .card-category {
@@ -615,6 +623,13 @@
       gap: 16px;
       margin-bottom: 20px;
       align-items: flex-start;
+      opacity: 0;
+      transform: translateX(-16px);
+      transition: opacity 0.5s ease, transform 0.5s ease;
+    }
+    .about-step.visible {
+      opacity: 1;
+      transform: translateX(0);
     }
     .about-step:last-child { margin-bottom: 0; }
 
@@ -626,7 +641,9 @@
       padding-top: 3px;
       min-width: 20px;
       flex-shrink: 0;
+      transition: transform 0.3s;
     }
+    .about-step:hover .about-step-num { transform: scale(1.2); }
 
     .about-step-title {
       font-family: var(--font);
@@ -634,6 +651,73 @@
       color: var(--text);
       margin-bottom: 5px;
     }
+
+    /* ── Section divider ornament ── */
+    .section-divider {
+      width: 40px; height: 1px;
+      background: var(--accent-dim);
+      margin: 0 auto 60px;
+    }
+
+    /* ── Pricing section ── */
+    .pricing {
+      position: relative; z-index: 2;
+      background: var(--bg);
+      padding: 100px 40px 80px;
+      border-top: 1px solid var(--border);
+    }
+    .pricing-inner { max-width: 960px; margin: 0 auto; }
+    .pricing-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+      margin-top: 48px;
+    }
+    @media (max-width: 768px) { .pricing-grid { grid-template-columns: 1fr; max-width: 400px; margin-left: auto; margin-right: auto; } }
+
+    .pricing-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-card);
+      border-radius: 12px;
+      padding: 36px 28px;
+      transition: border-color 0.3s, transform 0.3s;
+      display: flex; flex-direction: column;
+    }
+    .pricing-card:hover { border-color: var(--accent-dim); transform: translateY(-4px); }
+    .pricing-card.featured {
+      border-color: var(--accent-dim);
+      background: rgba(217,168,60,0.04);
+      position: relative;
+    }
+    .pricing-badge {
+      position: absolute; top: -12px; left: 50%; transform: translateX(-50%);
+      background: var(--accent); color: #0a0a0a;
+      font-family: var(--font-sans); font-size: 10px; font-weight: 700;
+      letter-spacing: 0.1em; text-transform: uppercase;
+      padding: 4px 14px; border-radius: 10px;
+    }
+    .pricing-plan {
+      font-family: var(--font-sans); font-size: 11px; letter-spacing: 0.2em;
+      text-transform: uppercase; color: var(--text-faint); margin-bottom: 8px;
+    }
+    .pricing-price {
+      font-family: var(--font); font-size: 36px; color: var(--text); margin-bottom: 4px;
+    }
+    .pricing-price span { font-size: 15px; color: var(--text-dim); }
+    .pricing-desc {
+      font-family: var(--font-sans); font-size: 13px; color: var(--text-dim);
+      line-height: 1.6; margin-bottom: 24px;
+    }
+    .pricing-features {
+      list-style: none; padding: 0; margin: 0 0 28px; flex: 1;
+    }
+    .pricing-features li {
+      font-family: var(--font-sans); font-size: 13px; color: var(--text-dim);
+      line-height: 1.6; padding: 6px 0; border-bottom: 1px solid var(--border-card);
+      display: flex; gap: 10px; align-items: flex-start;
+    }
+    .pricing-features li:last-child { border-bottom: none; }
+    .pricing-check { color: var(--accent); flex-shrink: 0; font-size: 13px; }
 
     .about-step-desc {
       font-family: var(--font-sans);
@@ -868,6 +952,7 @@
     <a href="#use-cases" class="top-nav-link">Use Cases</a>
     <a href="#library" class="top-nav-link">Voice Library</a>
     <a href="#about" class="top-nav-link">About</a>
+    <a href="#pricing" class="top-nav-link">Pricing</a>
     <a href="#faq" class="top-nav-link">Common Questions</a>
     <a href="/app" class="top-nav-link cta">Start free →</a>
   </div>
@@ -889,7 +974,7 @@
     <a href="/app?council=1" class="btn-secondary">Convene the Council</a>
   </div>
 
-  <div class="note">Make the future yours. No account required — start instantly.</div>
+  <div class="note">No credit card &middot; No account required &middot; 3-minute setup</div>
 
   <a href="#use-cases" class="scroll-hint" id="hero-scroll">
     <span>Explore</span>
@@ -909,6 +994,7 @@
   <div class="card-grid">
 
     <div class="card reveal" id="uc-articles">
+      <div class="card-icon">📰</div>
       <div class="card-category">Journalism / Editorial</div>
       <div class="card-title">Articles & Essays</div>
       <p class="card-body">
@@ -918,6 +1004,7 @@
     </div>
 
     <div class="card reveal" id="uc-brand">
+      <div class="card-icon">🏢</div>
       <div class="card-category">Brand / Marketing</div>
       <div class="card-title">Company Brand Voice</div>
       <p class="card-body">
@@ -927,6 +1014,7 @@
     </div>
 
     <div class="card reveal" id="uc-self">
+      <div class="card-icon">🪞</div>
       <div class="card-category">Personal / Reflective</div>
       <div class="card-title">Self-Discovery</div>
       <p class="card-body">
@@ -936,6 +1024,7 @@
     </div>
 
     <div class="card reveal" id="uc-fiction">
+      <div class="card-icon">🎭</div>
       <div class="card-category">Fiction / Narrative</div>
       <div class="card-title">Characters & Personas</div>
       <p class="card-body">
@@ -945,6 +1034,7 @@
     </div>
 
     <div class="card reveal" id="uc-academic">
+      <div class="card-icon">🎓</div>
       <div class="card-category">Academic / Research</div>
       <div class="card-title">Scholarly Writing</div>
       <p class="card-body">
@@ -954,6 +1044,7 @@
     </div>
 
     <div class="card reveal" id="uc-newsletters">
+      <div class="card-icon">✉️</div>
       <div class="card-category">Content / Media</div>
       <div class="card-title">Newsletters & Dispatches</div>
       <p class="card-body">
@@ -1183,6 +1274,64 @@
 
     <div style="text-align:center; margin-top:40px;">
       <a href="/app" class="btn-secondary" style="font-size:14px;">Build your own voice →</a>
+    </div>
+  </div>
+</section>
+
+<!-- ── Pricing ── -->
+<section class="pricing" id="pricing">
+  <div class="pricing-inner">
+    <div class="section-eyebrow">Pricing</div>
+    <h2 class="section-heading">Start free. Upgrade when you're ready.</h2>
+    <p class="section-sub">No credit card required. Set up in under 3 minutes.</p>
+
+    <div class="pricing-grid">
+      <div class="pricing-card reveal">
+        <div class="pricing-plan">Free</div>
+        <div class="pricing-price">$0 <span>/ forever</span></div>
+        <div class="pricing-desc">Everything you need to start building your voice.</div>
+        <ul class="pricing-features">
+          <li><span class="pricing-check">◆</span> 1 voice profile</li>
+          <li><span class="pricing-check">◆</span> 50 teaches per month</li>
+          <li><span class="pricing-check">◆</span> Write, Analyze & Export</li>
+          <li><span class="pricing-check">◆</span> 3 Council credits / week</li>
+          <li><span class="pricing-check">◆</span> AI Style Guide export</li>
+        </ul>
+        <a href="/app" class="btn-secondary" style="text-align:center; display:block;">Start free →</a>
+      </div>
+
+      <div class="pricing-card featured reveal">
+        <div class="pricing-badge">Most Popular</div>
+        <div class="pricing-plan">Starter</div>
+        <div class="pricing-price">$15 <span>/ month</span></div>
+        <div class="pricing-desc">For writers and professionals building their voice seriously.</div>
+        <ul class="pricing-features">
+          <li><span class="pricing-check">◆</span> 3 voice profiles</li>
+          <li><span class="pricing-check">◆</span> 500 teaches per month</li>
+          <li><span class="pricing-check">◆</span> Write, Analyze & Export</li>
+          <li><span class="pricing-check">◆</span> 25 Council credits / week</li>
+          <li><span class="pricing-check">◆</span> Full Council (6 thinkers, 2 rounds)</li>
+        </ul>
+        <a href="/app?signin=1" class="btn-primary" style="text-align:center; display:block;">Get Starter →</a>
+      </div>
+
+      <div class="pricing-card reveal">
+        <div class="pricing-plan">Pro</div>
+        <div class="pricing-price">$30 <span>/ month</span></div>
+        <div class="pricing-desc">Unlimited voices, unlimited thinking. For power users.</div>
+        <ul class="pricing-features">
+          <li><span class="pricing-check">◆</span> Unlimited voice profiles</li>
+          <li><span class="pricing-check">◆</span> Unlimited teaches</li>
+          <li><span class="pricing-check">◆</span> Write, Analyze & Export</li>
+          <li><span class="pricing-check">◆</span> 100 Council credits / week</li>
+          <li><span class="pricing-check">◆</span> Swarm Council (40 agents)</li>
+        </ul>
+        <a href="/app?signin=1" class="btn-primary" style="text-align:center; display:block; background: none; border: 1px solid var(--accent); color: var(--accent);">Get Pro →</a>
+      </div>
+    </div>
+
+    <div style="text-align:center; margin-top:24px; font-family:var(--font-sans); font-size:12px; color:var(--text-faint);">
+      No credit card required to start &middot; Cancel anytime &middot; 3-minute setup
     </div>
   </div>
 </section>
@@ -1433,13 +1582,25 @@ const reveals = document.querySelectorAll('.reveal');
 const observer = new IntersectionObserver((entries) => {
   entries.forEach((e, i) => {
     if (e.isIntersecting) {
-      // stagger each card slightly
       setTimeout(() => e.target.classList.add('visible'), i * 80);
       observer.unobserve(e.target);
     }
   });
 }, { threshold: 0.1 });
 reveals.forEach(el => observer.observe(el));
+
+// Staggered reveal for "How It Works" steps
+const steps = document.querySelectorAll('.about-step');
+const stepObserver = new IntersectionObserver((entries) => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      const idx = Array.from(steps).indexOf(e.target);
+      setTimeout(() => e.target.classList.add('visible'), idx * 150);
+      stepObserver.unobserve(e.target);
+    }
+  });
+}, { threshold: 0.15 });
+steps.forEach(el => stepObserver.observe(el));
 
 function toggleFaq(btn) {
   const item = btn.closest('.faq-item');
