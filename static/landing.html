@@ -327,6 +327,93 @@
     }
 
     /* ── Bottom CTA ── */
+    /* ── Export flow visual ── */
+    .export-flow {
+      margin-top: 28px;
+      display: flex; align-items: center; gap: 0;
+      flex-wrap: wrap;
+    }
+    .export-node {
+      display: flex; flex-direction: column; align-items: center; gap: 4px;
+      padding: 10px 14px; border: 1px solid var(--border);
+      border-radius: 8px; background: var(--bg-card);
+      font-family: var(--font-sans); font-size: 11px;
+      color: var(--text-dim); min-width: 80px; text-align: center;
+    }
+    .export-node-title { font-size: 12px; font-weight: 500; color: var(--text); }
+    .export-node.accent { border-color: var(--accent-dim); background: rgba(217,168,60,0.06); }
+    .export-node.accent .export-node-title { color: var(--accent); }
+    .export-arrow {
+      font-size: 16px; color: var(--accent-dim); padding: 0 8px;
+      flex-shrink: 0;
+    }
+    .export-destinations { display: flex; flex-direction: column; gap: 6px; }
+    .export-dest {
+      padding: 6px 12px; border: 1px solid var(--border); border-radius: 6px;
+      background: var(--bg); font-family: var(--font-sans); font-size: 11px;
+      color: var(--text-dim); white-space: nowrap;
+    }
+
+    /* ── Not For section ── */
+    .not-for {
+      position: relative; z-index: 2;
+      background: var(--bg-section);
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+      padding: 80px 40px;
+    }
+    .not-for-inner {
+      max-width: 860px; margin: 0 auto;
+    }
+    .not-for-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-top: 40px;
+    }
+    @media (max-width: 640px) { .not-for-grid { grid-template-columns: 1fr; gap: 28px; } }
+    .not-for-col-label {
+      font-family: var(--font-sans); font-size: 10px; letter-spacing: 0.2em;
+      text-transform: uppercase; margin-bottom: 18px;
+    }
+    .not-for-col-label.yes { color: var(--accent); }
+    .not-for-col-label.no  { color: var(--text-faint); }
+    .not-for-item {
+      display: flex; gap: 12px; align-items: flex-start;
+      margin-bottom: 16px; font-family: var(--font-sans); font-size: 14px;
+      color: var(--text-dim); line-height: 1.55;
+    }
+    .not-for-item:last-child { margin-bottom: 0; }
+    .not-for-item .bullet { flex-shrink: 0; margin-top: 2px; font-size: 12px; }
+    .not-for-item .bullet.yes { color: var(--accent); }
+    .not-for-item .bullet.no  { color: var(--text-faint); opacity: 0.5; }
+
+    /* ── FAQ ── */
+    .faq {
+      position: relative; z-index: 2;
+      background: var(--bg); padding: 80px 40px;
+    }
+    .faq-inner { max-width: 720px; margin: 0 auto; }
+    .faq-item {
+      border-bottom: 1px solid var(--border);
+    }
+    .faq-item:first-of-type { border-top: 1px solid var(--border); }
+    .faq-q {
+      width: 100%; display: flex; align-items: center; justify-content: space-between;
+      padding: 22px 0; background: none; border: none; cursor: pointer;
+      font-family: var(--font); font-size: 17px; font-weight: 400;
+      color: var(--text); text-align: left; gap: 16px;
+    }
+    .faq-q:hover { color: var(--accent); }
+    .faq-chevron {
+      flex-shrink: 0; font-size: 14px; color: var(--accent);
+      transition: transform 0.2s; line-height: 1;
+    }
+    .faq-item.open .faq-chevron { transform: rotate(45deg); }
+    .faq-a {
+      display: none; padding: 0 0 22px;
+      font-family: var(--font-sans); font-size: 14px;
+      color: var(--text-dim); line-height: 1.75;
+    }
+    .faq-item.open .faq-a { display: block; }
+
     .bottom-cta {
       position: relative;
       z-index: 2;
@@ -826,6 +913,28 @@
               Copy the distilled voice prompt and paste it into any AI tool you
               already use — ChatGPT, Claude, Notion AI, wherever you work.
             </div>
+            <div class="export-flow">
+              <div class="export-node accent">
+                <div class="export-node-title">Lumafox Voice</div>
+                <div>your trained profile</div>
+              </div>
+              <div class="export-arrow">→</div>
+              <div class="export-node">
+                <div class="export-node-title">Copy prompt</div>
+                <div>one click</div>
+              </div>
+              <div class="export-arrow">→</div>
+              <div class="export-destinations">
+                <div class="export-dest">Claude · ChatGPT</div>
+                <div class="export-dest">Notion AI · Substack</div>
+                <div class="export-dest">Any AI tool you use</div>
+              </div>
+              <div class="export-arrow">→</div>
+              <div class="export-node accent">
+                <div class="export-node-title">Sounds like you</div>
+                <div>every time</div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -896,6 +1005,134 @@
       </div>
     </div>
 
+  </div>
+</section>
+
+<!-- ── Not For ── -->
+<section class="not-for">
+  <div class="not-for-inner">
+    <div class="section-eyebrow">Honest by design</div>
+    <h2 class="section-heading" style="text-align:left; max-width:560px;">
+      Lumafox is not for everyone.<br><em>That's the point.</em>
+    </h2>
+    <div class="not-for-grid">
+      <div>
+        <div class="not-for-col-label yes">Lumafox is for you if —</div>
+        <div class="not-for-item">
+          <span class="bullet yes">◆</span>
+          <span>You have a distinct way of thinking and want AI to amplify it, not erase it</span>
+        </div>
+        <div class="not-for-item">
+          <span class="bullet yes">◆</span>
+          <span>You make decisions you actually care about and want rigorous perspective before acting</span>
+        </div>
+        <div class="not-for-item">
+          <span class="bullet yes">◆</span>
+          <span>You're a writer, thinker, or professional whose voice is a competitive advantage</span>
+        </div>
+        <div class="not-for-item">
+          <span class="bullet yes">◆</span>
+          <span>You want to get sharper over time — not just faster</span>
+        </div>
+        <div class="not-for-item">
+          <span class="bullet yes">◆</span>
+          <span>You believe that disagreement, done well, leads somewhere truer than consensus</span>
+        </div>
+      </div>
+      <div>
+        <div class="not-for-col-label no">This isn't for you if —</div>
+        <div class="not-for-item">
+          <span class="bullet no">◇</span>
+          <span>You need generic content at scale and don't care whose voice it is</span>
+        </div>
+        <div class="not-for-item">
+          <span class="bullet no">◇</span>
+          <span>You want an AI that tells you what you want to hear</span>
+        </div>
+        <div class="not-for-item">
+          <span class="bullet no">◇</span>
+          <span>You're looking for a shortcut around thinking, not a tool that deepens it</span>
+        </div>
+        <div class="not-for-item">
+          <span class="bullet no">◇</span>
+          <span>You have no interest in your own writing improving — just in producing more of it</span>
+        </div>
+        <div class="not-for-item">
+          <span class="bullet no">◇</span>
+          <span>You want quick answers, not examined ones</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── FAQ ── -->
+<section class="faq">
+  <div class="faq-inner">
+    <div class="section-eyebrow" style="text-align:left;">Common questions</div>
+    <h2 class="section-heading" style="text-align:left; margin-bottom:40px;">
+      What people ask before starting.
+    </h2>
+
+    <div class="faq-item">
+      <button class="faq-q" onclick="toggleFaq(this)">
+        Is my writing data private?
+        <span class="faq-chevron">+</span>
+      </button>
+      <div class="faq-a">
+        Yes. Your voice profile — the refinements, principles, and examples you teach — is stored privately under your account and never used to train any shared model. It belongs to you. You can export it or delete it at any time. Council questions are processed to generate deliberations but are not stored in a way that links them to your identity.
+      </div>
+    </div>
+
+    <div class="faq-item">
+      <button class="faq-q" onclick="toggleFaq(this)">
+        How many writing samples do I need to train Voice?
+        <span class="faq-chevron">+</span>
+      </button>
+      <div class="faq-a">
+        You can start with a single paragraph and a few principles stated in plain language. The model gets meaningfully sharper around 10–15 refinements, and noticeably powerful past 30. There is no ceiling — every correction you make is a permanent improvement. Most users find it useful within the first session and genuinely impressive within the first week.
+      </div>
+    </div>
+
+    <div class="faq-item">
+      <button class="faq-q" onclick="toggleFaq(this)">
+        Can I delete my voice model at any time?
+        <span class="faq-chevron">+</span>
+      </button>
+      <div class="faq-a">
+        Yes — completely and immediately. There is a delete button on every voice profile. When you delete a profile, all refinements, samples, and associated data are permanently removed. No recovery, no archive, no residual use.
+      </div>
+    </div>
+
+    <div class="faq-item">
+      <button class="faq-q" onclick="toggleFaq(this)">
+        Does Council replace my own judgment?
+        <span class="faq-chevron">+</span>
+      </button>
+      <div class="faq-a">
+        No — and it isn't designed to. Council is a deliberation engine, not a decision oracle. Socrates will not tell you what to do. What the Council does is stress-test your reasoning, surface angles you haven't considered, and force the question to hold up against perspectives that genuinely disagree with each other. The judgment remains yours. The Council just makes it harder to deceive yourself.
+      </div>
+    </div>
+
+    <div class="faq-item">
+      <button class="faq-q" onclick="toggleFaq(this)">
+        Do I need an account to start?
+        <span class="faq-chevron">+</span>
+      </button>
+      <div class="faq-a">
+        No. You can start building a voice profile or convening the council immediately — no email, no password, no credit card. Your session is saved locally. Create an account when you're ready to preserve your voice profile permanently and access it across devices.
+      </div>
+    </div>
+
+    <div class="faq-item">
+      <button class="faq-q" onclick="toggleFaq(this)">
+        How is this different from just prompting Claude or ChatGPT?
+        <span class="faq-chevron">+</span>
+      </button>
+      <div class="faq-a">
+        A general AI doesn't know your voice exists. When you prompt Claude or ChatGPT to "write like me," it infers from the conversation — and forgets everything next session. Lumafox Voice accumulates refinements permanently: every correction you make is saved, every principle you state is remembered, and the model grows more precise over time. You can also export the distilled voice prompt and use it in any AI tool you already use — so Lumafox makes your existing tools better, not redundant.
+      </div>
+    </div>
   </div>
 </section>
 
@@ -992,6 +1229,13 @@ const observer = new IntersectionObserver((entries) => {
   });
 }, { threshold: 0.1 });
 reveals.forEach(el => observer.observe(el));
+
+function toggleFaq(btn) {
+  const item = btn.closest('.faq-item');
+  const isOpen = item.classList.contains('open');
+  document.querySelectorAll('.faq-item.open').forEach(el => el.classList.remove('open'));
+  if (!isOpen) item.classList.add('open');
+}
 </script>
 
 </body>
