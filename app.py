@@ -19,7 +19,7 @@ from fastapi.responses import FileResponse
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel, Field
 
-from auth import register, login, verify_token, create_token, refresh_token, ensure_dirs as ensure_auth_dirs
+from auth import register, login, verify_token, create_token, refresh_token, ensure_dirs as ensure_auth_dirs, create_reset_token, consume_reset_token, send_reset_email
 from billing import (
     get_subscription, get_plan_limits, create_checkout_session,
     check_council_credits, consume_credits, get_credits_remaining,
@@ -268,6 +268,41 @@ async def refresh_session(
     return result
 
 
+# ── Password Reset ──
+
+class ForgotPasswordRequest(BaseModel):
+    email: str
+
+class ResetPasswordRequest(BaseModel):
+    token: str
+    password: str
+
+@app.post("/auth/forgot-password")
+async def forgot_password(req: ForgotPasswordRequest, request: Request):
+    """Send a password reset email. Always returns 200 to avoid email enumeration."""
+    _check_login_rate(request.client.host if request.client else "unknown")
+    email = req.email.lower().strip()
+    token = create_reset_token(email)
+    if token:
+        base_url = str(request.base_url).rstrip("/")
+        try:
+            send_reset_email(email, token, base_url)
+        except Exception as e:
+            print(f"[SMTP error] {e}")
+    return {"ok": True}
+
+@app.post("/auth/reset-password")
+async def reset_password(req: ResetPasswordRequest):
+    """Reset password with a valid token."""
+    try:
+        ok = consume_reset_token(req.token, req.password)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    if not ok:
+        raise HTTPException(400, "Reset link is invalid or has expired.")
+    return {"ok": True}
+
+
 # ── Billing Endpoints ──
 
 class CheckoutRequest(BaseModel):
@@ -465,6 +500,50 @@ async def delete_voice_profile(
         raise HTTPException(status_code=403, detail="Not your profile")
     delete_profile(profile_id)
     return {"deleted": True, "profile_id": profile_id}
+
+
+@app.patch("/profiles/{profile_id}/avatar")
+async def set_profile_avatar(
+    profile_id: str,
+    user_id: str = Depends(get_current_user),
+    avatar: str = Body(..., embed=True),
+):
+    """Set a preset avatar emoji key for a voice profile."""
+    profile = load_profile(profile_id)
+    if not profile:
+        raise HTTPException(404, "Profile not found")
+    if profile.owner_id != user_id:
+        raise HTTPException(403, "Not your profile")
+    profile.avatar = avatar
+    update_profile_metadata(profile)
+    return {"avatar": avatar}
+
+
+@app.post("/profiles/{profile_id}/avatar/upload")
+async def upload_profile_avatar(
+    profile_id: str,
+    user_id: str = Depends(get_current_user),
+    file: UploadFile = File(...),
+):
+    """Upload a custom image avatar for a voice profile."""
+    profile = load_profile(profile_id)
+    if not profile:
+        raise HTTPException(404, "Profile not found")
+    if profile.owner_id != user_id:
+        raise HTTPException(403, "Not your profile")
+    if file.content_type not in ("image/jpeg", "image/png", "image/webp", "image/gif"):
+        raise HTTPException(400, "Must be JPG, PNG, WebP, or GIF")
+    data = await file.read()
+    if len(data) > 2 * 1024 * 1024:  # 2MB cap
+        raise HTTPException(400, "Image must be under 2MB")
+    avatars_dir = Path(__file__).parent / "static" / "avatars"
+    avatars_dir.mkdir(parents=True, exist_ok=True)
+    ext = file.filename.rsplit(".", 1)[-1].lower() if "." in file.filename else "jpg"
+    path = avatars_dir / f"{profile_id}.{ext}"
+    path.write_bytes(data)
+    profile.avatar = f"custom:{ext}"
+    update_profile_metadata(profile)
+    return {"avatar": profile.avatar, "url": f"/static/avatars/{profile_id}.{ext}"}
 
 
 @app.get("/profiles/{profile_id}/refinements")

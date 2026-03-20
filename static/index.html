@@ -906,24 +906,49 @@ async function copyText(text) {
 }
 
 // ── Auth Modal ──
-function AuthModal({ onClose, onAuth, guestId }) {
-  const [isLogin, setIsLogin] = useState(true);
+function AuthModal({ onClose, onAuth, guestId, initialMode }) {
+  // mode: "login" | "register" | "forgot" | "forgot-sent" | "reset"
+  const [mode, setMode] = useState(initialMode || "login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
+  const [resetToken, setResetToken] = useState(initialMode === "reset" ? (new URLSearchParams(window.location.search).get("reset") || "") : "");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const emailRef = useRef(null);
 
-  useEffect(() => { emailRef.current?.focus(); }, [isLogin]);
+  useEffect(() => { emailRef.current?.focus(); }, [mode]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!email.trim() || !password) return;
     setError(""); setLoading(true);
     try {
-      const endpoint = isLogin ? "/auth/login" : "/auth/register";
-      const body = isLogin
+      if (mode === "forgot") {
+        await fetch(`${API}/auth/forgot-password`, {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: email.trim() }),
+        });
+        setMode("forgot-sent");
+        setLoading(false);
+        return;
+      }
+      if (mode === "reset") {
+        const res = await fetch(`${API}/auth/reset-password`, {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ token: resetToken, password }),
+        });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({ detail: "Something went wrong" }));
+          throw new Error(err.detail);
+        }
+        window.history.replaceState({}, "", "/app");
+        setMode("login");
+        toast("Password updated — sign in with your new password.");
+        setLoading(false);
+        return;
+      }
+      const endpoint = mode === "login" ? "/auth/login" : "/auth/register";
+      const body = mode === "login"
         ? { email: email.trim(), password }
         : { email: email.trim(), password, name: name.trim() };
       const headers = { "Content-Type": "application/json" };
@@ -942,47 +967,76 @@ function AuthModal({ onClose, onAuth, guestId }) {
     setLoading(false);
   };
 
+  const titles = { login: "Sign in", register: "Create account", forgot: "Reset password", "forgot-sent": "Check your email", reset: "Set new password" };
+
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal" onClick={e => e.stopPropagation()} style={{ width: 400 }}>
-        <div className="modal-title">{isLogin ? "Sign in" : "Create account"}</div>
-        {guestId && !isLogin && (
-          <p style={{ fontSize: 13, color: "var(--green)", fontFamily: "var(--font-sans)", marginBottom: 16 }}>
-            Your current work will be saved to your new account.
-          </p>
-        )}
-        <form onSubmit={handleSubmit}>
-          {error && (
-            <div style={{ background: "rgba(179,80,80,0.15)", border: "1px solid var(--red)",
-              color: "var(--red)", padding: "8px 12px", borderRadius: "var(--radius)",
-              fontSize: 13, marginBottom: 12, fontFamily: "var(--font-sans)" }}>
-              {error}
+        <div className="modal-title">{titles[mode]}</div>
+        {mode === "forgot-sent" ? (
+          <div style={{ fontFamily: "var(--font-sans)", fontSize: 14, color: "var(--text-dim)", lineHeight: 1.6 }}>
+            <p>If an account exists for <strong style={{ color: "var(--text)" }}>{email}</strong>, you'll receive a reset link within a minute.</p>
+            <p style={{ marginTop: 8 }}>The link expires in 30 minutes.</p>
+            <div className="modal-actions" style={{ marginTop: 20 }}>
+              <button className="action-btn" onClick={() => setMode("login")}>Back to sign in</button>
             </div>
-          )}
-          {!isLogin && (
-            <input className="modal-input" type="text" placeholder="Your name"
-              value={name} onChange={e => setName(e.target.value)} />
-          )}
-          <input ref={emailRef} className="modal-input" type="email" placeholder="Email" required
-            value={email} onChange={e => setEmail(e.target.value)} />
-          <input className="modal-input" type="password" placeholder="Password" minLength={6} required
-            value={password} onChange={e => setPassword(e.target.value)} />
-          <div className="modal-actions">
-            <button type="button" className="action-btn secondary" onClick={onClose}>Cancel</button>
-            <button type="submit" className="action-btn" disabled={loading}>
-              {loading ? "..." : isLogin ? "Sign In" : "Create Account"}
-            </button>
           </div>
-        </form>
-        <div style={{ textAlign: "center", marginTop: 16, fontSize: 13, color: "var(--text-dim)", fontFamily: "var(--font-sans)" }}>
-          {isLogin ? (
-            <>No account? <a style={{ color: "var(--accent)", cursor: "pointer" }}
-              onClick={() => { setIsLogin(false); setError(""); }}>Create one</a></>
-          ) : (
-            <>Have an account? <a style={{ color: "var(--accent)", cursor: "pointer" }}
-              onClick={() => { setIsLogin(true); setError(""); }}>Sign in</a></>
-          )}
-        </div>
+        ) : (
+          <>
+            {guestId && mode === "register" && (
+              <p style={{ fontSize: 13, color: "var(--green)", fontFamily: "var(--font-sans)", marginBottom: 16 }}>
+                Your current work will be saved to your new account.
+              </p>
+            )}
+            <form onSubmit={handleSubmit}>
+              {error && (
+                <div style={{ background: "rgba(179,80,80,0.15)", border: "1px solid var(--red)",
+                  color: "var(--red)", padding: "8px 12px", borderRadius: "var(--radius)",
+                  fontSize: 13, marginBottom: 12, fontFamily: "var(--font-sans)" }}>
+                  {error}
+                </div>
+              )}
+              {mode === "register" && (
+                <input className="modal-input" type="text" placeholder="Your name"
+                  value={name} onChange={e => setName(e.target.value)} />
+              )}
+              {mode !== "reset" && (
+                <input ref={emailRef} className="modal-input" type="email" placeholder="Email" required
+                  value={email} onChange={e => setEmail(e.target.value)} />
+              )}
+              {(mode === "login" || mode === "register" || mode === "reset") && (
+                <input className="modal-input" type="password"
+                  placeholder={mode === "reset" ? "New password (min 6 chars)" : "Password"}
+                  minLength={6} required
+                  value={password} onChange={e => setPassword(e.target.value)} />
+              )}
+              <div className="modal-actions">
+                <button type="button" className="action-btn secondary" onClick={onClose}>Cancel</button>
+                <button type="submit" className="action-btn" disabled={loading}>
+                  {loading ? "…" : mode === "login" ? "Sign In" : mode === "register" ? "Create Account" : mode === "forgot" ? "Send Reset Link" : "Set Password"}
+                </button>
+              </div>
+            </form>
+            <div style={{ textAlign: "center", marginTop: 16, fontSize: 13, color: "var(--text-dim)", fontFamily: "var(--font-sans)" }}>
+              {mode === "login" && (
+                <>
+                  <div>No account? <a style={{ color: "var(--accent)", cursor: "pointer" }}
+                    onClick={() => { setMode("register"); setError(""); }}>Create one</a></div>
+                  <div style={{ marginTop: 6 }}><a style={{ color: "var(--text-dim)", cursor: "pointer" }}
+                    onClick={() => { setMode("forgot"); setError(""); }}>Forgot password?</a></div>
+                </>
+              )}
+              {mode === "register" && (
+                <>Have an account? <a style={{ color: "var(--accent)", cursor: "pointer" }}
+                  onClick={() => { setMode("login"); setError(""); }}>Sign in</a></>
+              )}
+              {(mode === "forgot" || mode === "reset") && (
+                <a style={{ color: "var(--text-dim)", cursor: "pointer" }}
+                  onClick={() => { setMode("login"); setError(""); }}>← Back to sign in</a>
+              )}
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
@@ -3199,6 +3253,119 @@ function ThinkerCard({ thinker }) {
 }
 
 
+// ── Avatar Picker ──
+const AVATAR_PRESETS = [
+  { key: "🦉", label: "Scholarly" },
+  { key: "🎨", label: "Artistic" },
+  { key: "✍️", label: "Writer" },
+  { key: "🏛️", label: "Classical" },
+  { key: "⚡", label: "Bold" },
+  { key: "🌙", label: "Poetic" },
+  { key: "🔬", label: "Analytical" },
+  { key: "🌿", label: "Reflective" },
+  { key: "🗣️", label: "Voice" },
+  { key: "🧭", label: "Strategic" },
+];
+
+function ProfileAvatar({ avatar, size = 32, style = {} }) {
+  if (!avatar) {
+    return (
+      <div style={{
+        width: size, height: size, borderRadius: "50%",
+        background: "var(--accent-glow)", border: "1px solid var(--accent-dim)",
+        display: "flex", alignItems: "center", justifyContent: "center",
+        fontSize: size * 0.45, flexShrink: 0, ...style
+      }}>🦊</div>
+    );
+  }
+  if (avatar.startsWith("custom:")) {
+    const profileId = style["data-profile-id"];
+    const ext = avatar.split(":")[1];
+    return (
+      <img src={`/static/avatars/${profileId}.${ext}`}
+        style={{ width: size, height: size, borderRadius: "50%", objectFit: "cover", flexShrink: 0, ...style }} />
+    );
+  }
+  return (
+    <div style={{
+      width: size, height: size, borderRadius: "50%",
+      background: "var(--accent-glow)", border: "1px solid var(--accent-dim)",
+      display: "flex", alignItems: "center", justifyContent: "center",
+      fontSize: size * 0.55, flexShrink: 0, ...style
+    }}>{avatar}</div>
+  );
+}
+
+function AvatarPicker({ profile, onSaved, onClose }) {
+  const [uploading, setUploading] = React.useState(false);
+  const fileRef = React.useRef();
+
+  async function pickPreset(emoji) {
+    await api(`/profiles/${profile.profile_id}/avatar`, {
+      method: "PATCH",
+      body: JSON.stringify({ avatar: emoji }),
+    });
+    onSaved(emoji);
+  }
+
+  async function handleUpload(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      const form = new FormData();
+      form.append("file", file);
+      const res = await fetch(`/profiles/${profile.profile_id}/avatar/upload`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${getToken()}` },
+        body: form,
+      });
+      const data = await res.json();
+      onSaved(data.avatar);
+    } catch {
+      toast("Upload failed — try a smaller image.");
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  return (
+    <div style={{
+      position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)",
+      display: "flex", alignItems: "center", justifyContent: "center", zIndex: 200,
+    }} onClick={onClose}>
+      <div style={{
+        background: "var(--bg-card)", border: "1px solid var(--border-light)",
+        borderRadius: 12, padding: 24, width: 320, maxWidth: "90vw",
+      }} onClick={e => e.stopPropagation()}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+          <span style={{ fontFamily: "var(--font-serif)", fontSize: 15, color: "var(--text)" }}>Choose an avatar</span>
+          <button onClick={onClose} style={{ background: "none", border: "none", color: "var(--text-dim)", cursor: "pointer", fontSize: 18 }}>×</button>
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 8, marginBottom: 16 }}>
+          {AVATAR_PRESETS.map(({ key, label }) => (
+            <button key={key} title={label} onClick={() => pickPreset(key)} style={{
+              background: profile.avatar === key ? "var(--accent-glow)" : "var(--bg-hover)",
+              border: profile.avatar === key ? "1px solid var(--accent)" : "1px solid var(--border-light)",
+              borderRadius: 8, padding: "10px 0", cursor: "pointer",
+              fontSize: 22, display: "flex", alignItems: "center", justifyContent: "center",
+              transition: "all 0.15s",
+            }}>{key}</button>
+          ))}
+        </div>
+        <button onClick={() => fileRef.current?.click()} disabled={uploading} style={{
+          width: "100%", padding: "10px", border: "1px dashed var(--border-light)",
+          borderRadius: 8, background: "none", color: uploading ? "var(--text-dim)" : "var(--text)",
+          cursor: uploading ? "default" : "pointer", fontFamily: "var(--font-sans)", fontSize: 13,
+        }}>
+          {uploading ? "Uploading…" : "Upload photo (JPG / PNG / WebP)"}
+        </button>
+        <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" style={{ display: "none" }} onChange={handleUpload} />
+      </div>
+    </div>
+  );
+}
+
 // ── Home View — workflow entry point shown when a profile is first selected ──
 function HomeView({ profile, onMode }) {
   const isNew = profile.refinement_count === 0;
@@ -3647,18 +3814,25 @@ function App() {
   const [showCreate, setShowCreate] = useState(false);
   const [showFind, setShowFind] = useState(false);
   const [showAuth, setShowAuth] = useState(false);
+  const [authInitialMode, setAuthInitialMode] = useState("login");
   const [showOnboarding, setShowOnboarding] = useState(() => !localStorage.getItem("lumafox_onboarded"));
   const [pendingDesc, setPendingDesc] = useState("");
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [loaded, setLoaded] = useState(false);
+  const [showAvatarPicker, setShowAvatarPicker] = useState(false);
 
   const isGuest = user?.user_id?.startsWith("guest-");
 
   // Open auth modal immediately if landing page sent ?signin=1
   useEffect(() => {
-    if (new URLSearchParams(window.location.search).get("signin") === "1") {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("signin") === "1") {
       setShowAuth(true);
       window.history.replaceState({}, "", "/app");
+    } else if (params.get("reset")) {
+      setAuthInitialMode("reset");
+      setShowAuth(true);
+      // keep ?reset= in URL so AuthModal can read it; it will clear it on submit
     }
   }, []);
 
@@ -3901,9 +4075,13 @@ function App() {
                     key={p.profile_id}
                     className={`profile-card ${activeProfile?.profile_id === p.profile_id ? "active" : ""}`}
                     onClick={() => { setActiveProfile(p); setMode("home"); setMobileSidebarOpen(false); }}
+                    style={{ display: "flex", alignItems: "center", gap: 10 }}
                   >
-                    <div className="profile-card-name">{p.name}</div>
-                    <div className="profile-card-meta">{p.refinement_count} refinements</div>
+                    <ProfileAvatar avatar={p.avatar} size={28} style={{ "data-profile-id": p.profile_id }} />
+                    <div>
+                      <div className="profile-card-name">{p.name}</div>
+                      <div className="profile-card-meta">{p.refinement_count} refinements</div>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -3973,9 +4151,20 @@ function App() {
           ) : activeProfile ? (
             <>
               <div className="profile-header" style={{ position: "relative", zIndex: 1 }}>
-                <div style={{ display: "flex", alignItems: "baseline" }}>
-                  <div className="profile-header-name">{activeProfile.name}</div>
-                  <div className="profile-header-meta">{activeProfile.refinement_count} refinements</div>
+                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                  <button onClick={() => setShowAvatarPicker(true)} title="Change avatar" style={{
+                    background: "none", border: "none", padding: 0, cursor: "pointer",
+                    borderRadius: "50%", transition: "opacity 0.15s",
+                  }}
+                    onMouseEnter={e => e.currentTarget.style.opacity = "0.7"}
+                    onMouseLeave={e => e.currentTarget.style.opacity = "1"}
+                  >
+                    <ProfileAvatar avatar={activeProfile.avatar} size={36} style={{ "data-profile-id": activeProfile.profile_id }} />
+                  </button>
+                  <div>
+                    <div className="profile-header-name">{activeProfile.name}</div>
+                    <div className="profile-header-meta">{activeProfile.refinement_count} refinements</div>
+                  </div>
                 </div>
                 <div className="profile-header-actions">
                   <button className="header-action danger" onClick={handleDelete}>Delete</button>
@@ -4025,11 +4214,23 @@ function App() {
         />
       )}
       {showFind && <FindVoiceModal onClose={() => setShowFind(false)} onResult={handleFindResult} />}
+      {showAvatarPicker && activeProfile && (
+        <AvatarPicker
+          profile={activeProfile}
+          onSaved={(newAvatar) => {
+            setActiveProfile(prev => ({ ...prev, avatar: newAvatar }));
+            setProfiles(prev => prev.map(p => p.profile_id === activeProfile.profile_id ? { ...p, avatar: newAvatar } : p));
+            setShowAvatarPicker(false);
+          }}
+          onClose={() => setShowAvatarPicker(false)}
+        />
+      )}
       {showAuth && (
         <AuthModal
-          onClose={() => setShowAuth(false)}
+          onClose={() => { setShowAuth(false); setAuthInitialMode("login"); }}
           onAuth={handleAuth}
           guestId={isGuest ? user.user_id : null}
+          initialMode={authInitialMode}
         />
       )}
       {confirmDelete && activeProfile && (

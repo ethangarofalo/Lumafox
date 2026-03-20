@@ -7,8 +7,11 @@ Replace with OAuth/SSO when ready for production.
 
 import json
 import os
+import secrets
+import smtplib
 import uuid
 from datetime import datetime, timedelta
+from email.mime.text import MIMEText
 from pathlib import Path
 from typing import Optional
 
@@ -138,6 +141,106 @@ def refresh_token(token: str) -> Optional[dict]:
         "user_id": user_id, "email": email, "name": email.split("@")[0], "plan": "free"
     }
     return {"token": new_token, "user": user_public}
+
+
+# ── Password Reset ──
+
+RESET_TOKENS_PATH = DATA_DIR / "reset_tokens.json"
+RESET_TOKEN_EXPIRY_MINUTES = 30
+
+
+def _load_reset_tokens() -> dict:
+    if not RESET_TOKENS_PATH.exists():
+        return {}
+    try:
+        return json.loads(RESET_TOKENS_PATH.read_text())
+    except Exception:
+        return {}
+
+
+def _save_reset_tokens(tokens: dict):
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    RESET_TOKENS_PATH.write_text(json.dumps(tokens, indent=2))
+
+
+def create_reset_token(email: str) -> Optional[str]:
+    """Create a password-reset token for email. Returns token or None if user not found."""
+    email = email.lower().strip()
+    if not _load_user(email):
+        return None  # Don't reveal whether account exists
+    token = secrets.token_urlsafe(32)
+    tokens = _load_reset_tokens()
+    # Purge expired tokens
+    now = datetime.utcnow()
+    tokens = {t: v for t, v in tokens.items()
+              if datetime.fromisoformat(v["expires_at"]) > now}
+    tokens[token] = {
+        "email": email,
+        "expires_at": (now + timedelta(minutes=RESET_TOKEN_EXPIRY_MINUTES)).isoformat(),
+    }
+    _save_reset_tokens(tokens)
+    return token
+
+
+def consume_reset_token(token: str, new_password: str) -> bool:
+    """Validate reset token and update password. Returns True on success."""
+    tokens = _load_reset_tokens()
+    entry = tokens.get(token)
+    if not entry:
+        return False
+    if datetime.fromisoformat(entry["expires_at"]) <= datetime.utcnow():
+        return False
+    email = entry["email"]
+    user = _load_user(email)
+    if not user:
+        return False
+    if len(new_password) < 6:
+        raise ValueError("Password must be at least 6 characters.")
+    user["password_hash"] = bcrypt.hashpw(new_password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
+    _save_user(user)
+    # Invalidate the used token
+    del tokens[token]
+    _save_reset_tokens(tokens)
+    return True
+
+
+def send_reset_email(email: str, token: str, base_url: str = "https://lumafox.ai"):
+    """Send password reset email. Falls back to logging if SMTP not configured."""
+    reset_url = f"{base_url}/app?reset={token}"
+    subject = "Reset your Lumafox password"
+    body = f"""Hi,
+
+Someone requested a password reset for your Lumafox account ({email}).
+
+Click the link below to set a new password — it expires in {RESET_TOKEN_EXPIRY_MINUTES} minutes:
+
+{reset_url}
+
+If you didn't request this, ignore this email.
+
+— Lumafox
+"""
+    smtp_host = os.environ.get("SMTP_HOST")
+    smtp_port = int(os.environ.get("SMTP_PORT", "587"))
+    smtp_user = os.environ.get("SMTP_USER")
+    smtp_pass = os.environ.get("SMTP_PASS")
+    from_email = os.environ.get("FROM_EMAIL", smtp_user or "noreply@lumafox.ai")
+
+    if not smtp_host or not smtp_user:
+        # Local / no SMTP configured — print reset link so devs can test
+        print(f"[RESET LINK for {email}] {reset_url}")
+        return
+
+    msg = MIMEText(body)
+    msg["Subject"] = subject
+    msg["From"] = f"Lumafox <{from_email}>"
+    msg["To"] = email
+
+    with smtplib.SMTP(smtp_host, smtp_port) as server:
+        server.ehlo()
+        server.starttls()
+        server.login(smtp_user, smtp_pass)
+        server.sendmail(from_email, [email], msg.as_string())
 
 
 # ── Convenience ──

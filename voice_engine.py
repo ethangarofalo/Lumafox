@@ -42,6 +42,7 @@ class VoiceProfile:
     created_at: str = ""
     last_taught: str = ""
     refinement_count: int = 0
+    avatar: str = ""   # preset emoji key or "custom" when image uploaded
 
     def to_dict(self) -> dict:
         return asdict(self)
