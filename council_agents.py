@@ -501,11 +501,15 @@ def _detect_tensions_alliances(
 
 # ── Main entry point ──────────────────────────────────────────────────────────
 
+_LITE_THINKERS = ["Socrates", "Aristotle", "Machiavelli"]  # default lite panel
+
+
 async def run_council_agents(
     question: str,
     mode: str,
     thinker_names: list[str],
     rounds: int = 2,
+    lite: bool = False,
 ) -> dict:
     """
     Run a council deliberation using Claude API agents with global thinker memory.
@@ -523,6 +527,12 @@ async def run_council_agents(
     """
     if mode not in VALID_MODES:
         raise ValueError(f"mode must be one of {VALID_MODES}")
+
+    # Lite mode: 3 fixed thinkers, 1 round, faster + cheaper
+    if lite:
+        thinker_names = _LITE_THINKERS
+        rounds = 1
+
     if not (2 <= len(thinker_names) <= 6):
         raise ValueError("Select between 2 and 6 thinkers")
     unknown = [n for n in thinker_names if n not in _PROFILES]
@@ -549,6 +559,23 @@ async def run_council_agents(
         ])
         all_rounds.append(list(round_results))
         current_positions = list(round_results)
+
+        # Early-exit: if thinkers have converged, skip remaining rounds
+        if round_num < rounds and len(current_positions) >= 2:
+            positions = [r.get("position", "") for r in current_positions]
+            # Simple convergence signal: all positions contain similar stance words
+            stances = []
+            for p in positions:
+                pl = p.lower()
+                if any(w in pl for w in ["yes", "should", "recommend", "proceed", "pursue"]):
+                    stances.append(1)
+                elif any(w in pl for w in ["no", "shouldn't", "avoid", "against", "reject"]):
+                    stances.append(-1)
+                else:
+                    stances.append(0)
+            if len(set(stances)) == 1 and stances[0] != 0:
+                # Full agreement detected — synthesis will be richer anyway, skip round
+                break
 
     round1 = all_rounds[0]
     final = current_positions

@@ -36,10 +36,18 @@ def ensure_dirs():
 
 # ── Plan Limits ──
 
+# Credit costs per council mode
+COUNCIL_CREDIT_COSTS = {
+    "lite":  1,   # 3 thinkers, 1 round  — ~$0.05/run
+    "full":  3,   # 6 thinkers, 2 rounds — ~$0.25/run
+    "swarm": 10,  # 40 agents, 2 rounds  — ~$1.50/run
+}
+
 PLAN_LIMITS = {
-    "free":    {"profiles": 1,   "teaches_per_month": 50,     "write": True, "analyze": True, "export": True, "council_per_week": 1},
-    "starter": {"profiles": 3,   "teaches_per_month": 500,    "write": True, "analyze": True, "export": True, "council_per_week": 5},
-    "pro":     {"profiles": 999, "teaches_per_month": 999999, "write": True, "analyze": True, "export": True, "council_per_week": 5},
+    "guest":   {"profiles": 1,   "teaches_per_month": 10,     "write": True, "analyze": True, "export": False, "council_credits_per_week": 1},
+    "free":    {"profiles": 1,   "teaches_per_month": 50,     "write": True, "analyze": True, "export": True,  "council_credits_per_week": 3},
+    "starter": {"profiles": 3,   "teaches_per_month": 500,    "write": True, "analyze": True, "export": True,  "council_credits_per_week": 25},
+    "pro":     {"profiles": 999, "teaches_per_month": 999999, "write": True, "analyze": True, "export": True,  "council_credits_per_week": 100},
 }
 
 
@@ -47,7 +55,7 @@ def get_plan_limits(plan: str) -> dict:
     return PLAN_LIMITS.get(plan, PLAN_LIMITS["free"])
 
 
-# ── Council weekly usage tracking ──
+# ── Council credit tracking (weekly reset) ──
 
 def _week_key() -> str:
     """ISO year-week string, resets every Monday UTC."""
@@ -61,7 +69,8 @@ def _council_usage_path(user_id: str) -> Path:
     return COUNCIL_USAGE_DIR / f"{safe}.json"
 
 
-def get_council_usage(user_id: str) -> int:
+def get_credits_used(user_id: str) -> int:
+    """Credits spent this week."""
     path = _council_usage_path(user_id)
     if not path.exists():
         return 0
@@ -69,22 +78,44 @@ def get_council_usage(user_id: str) -> int:
     return data.get(_week_key(), 0)
 
 
-def increment_council_usage(user_id: str) -> int:
-    """Increment and return the new weekly count."""
+def get_credits_remaining(user_id: str, plan: str) -> int:
+    limit = get_plan_limits(plan)["council_credits_per_week"]
+    return max(0, limit - get_credits_used(user_id))
+
+
+def consume_credits(user_id: str, cost: int) -> int:
+    """Deduct credits. Returns remaining credits."""
     COUNCIL_USAGE_DIR.mkdir(parents=True, exist_ok=True)
     path = _council_usage_path(user_id)
     data = json.loads(path.read_text()) if path.exists() else {}
     week = _week_key()
-    data[week] = data.get(week, 0) + 1
+    data[week] = data.get(week, 0) + cost
     path.write_text(json.dumps(data, indent=2))
     return data[week]
 
 
+def check_council_credits(user_id: str, plan: str, mode: str = "full") -> dict:
+    """Returns allowed, credits_remaining, cost for the requested mode."""
+    cost = COUNCIL_CREDIT_COSTS.get(mode, 3)
+    remaining = get_credits_remaining(user_id, plan)
+    return {
+        "allowed": remaining >= cost,
+        "credits_remaining": remaining,
+        "credits_per_week": get_plan_limits(plan)["council_credits_per_week"],
+        "cost": cost,
+    }
+
+
+# Backwards-compat shim for old call sites
+def get_council_usage(user_id: str) -> int:
+    return get_credits_used(user_id)
+
+def increment_council_usage(user_id: str) -> int:
+    return consume_credits(user_id, 1)
+
 def check_council_limit(user_id: str, plan: str) -> dict:
-    """Returns allowed, used, limit for this user's current week."""
-    limit = get_plan_limits(plan)["council_per_week"]
-    used = get_council_usage(user_id)
-    return {"allowed": used < limit, "used": used, "limit": limit}
+    result = check_council_credits(user_id, plan, "full")
+    return {"allowed": result["allowed"], "used": get_credits_used(user_id), "limit": get_plan_limits(plan)["council_credits_per_week"]}
 
 
 # ── Subscription Storage (file-based for MVP) ──

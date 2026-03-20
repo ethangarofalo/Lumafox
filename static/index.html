@@ -2613,10 +2613,22 @@ function CouncilView({ isGuest, onNeedAuth }) {
   const [writingInputMode, setWritingInputMode] = useState("question"); // "question" | "prose"
   const [thinkers, setThinkers] = useState(new Set(ALL_THINKERS));
   const [swarmMode, setSwarmMode] = useState(false);
+  const [councilTier, setCouncilTier] = useState("full"); // "lite" | "full" | "swarm"
+  const [credits, setCredits] = useState(null); // {remaining, per_week, costs}
   const [deliberating, setDeliberating] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState("");
   const [limitData, setLimitData] = useState(null);
+
+  // Load credit balance on mount
+  React.useEffect(() => {
+    api("/council/credits").then(d => setCredits({
+      remaining: d.credits_remaining,
+      perWeek: d.credits_per_week,
+      costs: d.costs,
+      plan: d.plan,
+    })).catch(() => {});
+  }, []);
 
   const toggleThinker = (name) => {
     setThinkers(prev => {
@@ -2650,10 +2662,14 @@ function CouncilView({ isGuest, onNeedAuth }) {
         question: q || "Please read and respond to this passage.",
         mode,
         thinkers: [...thinkers],
-        swarm: swarmMode,
+        council_tier: councilTier,
+        swarm: councilTier === "swarm",
       };
       if (mode === "writing" && p) body.prose = p;
       const r = await api("/council", { method: "POST", body: JSON.stringify(body) });
+      if (r.credits_remaining !== undefined) {
+        setCredits(prev => prev ? { ...prev, remaining: r.credits_remaining } : null);
+      }
       setResult(r);
     } catch (e) {
       if (e.limitData) {
@@ -2956,38 +2972,47 @@ function CouncilView({ isGuest, onNeedAuth }) {
 
         {/* Swarm / Panel toggle */}
         <div style={{ display: "flex", alignItems: "center", gap: 0, marginBottom: 20, borderRadius: "var(--radius)", border: "1px solid var(--border)", overflow: "hidden", width: "fit-content" }}>
-          <button onClick={() => setSwarmMode(false)} style={{
-            padding: "8px 18px",
-            background: !swarmMode ? "rgba(217,168,60,0.12)" : "none",
-            border: "none",
-            borderRight: "1px solid var(--border)",
-            color: !swarmMode ? "var(--accent)" : "var(--text-faint)",
-            fontFamily: "var(--font-sans)", fontSize: 12, cursor: "pointer",
-            letterSpacing: "0.06em",
-          }}>
-            ◈ Panel — 6 thinkers
-          </button>
-          <button onClick={() => setSwarmMode(true)} style={{
-            padding: "8px 18px",
-            background: swarmMode ? "rgba(217,168,60,0.12)" : "none",
-            border: "none",
-            color: swarmMode ? "var(--accent)" : "var(--text-faint)",
-            fontFamily: "var(--font-sans)", fontSize: 12, cursor: "pointer",
-            letterSpacing: "0.06em",
-          }}>
-            ◉ Swarm — 40 agents
-          </button>
+          {[
+            { key: "lite",  label: "Lite",  sub: "3 thinkers · 1 round", cost: 1 },
+            { key: "full",  label: "Full",  sub: "6 thinkers · 2 rounds", cost: 3 },
+            { key: "swarm", label: "Swarm", sub: "40 agents · 2 rounds",  cost: 10 },
+          ].map(t => (
+            <button key={t.key} onClick={() => { setCouncilTier(t.key); setSwarmMode(t.key === "swarm"); }}
+              style={{
+                flex: 1, padding: "10px 8px", border: "none",
+                borderRight: t.key !== "swarm" ? "1px solid var(--border)" : "none",
+                background: councilTier === t.key ? "rgba(217,168,60,0.12)" : "none",
+                color: councilTier === t.key ? "var(--accent)" : "var(--text-faint)",
+                fontFamily: "var(--font-sans)", cursor: "pointer", transition: "all 0.15s",
+              }}>
+              <div style={{ fontSize: 13, fontWeight: 500, letterSpacing: "0.04em" }}>{t.label}</div>
+              <div style={{ fontSize: 10, opacity: 0.6, marginTop: 2 }}>{t.sub}</div>
+              <div style={{ fontSize: 10, color: "var(--accent)", marginTop: 3, opacity: 0.8 }}>{t.cost} credit{t.cost !== 1 ? "s" : ""}</div>
+            </button>
+          ))}
         </div>
 
-        {swarmMode && (
+        {/* Credit balance */}
+        {credits && (
+          <div style={{ fontFamily: "var(--font-sans)", fontSize: 11, color: "var(--text-dim)", marginBottom: 16, display: "flex", alignItems: "center", gap: 8 }}>
+            <span style={{ color: credits.remaining > 0 ? "var(--accent)" : "#e07070" }}>
+              {credits.remaining} credit{credits.remaining !== 1 ? "s" : ""} remaining
+            </span>
+            <span style={{ opacity: 0.4 }}>·</span>
+            <span>{credits.perWeek}/week on {credits.plan} plan</span>
+            {credits.remaining === 0 && <span style={{ color: "#e07070" }}>· resets Monday</span>}
+          </div>
+        )}
+
+        {councilTier === "swarm" && (
           <p style={{ fontFamily: "var(--font-sans)", fontSize: 13, color: "var(--text-faint)", marginBottom: 20, lineHeight: 1.7 }}>
             40 people drawn from 14 philosophical and theological traditions deliberate in two rounds.
             You see where the population actually lands — not a panel of experts, but a world.
           </p>
         )}
 
-        {/* Thinker selector — panel mode only */}
-        {!swarmMode && (
+        {/* Thinker selector — full mode only */}
+        {councilTier === "full" && (
           <div style={{ marginBottom: 20 }}>
             <div style={{ fontFamily: "var(--font-sans)", fontSize: 11, letterSpacing: "0.2em", textTransform: "uppercase", color: "var(--text-faint)", marginBottom: 10 }}>
               Council Members
@@ -3025,7 +3050,7 @@ function CouncilView({ isGuest, onNeedAuth }) {
           </div>
         ) : (
           <button className="action-btn" onClick={handleSubmit}>
-            {swarmMode ? "Deploy the Swarm →" : "Convene the Council →"}
+            {councilTier === "swarm" ? "Deploy the Swarm →" : councilTier === "lite" ? "Quick Council →" : "Convene the Council →"}
           </button>
         )}
       </div>

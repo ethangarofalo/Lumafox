@@ -22,10 +22,12 @@ from pydantic import BaseModel, Field
 from auth import register, login, verify_token, create_token, refresh_token, ensure_dirs as ensure_auth_dirs
 from billing import (
     get_subscription, get_plan_limits, create_checkout_session,
-    check_council_limit, increment_council_usage,
+    check_council_credits, consume_credits, get_credits_remaining,
+    COUNCIL_CREDIT_COSTS,
     create_portal_session, handle_webhook,
     ensure_dirs as ensure_billing_dirs,
 )
+from council_cache import get_cached_response, store_response as cache_store_response
 from voice_engine import (
     create_profile,
     load_profile,
@@ -896,9 +898,10 @@ class CouncilRequest(BaseModel):
     question: str = Field(..., min_length=4, max_length=2000)
     mode: str = Field("advice")
     thinkers: list[str] = Field(default_factory=lambda: list(COUNCIL_NAMES))
-    # For writing mode with prose critique — prepend as context
     prose: str = Field(default="", max_length=4000)
-    # Swarm mode: 40-agent philosophical population instead of 6 named thinkers
+    # council_tier: "lite" | "full" | "swarm"
+    council_tier: str = Field(default="full")
+    # Legacy swarm flag — maps to council_tier="swarm"
     swarm: bool = Field(default=False)
     n_agents: int = Field(default=40, ge=10, le=60)
 
@@ -908,33 +911,34 @@ async def convene_council(
     req: CouncilRequest,
     user_id: str = Depends(get_current_user),
 ):
-    # ── Weekly usage gate ──
     sub = get_subscription(user_id)
-    limit_check = check_council_limit(user_id, sub["plan"])
-    if not limit_check["allowed"]:
+    tier = "swarm" if req.swarm else req.council_tier
+    if tier not in ("lite", "full", "swarm"):
+        tier = "full"
+
+    # ── Credit gate ──
+    credit_check = check_council_credits(user_id, sub["plan"], tier)
+    if not credit_check["allowed"]:
         is_guest = user_id.startswith("guest-")
+        cost = credit_check["cost"]
+        remaining = credit_check["credits_remaining"]
         if is_guest:
-            msg = (
-                "You've used your free Council session this week. "
-                "Create a free account to keep your session and come back next week — "
-                "or upgrade for 5 sessions per week."
-            )
+            msg = "Create a free account to get 3 Council credits per week."
         else:
-            limit = limit_check["limit"]
             msg = (
-                f"You've used all {limit} Council session{'s' if limit != 1 else ''} "
-                f"this week. Upgrade to unlock more."
+                f"This run costs {cost} credit{'s' if cost != 1 else ''} "
+                f"and you have {remaining} remaining this week. "
+                f"Upgrade to unlock more."
             )
         raise HTTPException(
             status_code=429,
-            detail={"message": msg, "used": limit_check["used"],
-                    "limit": limit_check["limit"], "is_guest": is_guest},
+            detail={"message": msg, "credits_remaining": remaining,
+                    "cost": cost, "is_guest": is_guest},
         )
 
     if req.mode not in VALID_MODES:
         raise HTTPException(400, f"mode must be one of {sorted(VALID_MODES)}")
 
-    # For writing mode: if prose is provided, fold it into the question
     question = req.question
     if req.mode == "writing" and req.prose.strip():
         question = (
@@ -945,33 +949,63 @@ async def convene_council(
                  f"and more powerful:\n\n{req.prose.strip()}"
         )
 
+    # ── Semantic cache check (skip for swarm — too expensive to cache exactly) ──
+    if tier != "swarm":
+        cached = get_cached_response(question, req.mode)
+        if cached:
+            cached["credits_remaining"] = credit_check["credits_remaining"]
+            return cached
+
     try:
-        if req.swarm:
-            # 40-agent philosophical population swarm
+        if tier == "swarm":
             result = await run_council_swarm(
-                question=question,
-                mode=req.mode,
-                n_agents=req.n_agents,
+                question=question, mode=req.mode, n_agents=req.n_agents,
+            )
+        elif tier == "lite":
+            result = await run_council_agents(
+                question=question, mode=req.mode,
+                thinker_names=["Socrates", "Aristotle", "Machiavelli"],
+                lite=True,
             )
         else:
-            # Original 6-thinker named council
             if not (2 <= len(req.thinkers) <= 6):
                 raise HTTPException(400, "Select between 2 and 6 thinkers")
             unknown = [n for n in req.thinkers if n not in COUNCIL_NAMES]
             if unknown:
                 raise HTTPException(400, f"Unknown thinkers: {unknown}")
             result = await run_council_agents(
-                question=question,
-                mode=req.mode,
-                thinker_names=req.thinkers,
+                question=question, mode=req.mode, thinker_names=req.thinkers,
             )
     except HTTPException:
         raise
     except Exception as e:
         raise HTTPException(500, f"Council deliberation failed: {e}")
 
-    increment_council_usage(user_id)
+    # Deduct credits and cache result
+    cost = COUNCIL_CREDIT_COSTS[tier]
+    consume_credits(user_id, cost)
+    remaining_after = get_credits_remaining(user_id, sub["plan"])
+    result["credits_remaining"] = remaining_after
+    result["credits_cost"] = cost
+
+    if tier != "swarm":
+        cache_store_response(question, req.mode, result)
+
     return result
+
+
+@app.get("/council/credits")
+async def get_council_credits_info(user_id: str = Depends(get_current_user)):
+    """Return credit balance and costs for the current user."""
+    sub = get_subscription(user_id)
+    from billing import get_credits_remaining, COUNCIL_CREDIT_COSTS, get_plan_limits
+    plan = sub["plan"]
+    return {
+        "plan": plan,
+        "credits_remaining": get_credits_remaining(user_id, plan),
+        "credits_per_week": get_plan_limits(plan)["council_credits_per_week"],
+        "costs": COUNCIL_CREDIT_COSTS,
+    }
 
 
 @app.get("/council/thinkers")
