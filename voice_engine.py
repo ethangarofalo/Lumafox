@@ -15,6 +15,8 @@ from pathlib import Path
 from dataclasses import dataclass, field, asdict
 from typing import Optional
 
+from linguistic_taxonomy import LINGUISTIC_TAXONOMY
+
 _PROFILE_ID_RE = re.compile(r'^[0-9a-f]{8}$')
 
 # ── Paths ──
@@ -353,9 +355,11 @@ def ingest_writing_samples(profile_id: str, llm_call, max_examples: int = 5) -> 
         f"[From: {t['filename']}]\n{t['text']}" for t in texts
     )
 
-    prompt = f"""You are a voice analyst. You have been given writing samples from a person
-who wants to teach an AI their voice. Your job is to extract concrete, specific refinements
-from these samples.
+    prompt = f"""You are a philological voice analyst trained in formal grammar and rhetoric.
+You have been given writing samples from a person who wants to teach an AI their voice.
+Your job is to extract concrete, specific refinements using precise linguistic terminology.
+
+{LINGUISTIC_TAXONOMY}
 
 For each sample, identify:
 
@@ -363,19 +367,23 @@ For each sample, identify:
    These should be passages someone could point to and say "that's how I sound."
    Extract {max_examples} of the strongest examples across all samples.
 
-2. PRINCIPLES: Core writing principles this voice follows. Not generic advice — specific
-   patterns you see repeated. "Sentences build through accumulation, not logical connectives"
-   is specific. "Write clearly" is not.
+2. PRINCIPLES: Core writing principles this voice follows. Use the taxonomy above
+   to be grammatically precise. NOT "writes with rhythm" but "predominantly cumulative
+   sentences with participle phrases trailing the main clause; favors asyndeton in series."
+   NOT "uses vivid language" but "concrete Anglo-Saxon diction with kinesthetic imagery;
+   metaphors draw from physical labor and the body."
 
-3. ANTI-PATTERNS: Things this voice conspicuously avoids. Transitions it never uses,
-   structures it rejects, tones it stays away from.
+3. ANTI-PATTERNS: Things this voice conspicuously avoids. Use the taxonomy to name
+   what's absent: "never uses periodic sentences," "no semicolons — dashes serve all
+   parenthetical functions," "no explicit transition words between paragraphs."
 
-4. VOICE NOTES: Observations about rhythm, diction, stance, or movement that don't fit
-   the other categories but are distinctive.
+4. VOICE NOTES: Grammatical or rhetorical observations that don't fit the other
+   categories. Clause-combination ratios, punctuation signatures, paragraph development
+   patterns, register shifts — anything structurally distinctive.
 
 Output your analysis as a JSON array of objects, each with:
   "type": one of "example", "principle", "anti_pattern", "voice_note"
-  "content": the refinement text
+  "content": the refinement text (use precise linguistic terminology from the taxonomy)
 
 Return ONLY the JSON array, no other text.
 
@@ -432,37 +440,54 @@ def analyze_samples(samples: list[str], llm_call) -> str:
     """
     combined = "\n\n---\n\n".join(samples)
 
-    prompt = f"""You are a master literary analyst and voice coach. The user has provided
-writing samples — either their own work or work they deeply admire. Your job is to
-identify the distinctive patterns of this voice with extreme precision.
+    prompt = f"""You are a philological voice analyst — trained in formal grammar, rhetoric,
+and stylistics. The user has provided writing samples (their own work or work they admire).
+Your job is to produce a Voice Description with the precision of a grammarian, not the
+vagueness of a book review.
 
-Analyze the following samples and produce a Voice Description that captures:
+Use the following linguistic taxonomy to ground every observation in specific categories:
 
-1. **Rhythm and Syntax**: How do sentences move? Short and declarative? Long and
-   accumulating? Paratactic (joined by "and") or hypotactic (subordinate clauses)?
-   Do they build through repetition? Through variation?
+{LINGUISTIC_TAXONOMY}
 
-2. **Diction**: What kind of words does this voice reach for? Anglo-Saxon or Latinate?
-   Concrete or abstract? Technical or plain? What adjectives recur? What verbs?
+Analyze the samples and produce a Voice Description covering:
 
-3. **Imagery and Metaphor**: How does this voice handle figurative language? Extended
-   metaphors sustained across passages, or quick comparisons? What domains do the
-   metaphors draw from — physical labor, nature, religion, the body, architecture?
+1. **Sentence Architecture**: Classify the dominant sentence style(s) from the taxonomy
+   (cumulative, periodic, segregating, balanced, etc.). What is the coordination-to-
+   subordination ratio? Which subordinate clause types appear most? What are the
+   characteristic sentence lengths and how does length vary for effect?
 
-4. **Structure**: How do paragraphs move? How do pieces begin and end? Is there a
-   characteristic shape to the argument?
+2. **Rhetorical Devices**: Which emphasis and repetition patterns does this voice use?
+   Polysyndeton or asyndeton? Anaphora? Chiasmus? Negative-positive restatement?
+   How does the writer handle interruption and parenthetical material?
 
-5. **Stance**: What is this voice's relationship to its reader? Does it use "we," "one,"
-   "you," "I"? Is it warm or cool? Intimate or public? Does it contend, persuade,
-   confess, declare?
+3. **Diction**: Anglo-Saxon or Latinate etymology? Concrete or abstract? General or
+   specific? What register — formal, informal, or deliberately mixed? Any unusual
+   collocations, transferred epithets, nonce compounds, or archaisms?
 
-6. **What This Voice Avoids**: What is conspicuously absent? No bullet points? No
-   hedging qualifiers? No transitional phrases? Identifying what the voice does NOT
-   do is as important as identifying what it does.
+4. **Figurative Language**: Simile or metaphor? Single-use or extended? What source
+   domains do metaphors draw from (body, nature, architecture, warfare, domestic life)?
+   What is the allusion density? Any irony, litotes, hyperbole, or zeugma?
 
-Write the Voice Description as a practical guide that an AI could use to write in this
-voice. Be specific enough that someone who reads your description could distinguish
-this voice from any other.
+5. **Imagery**: Which sensory channels dominate (visual, auditory, tactile, kinesthetic,
+   olfactory)? How dense is the imagery — every sentence, or reserved for key moments?
+
+6. **Punctuation as Style**: Semicolons or dashes? Oxford comma or not? How does the
+   writer handle series? Colons for announcement? Deliberate comma splices? Fragment
+   sentences?
+
+7. **Paragraph Architecture**: Deductive, inductive, pivoting, or accumulative development?
+   Short or long paragraphs? Explicit transitions, implicit, or absent? Tight or loose unity?
+
+8. **Stance and Address**: Relationship to reader — "we," "one," "you," "I"? Warm or cool?
+   Intimate or public? Does it contend, persuade, confess, declare, interrogate?
+
+9. **What This Voice NEVER Does**: Name the specific absences using taxonomy terms.
+   Not "avoids fancy words" but "never uses Latinate abstractions when an Anglo-Saxon
+   concrete exists." Not "keeps it simple" but "no periodic sentences, no semicolons,
+   no subordinate clauses deeper than one level."
+
+Write the Voice Description as a practical, technically precise guide that an AI could
+use to write in this voice. Every claim should be classifiable within the taxonomy above.
 
 WRITING SAMPLES:
 
@@ -738,12 +763,16 @@ def write_with_voice(profile_id: str, instruction: str, llm_call,
     if context:
         context_block = f"\n\nCONTEXT / NOTES PROVIDED:\n{context}\n"
 
-    prompt = f"""You are writing in a specific voice. Everything about how you write —
-your rhythm, your diction, your imagery, your structure, what you reach for and
-what you avoid — must match this voice exactly.
+    prompt = f"""You are writing in a specific voice. Every grammatical and rhetorical
+choice you make — sentence architecture, clause patterns, diction register and
+etymology, figurative language, punctuation, paragraph development — must match
+this voice exactly.
 
 THE VOICE:
 {voice_text}
+
+LINGUISTIC REFERENCE (use this to interpret the voice description precisely):
+{LINGUISTIC_TAXONOMY}
 
 {context_block}
 
@@ -752,8 +781,13 @@ INSTRUCTION: {instruction}
 Output ONLY the written text. Begin immediately — no preamble, no explanation,
 no commentary about the voice or these instructions. Do not acknowledge the task.
 Do not describe what you are doing. Simply produce the writing itself, as this
-voice would produce it, at its best. The output should be indistinguishable
-from the person's actual work."""
+voice would produce it, at its best.
+
+When in doubt, match the voice's sentence style (cumulative, periodic, etc.),
+diction level (Anglo-Saxon vs. Latinate), punctuation habits (dashes vs. semicolons),
+and rhetorical devices (asyndeton, anaphora, etc.) — not just its "tone."
+The output should be indistinguishable from the person's actual work at the
+level of grammar, not just feeling."""
 
     return llm_call(prompt).strip()
 
@@ -771,8 +805,11 @@ def analyze_text(profile_id: str, text: str, llm_call) -> str:
     if not profile:
         return "Profile not found."
 
-    prompt = f"""You are a voice analyst. You have deep knowledge of a specific writing voice
-and you are evaluating whether a piece of text matches it.
+    prompt = f"""You are a philological voice analyst. You have deep knowledge of a specific
+writing voice and you are evaluating whether a piece of text matches it, using precise
+grammatical and rhetorical terminology.
+
+{LINGUISTIC_TAXONOMY}
 
 THE VOICE (what the writing SHOULD sound like):
 {voice_text}
@@ -780,21 +817,35 @@ THE VOICE (what the writing SHOULD sound like):
 THE TEXT (what was actually written):
 {text}
 
-Analyze the text against the voice profile. For each issue you find, be specific:
+Analyze the text against the voice profile using the taxonomy above. For each issue, be
+grammatically specific — name the exact sentence style, device, or pattern involved:
 
-1. **Voice Breaks**: Where does the writing lapse into generic AI register or
-   contradict the voice's principles? Quote the specific passage.
+1. **Sentence Architecture Breaks**: Does the text use sentence styles the voice avoids?
+   E.g., "This periodic sentence contradicts the voice's cumulative pattern." Quote the
+   specific passage and name the violation.
 
-2. **Anti-Pattern Violations**: Does the text use any patterns the voice has
-   been taught to avoid? Quote them.
+2. **Diction Breaks**: Does the register, etymology, or abstraction level shift away
+   from the voice? E.g., "This Latinate abstraction ('facilitate') breaks the voice's
+   Anglo-Saxon concreteness." Quote the word or phrase.
 
-3. **Missed Opportunities**: Where could the voice's distinctive strengths
-   (particular imagery, rhythm, stance) have been deployed but weren't?
+3. **Rhetorical Device Violations**: Does the text use devices the voice avoids, or
+   miss devices the voice depends on? E.g., "The voice relies on asyndeton in series
+   but this passage uses polysyndeton."
 
-4. **What Works**: What parts of the text DO match the voice well?
+4. **Anti-Pattern Violations**: Does the text use any patterns the voice has been
+   explicitly taught to avoid? Name the anti-pattern and quote the violation.
 
-Be specific and constructive. The goal is to help the writer bring the text
-closer to the voice, not to criticize for its own sake."""
+5. **Missed Opportunities**: Where could the voice's distinctive strengths have been
+   deployed? Be specific: "This declarative sequence could have used the voice's
+   characteristic triadic structure" or "the dash-interrupted parenthetical that
+   defines this voice is absent here."
+
+6. **What Works**: What parts DO match? Name the specific taxonomic features that
+   align with the voice profile.
+
+Be constructive. The goal is philological precision — helping the writer understand
+exactly which grammatical and rhetorical choices bring text closer to (or further from)
+their voice."""
 
     return llm_call(prompt).strip()
 
