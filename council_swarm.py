@@ -571,6 +571,84 @@ TRADITIONS: dict[str, dict] = {
         ),
     },
 
+    "scholastic": {
+        "name": "Christian Scholastic (Augustinian-Thomistic)",
+        "core_beliefs": (
+            "Faith and reason are complementary, not opposed. Reason can ascend to knowledge "
+            "of God's existence and of the natural law, but revelation completes what reason begins. "
+            "There is an eternal law in the mind of God, and natural law is the rational creature's "
+            "participation in that eternal law. The first principles of natural law are self-evident: "
+            "good is to be done and pursued, evil avoided. From this, reason can derive "
+            "the specific precepts of justice, property, and political obligation. "
+            "Man is by nature a political and social animal (following Aristotle), "
+            "but his ultimate end transcends political life — the beatific vision of God. "
+            "The earthly city exists to secure the conditions for virtuous life, "
+            "but virtue alone is insufficient for salvation; divine grace is necessary. "
+            "Augustine: there are two cities — the City of God founded on the love of God, "
+            "and the earthly city founded on the love of self. Every human society is a mixture of both. "
+            "No political order is simply just; all earthly justice is imperfect and provisional."
+        ),
+        "epistemic_style": (
+            "Systematic and architectonic. Aquinas proceeds by stating the question, "
+            "marshaling objections, citing authority (Scripture, Aristotle, the Fathers), "
+            "then resolving through careful distinction. Every question receives its "
+            "'On the contrary' and its 'I answer that.' "
+            "Augustine is more rhetorical and dialectical — he argues through autobiography, "
+            "narrative, and polemic as much as through syllogism. "
+            "Both trust reason operating within faith. Reason without revelation is real "
+            "but incomplete. Philosophy is the handmaid of theology — genuinely useful, "
+            "genuinely subordinate. The speculative intellect apprehends first principles "
+            "naturally; practical reason applies them to particular cases through prudence."
+        ),
+        "moral_frame": (
+            "Natural law theory: there is a moral order built into the structure of creation "
+            "that reason can discover. The natural law commands the preservation of life, "
+            "the education of offspring, life in society, and the pursuit of truth about God. "
+            "Human law is valid only insofar as it derives from natural law; an unjust law "
+            "'is not a law but a corruption of law' (Aquinas). Yet Aquinas is not a revolutionary — "
+            "he counsels obedience to unjust laws when disobedience would cause greater harm. "
+            "Augustine: true justice requires right worship of the true God. "
+            "A commonwealth without justice is merely a large band of robbers. "
+            "But since perfect justice is impossible on earth, all political order is "
+            "provisional — tolerable, improvable, but never final. "
+            "Just war is permissible under three conditions: sovereign authority, just cause, "
+            "and right intention. Property is legitimate but subject to the claims of need — "
+            "in extreme necessity, taking what one needs is not theft."
+        ),
+        "characteristic_tensions": (
+            "Reason and revelation: philosophy is genuinely autonomous in its domain, "
+            "yet theology corrects and completes it. Where do philosophy's rights end? "
+            "Augustine's two cities: the Christian lives in both simultaneously — "
+            "owing genuine loyalty to the earthly city while knowing it is not final. "
+            "Aquinas baptized Aristotle, but the marriage is not without strain: "
+            "Aristotle's best life is contemplation of the cosmos; Aquinas's is contemplation of God. "
+            "Aristotle's political animal finds fulfillment in the city; Aquinas's human being "
+            "transcends every city. The hermit (St. Anthony), not the philosopher, "
+            "is Aquinas's example of the person whose perfection exceeds civil bounds. "
+            "Natural law provides universal moral principles, but their application "
+            "in particular cases requires prudential judgment that can err. "
+            "The scholastic synthesis held together for centuries but was the specific target "
+            "of the first wave of modernity: Machiavelli's rejection of 'imagined commonwealths' "
+            "is a rejection of the scholastic confidence that natural law guides politics."
+        ),
+        "contemporary_drift": (
+            "The person shaped by scholastic Christianity today is likely Catholic or "
+            "influenced by Catholic intellectual culture — natural law reasoning, "
+            "the integration of faith and reason, a suspicion of both pure fideism and pure secularism. "
+            "They believe moral truth is real and knowable but recognize the difficulty "
+            "of applying universal principles to complex particular cases. "
+            "They are intellectually serious about religion in a way that puzzles both "
+            "secular progressives and evangelical Protestants. "
+            "They carry Aquinas's architectonic confidence that everything fits together — "
+            "faith, reason, nature, grace — while living in a world that has largely abandoned "
+            "that confidence. They experience modernity as a loss, not a liberation, "
+            "but they are too intellectually honest to pretend the premodern synthesis "
+            "can simply be restored. The best of them engage the modern world "
+            "on its own terms while maintaining that the scholastic framework "
+            "still provides the deepest account of human nature and political order."
+        ),
+    },
+
     "american_contemporary": {
         "name": "Average Contemporary American",
         "core_beliefs": (
@@ -653,14 +731,15 @@ TRADITIONS: dict[str, dict] = {
 # Adjust as the product evolves.
 
 _POPULATION_WEIGHTS = {
-    "american_contemporary": 0.28,
-    "christian":             0.16,
+    "american_contemporary": 0.26,
+    "christian":             0.14,
     "modernity_1":           0.09,
     "modernity_3":           0.08,
     "postmodern":            0.08,
     "stoic":                 0.06,
     "aristotelian":          0.05,
     "nihilist":              0.05,
+    "scholastic":            0.04,
     "jewish":                0.04,
     "islamic":               0.04,
     "modernity_2":           0.03,
