@@ -966,22 +966,40 @@ ROUND 2 TRADITION BREAKDOWN:
 
 {shift_pct}% of agents shifted their position between rounds.
 
-Write a synthesis in three parts, each as a plain paragraph (no headers, no bullet points):
+IMPORTANT CONTEXT — THE THREE WAVES OF MODERNITY (Strauss):
+The modern traditions in this swarm exist in a dialectical relationship.
+The First Wave (Machiavelli-Hobbes-Locke) lowered the sights from virtue to self-preservation
+and made the political problem technical. The Second Wave (Rousseau-Kant-Hegel) protested
+the degradation of the first wave in the name of freedom and virtue, but historicized man —
+reason replaces nature, the general will replaces natural law. The Third Wave (Nietzsche-Heidegger)
+destroyed all foundations: if all values are historical, even the second wave's faith in progress
+is baseless. Each wave flows from and is mainly a response to the previous one.
+The premodern traditions (Platonist, Aristotelian, Stoic, Jewish, Christian, Islamic) represent
+the position that all three waves reject — that there is a natural or divine standard
+independent of human will. When analyzing fault lines, attend to whether the deepest
+disagreement runs between ancient and modern, or between the waves of modernity themselves.
+
+Write a synthesis in four parts, each as a plain paragraph (no headers, no bullet points):
 
 1. SYNTHESIS (2-3 sentences): What did the swarm actually conclude?
    Describe the distribution of positions honestly — not false consensus.
 
 2. FAULT LINES (1-2 sentences): Where was the deepest disagreement,
-   and what does that disagreement reveal?
+   and what does that disagreement reveal? Attend especially to whether
+   the fault line runs between premodern and modern, or between waves.
 
 3. WHAT SHIFTED (1-2 sentences): What happened between Round 1 and Round 2?
    What arguments or social dynamics moved people?
+
+4. WAVE ANALYSIS (1-2 sentences): How did the three waves of modernity
+   position themselves relative to each other and to the premodern traditions?
+   Did any wave's agents shift toward another wave's position?
 
 Be specific. Name the traditions. Be honest if the swarm was confused or divided."""
 
     response = await _CLIENT.messages.create(
         model="claude-opus-4-5",
-        max_tokens=600,
+        max_tokens=900,
         messages=[{"role": "user", "content": synthesis_prompt}],
     )
     synthesis_text = response.content[0].text.strip()
@@ -991,6 +1009,7 @@ Be specific. Name the traditions. Be honest if the swarm was confused or divided
         "synthesis": paragraphs[0] if paragraphs else synthesis_text,
         "fault_lines": paragraphs[1] if len(paragraphs) > 1 else "",
         "what_shifted": paragraphs[2] if len(paragraphs) > 2 else "",
+        "wave_analysis": paragraphs[3] if len(paragraphs) > 3 else "",
         "shift_percentage": shift_pct,
         "tradition_breakdown": {
             t: {"count": len(v), "positions": list(set(v))}
