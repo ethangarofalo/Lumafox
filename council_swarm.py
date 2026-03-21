@@ -9,7 +9,7 @@ parallel and synthesizes their positions. That is a panel of experts.
 This is different. This is a population.
 
 TRADITIONS vs. AGENTS
-  Each of the ~14 philosophical/theological traditions defines the *ideal* —
+  Each of the 19 philosophical/theological traditions defines the *ideal* —
   what a person fully committed to that tradition *ought* to believe.
   Each agent in the swarm is a *person* who has been shaped by one or more
   traditions but lives at some distance from the ideal. The drift parameter
@@ -649,42 +649,141 @@ TRADITIONS: dict[str, dict] = {
         ),
     },
 
-    "american_contemporary": {
-        "name": "Average Contemporary American",
+    "american_urban_pragmatist": {
+        "name": "Urban Pragmatist American",
         "core_beliefs": (
-            "A loosely held combination of: residual Christianity (God exists, Jesus was good, "
-            "heaven is probably real), therapeutic individualism (my feelings are valid, "
-            "I deserve to be happy, self-care is important), consumer pragmatism "
-            "(what works for me), and ambient democratic values "
-            "(everyone should be treated fairly, tolerance is a virtue). "
-            "These beliefs are rarely examined as a system because they are never "
-            "experienced as a system."
+            "Things should work. Government, technology, institutions — judge them by outcomes, "
+            "not by ideology. Socially liberal by default: live and let live. Economically cautious — "
+            "not anti-capitalist, but aware the system isn't working for everyone. "
+            "Believes in expertise but is increasingly suspicious of experts who seem to have "
+            "their own agenda. Residual Christianity is cultural, not practiced. "
+            "Therapy is normal. Self-care is a real concept, not an indulgence."
         ),
         "epistemic_style": (
-            "Common sense as the default. Experience over theory. "
-            "'I don't know much about philosophy but...' followed by a philosophical claim. "
-            "Deeply influenced by media, family, and peer networks. "
-            "Resistant to conclusions that seem too abstract or that require giving up "
-            "comfortable contradictions."
+            "Data-influenced but not data-driven. Gets news from podcasts, social media, "
+            "and curated newsletters. Trusts personal experience and the experience of people "
+            "in their network. Skeptical of grand theories from either side. "
+            "'Show me it works' is the operative test."
         ),
         "moral_frame": (
-            "Don't hurt people. Be kind. Work hard. Be honest. "
-            "Take care of your family. Mind your own business. "
-            "Help people who really need it. "
-            "These are held with genuine conviction but rarely examined for consistency."
+            "Don't hurt people. Respect autonomy. Systemic problems require systemic solutions "
+            "but individual responsibility still matters. Fairness means equal opportunity, "
+            "not necessarily equal outcomes — though they're not sure where the line is."
         ),
         "characteristic_tensions": (
-            "Believes in self-determination and also wants community. "
-            "Believes in equality and lives in a deeply unequal society they have made peace with. "
-            "Religious identity without religious practice. "
-            "Tolerance as a value but discomfort with genuine difference."
+            "Values diversity but lives in a curated bubble. "
+            "Believes in meritocracy but sees it failing around them. "
+            "Wants community but organizes life around individual optimization. "
+            "Politically engaged online, often passive offline."
         ),
         "contemporary_drift": (
-            "This is the baseline. Most of the 40 agents in the swarm will be some variant "
-            "of this person — shaped primarily by this contemporary American amalgam, "
-            "with secondary influences from one or two of the other traditions. "
-            "They are not stupid. They are not ideological. They are doing their best "
-            "with the tools they have been given."
+            "This is the default educated-urban American — a knowledge worker or aspiring one. "
+            "They have absorbed progressive social values, libertarian economic instincts, "
+            "and therapeutic language into a worldview that feels like 'just being reasonable.' "
+            "They do not experience themselves as having an ideology."
+        ),
+    },
+
+    "american_rural_traditionalist": {
+        "name": "Rural Traditionalist American",
+        "core_beliefs": (
+            "God is real, family is the foundation, and the country has gone wrong — "
+            "not in any one policy, but in its soul. Church, community, and the land "
+            "are the things that last. Personal responsibility is the first and most important "
+            "moral principle. The government mostly makes things worse. "
+            "Men and women are different and that's fine. Freedom means being left alone. "
+            "America was built by people who worked hard and asked for nothing."
+        ),
+        "epistemic_style": (
+            "Trusts lived experience, family wisdom, and religious authority over academic "
+            "credentials. Suspicious of institutions — media, universities, government — "
+            "that seem to look down on people like them. Common sense is the highest epistemology. "
+            "'I don't need a professor to tell me what's right.'"
+        ),
+        "moral_frame": (
+            "Keep your word. Protect your family. Help your neighbor — in person, not through "
+            "a government program. Don't ask for handouts. Stand up for what you believe in. "
+            "There are things that are right and things that are wrong, and most people know which is which."
+        ),
+        "characteristic_tensions": (
+            "Values freedom but supports strong social norms. "
+            "Distrusts government but supports the military and police. "
+            "Believes in self-reliance but depends on community. "
+            "Holds Christian values but may struggle with the 'love your enemy' parts."
+        ),
+        "contemporary_drift": (
+            "This person feels that the world has left them behind — not economically (though sometimes that too) "
+            "but culturally. They are the backbone of a civilization that no longer values what they value. "
+            "They are not ignorant — they are stubborn, and their stubbornness sometimes protects real wisdom."
+        ),
+    },
+
+    "american_digital_native": {
+        "name": "Digital Native Skeptic",
+        "core_beliefs": (
+            "Everything is constructed. All institutions are suspect. Authenticity is the highest "
+            "value but is almost impossible to achieve. Irony is the default register because "
+            "sincerity feels naive. Capitalism is the water they swim in — they hate it and "
+            "participate in it simultaneously. Mental health is the moral vocabulary of their generation. "
+            "Identity is real, fluid, and politically significant. Climate change is the defining crisis "
+            "but they feel powerless to address it."
+        ),
+        "epistemic_style": (
+            "Information-saturated and context-aware. Everything has been debunked somewhere. "
+            "Trusts peer networks and personal testimony over official channels. "
+            "Memes are a genuine form of political communication. "
+            "Media literacy is high; trust is low. They know they're being manipulated "
+            "and are mostly resigned to it."
+        ),
+        "moral_frame": (
+            "Don't be a hypocrite. Punch up, not down. Center marginalized voices. "
+            "Consent is the master principle. Systems matter more than individual actors. "
+            "Personal moral purity and systemic critique coexist uneasily."
+        ),
+        "characteristic_tensions": (
+            "Radical skeptic who still cares deeply. Anti-institutional but craves belonging. "
+            "Performatively ironic but sincerely anxious. Demands authenticity while performing "
+            "identity online. Wants structural change but is politically cynical."
+        ),
+        "contemporary_drift": (
+            "This person is 18-35 and the internet is their native environment. "
+            "They have been exposed to more philosophical diversity than any previous generation "
+            "but experience it as noise rather than education. "
+            "They carry genuine moral seriousness underneath a thick layer of ironic self-defense."
+        ),
+    },
+
+    "american_spiritual_seeker": {
+        "name": "Spiritual Seeker American",
+        "core_beliefs": (
+            "Something is out there — God, the universe, a higher self — but organized religion "
+            "has made a mess of it. Spiritual but not religious. The soul is real. "
+            "Energy, karma, manifestation, mindfulness — borrowed from various traditions without "
+            "full commitment to any. Believes deeply in personal growth: you are on a journey. "
+            "Suffering has meaning if you can find it. Love is the answer to most questions."
+        ),
+        "epistemic_style": (
+            "Experiential and intuitive. Trusts feelings, synchronicities, and personal revelation "
+            "over systematic argument. Open to sources that mainstream culture dismisses — "
+            "astrology, plant medicine, energy healing — not because they've verified them "
+            "but because the openness itself feels like wisdom. "
+            "Suspicious of materialist reductionism but not rigorous about alternatives."
+        ),
+        "moral_frame": (
+            "Be kind. Don't judge. Heal your own trauma so you don't pass it on. "
+            "The golden rule, universalized beyond any single tradition. "
+            "Moral growth is personal growth — become a better version of yourself."
+        ),
+        "characteristic_tensions": (
+            "Borrows from traditions they don't fully understand. "
+            "Values tolerance but can be intolerant of 'negative energy.' "
+            "Seeks meaning desperately but resists the discipline that meaning requires. "
+            "Anti-dogmatic but holds their own synthesis with surprising rigidity."
+        ),
+        "contemporary_drift": (
+            "This person is the heir of the 1960s counterculture filtered through wellness culture, "
+            "Instagram spirituality, and the psychedelic renaissance. They carry genuine spiritual "
+            "hunger that deserves respect, even when the forms it takes are shallow."
         ),
     },
 
@@ -722,6 +821,78 @@ TRADITIONS: dict[str, dict] = {
         ),
     },
 
+    # ── Friction agents ──────────────────────────────────────────────────────
+    # These exist to prevent groupthink. They are not traditions people
+    # identify with — they are roles that certain people play in any crowd.
+
+    "friction_gadfly": {
+        "name": "Socratic Gadfly",
+        "core_beliefs": (
+            "Every consensus is suspicious. If everyone agrees, someone is lying — "
+            "to others or to themselves. The most dangerous belief is the one that "
+            "feels obvious. My job is not to offer a position but to test every position "
+            "that is offered. I do this not out of contrarianism but out of respect: "
+            "an untested position is not a position at all."
+        ),
+        "epistemic_style": (
+            "Interrogative. Finds the weakest point in the strongest argument "
+            "and presses on it. Asks 'what do you mean by...' and 'how do you know...' "
+            "Treats confidence as evidence that something has been overlooked. "
+            "Does not have a doctrine — has a method."
+        ),
+        "moral_frame": (
+            "Truth-seeking is itself a moral obligation. Comfortable lies "
+            "harm people more than uncomfortable truths. "
+            "The examined life is the only defensible one."
+        ),
+        "characteristic_tensions": (
+            "Appears destructive but is actually constructive. "
+            "Tests others' positions without always having one of their own. "
+            "Can be experienced as obnoxious when the room wants resolution. "
+            "The gadfly stings — but the sting is a gift."
+        ),
+        "contemporary_drift": (
+            "This person is the devil's advocate at every table — not because they "
+            "enjoy disruption but because they genuinely cannot let a lazy consensus stand. "
+            "They may not know Socrates, but they channel him."
+        ),
+    },
+
+    "friction_populist": {
+        "name": "Populist Cynic",
+        "core_beliefs": (
+            "The people who write the rules don't follow them. Elites — intellectual, "
+            "political, financial — use complexity and abstraction to obscure simple truths. "
+            "Most sophisticated arguments are just sophisticated ways of serving the interests "
+            "of whoever is making them. The common person's instinct is more honest than "
+            "the philosopher's system. Power corrupts, and the powerful disguise their corruption "
+            "as wisdom."
+        ),
+        "epistemic_style": (
+            "Cut the bullshit. Who benefits from this argument? What are they not saying? "
+            "Abstractions are suspect — speak plainly or admit you're hiding something. "
+            "Track record matters more than credentials. "
+            "'Follow the money' is not a cliché, it is a method."
+        ),
+        "moral_frame": (
+            "Fairness means the same rules for everyone — actually, not just on paper. "
+            "Loyalty to your people. Contempt for hypocrisy. "
+            "The worst sin is pretending to serve others while serving yourself."
+        ),
+        "characteristic_tensions": (
+            "Populist anger is sometimes righteous and sometimes scapegoating. "
+            "Distrusts complexity even when the truth IS complex. "
+            "Can see through elite rhetoric but is vulnerable to populist rhetoric. "
+            "Carries genuine insight about power wrapped in oversimplification."
+        ),
+        "contemporary_drift": (
+            "This person exists across the political spectrum — left populist, right populist, "
+            "apolitical cynic. What they share is the conviction that 'the system' is rigged "
+            "and that sophisticated people are in on it. They are often wrong about specifics "
+            "and often right about the general pattern."
+        ),
+    },
+
 }
 
 # ── Agent generation ───────────────────────────────────────────────────────────
@@ -730,54 +901,168 @@ TRADITIONS: dict[str, dict] = {
 # These are rough and intentionally skewed toward the contemporary baseline.
 # Adjust as the product evolves.
 
-_POPULATION_WEIGHTS = {
-    "american_contemporary": 0.26,
-    "christian":             0.14,
-    "modernity_1":           0.09,
-    "modernity_3":           0.08,
-    "postmodern":            0.08,
-    "stoic":                 0.06,
-    "aristotelian":          0.05,
-    "nihilist":              0.05,
-    "scholastic":            0.04,
-    "jewish":                0.04,
-    "islamic":               0.04,
-    "modernity_2":           0.03,
-    "platonist":             0.02,
-    "hedonist":              0.02,
+_BASE_WEIGHTS = {
+    # Contemporary American subtypes (was 26% as one block)
+    "american_urban_pragmatist":  0.10,
+    "american_rural_traditionalist": 0.07,
+    "american_digital_native":   0.05,
+    "american_spiritual_seeker": 0.04,
+    # Established traditions
+    "christian":                 0.13,
+    "modernity_1":               0.09,
+    "modernity_3":               0.07,
+    "postmodern":                0.07,
+    "stoic":                     0.06,
+    "aristotelian":              0.05,
+    "nihilist":                  0.04,
+    "scholastic":                0.04,
+    "jewish":                    0.04,
+    "islamic":                   0.04,
+    "modernity_2":               0.03,
+    "platonist":                 0.02,
+    "hedonist":                  0.02,
+    # Friction agents (prevent groupthink)
+    "friction_gadfly":           0.02,
+    "friction_populist":         0.02,
 }
+
+# ── Dynamic weighting by question domain ─────────────────────────────────────
+#
+# When a question touches a specific domain, relevant traditions get a boost
+# and less-relevant ones get a proportional reduction. The total always sums to 1.0.
+# This is not about correctness — it's about ensuring the traditions with the most
+# to SAY about a topic have the most agents saying it.
+
+_DOMAIN_BOOSTS: dict[str, dict[str, float]] = {
+    "religion": {
+        "christian": 1.5, "jewish": 1.5, "islamic": 1.5, "scholastic": 1.5,
+        "american_spiritual_seeker": 1.3,
+        "nihilist": 1.2, "modernity_3": 1.2,
+    },
+    "politics": {
+        "modernity_1": 1.5, "modernity_2": 1.5, "modernity_3": 1.3,
+        "aristotelian": 1.3, "american_rural_traditionalist": 1.3,
+        "friction_populist": 1.5,
+    },
+    "ethics": {
+        "aristotelian": 1.5, "stoic": 1.4, "christian": 1.3,
+        "scholastic": 1.4, "platonist": 1.3, "jewish": 1.2,
+    },
+    "technology": {
+        "american_digital_native": 1.5, "american_urban_pragmatist": 1.3,
+        "modernity_1": 1.3, "postmodern": 1.2,
+        "friction_gadfly": 1.3,
+    },
+    "relationships": {
+        "christian": 1.3, "american_spiritual_seeker": 1.4,
+        "stoic": 1.3, "hedonist": 1.3,
+        "american_rural_traditionalist": 1.2,
+    },
+    "meaning": {
+        "nihilist": 1.5, "modernity_3": 1.4, "platonist": 1.4,
+        "stoic": 1.3, "christian": 1.3, "american_spiritual_seeker": 1.3,
+        "friction_gadfly": 1.3,
+    },
+    "art": {
+        "platonist": 1.5, "modernity_3": 1.4, "postmodern": 1.3,
+        "hedonist": 1.3, "american_digital_native": 1.2,
+    },
+    "justice": {
+        "aristotelian": 1.4, "scholastic": 1.5, "modernity_1": 1.3,
+        "jewish": 1.4, "islamic": 1.3, "modernity_2": 1.4,
+        "friction_populist": 1.4,
+    },
+    "death": {
+        "stoic": 1.5, "christian": 1.4, "hedonist": 1.4,
+        "platonist": 1.3, "nihilist": 1.3, "islamic": 1.3,
+    },
+    "money": {
+        "modernity_1": 1.5, "american_urban_pragmatist": 1.4,
+        "friction_populist": 1.5, "scholastic": 1.2,
+        "american_rural_traditionalist": 1.2,
+    },
+}
+
+# Keywords that trigger domain detection
+_DOMAIN_KEYWORDS: dict[str, list[str]] = {
+    "religion": ["god", "faith", "prayer", "church", "soul", "divine", "sacred", "spiritual", "afterlife", "worship", "sin", "salvation", "bible", "scripture", "atheism", "belief"],
+    "politics": ["government", "vote", "election", "democracy", "law", "rights", "freedom", "liberty", "power", "state", "policy", "political", "constitution", "authority", "revolution", "citizen"],
+    "ethics": ["right", "wrong", "moral", "ethical", "virtue", "duty", "obligation", "should", "ought", "conscience", "integrity", "character", "principle"],
+    "technology": ["ai", "artificial intelligence", "algorithm", "internet", "social media", "data", "privacy", "automation", "digital", "tech", "robot", "machine learning", "surveillance"],
+    "relationships": ["love", "marriage", "family", "friend", "trust", "betray", "partner", "parent", "child", "divorce", "loyalty", "forgiveness", "intimacy"],
+    "meaning": ["meaning", "purpose", "why", "exist", "nihil", "absurd", "pointless", "fulfill", "worth living", "happiness", "suffering"],
+    "art": ["art", "beauty", "create", "write", "music", "aesthetic", "literature", "poetry", "film", "culture", "imagination", "craft"],
+    "justice": ["justice", "fair", "equal", "inequality", "oppression", "punishment", "crime", "law", "court", "discrimination", "privilege"],
+    "death": ["death", "dying", "mortality", "grief", "loss", "terminal", "funeral", "afterlife", "euthanasia", "suicide"],
+    "money": ["money", "wealth", "poverty", "capitalism", "economics", "profit", "greed", "income", "market", "debt", "class", "rich", "poor"],
+}
+
+
+def _detect_domains(question: str) -> list[str]:
+    """Detect which domains a question touches, ranked by match strength."""
+    q_lower = question.lower()
+    scored: list[tuple[int, str]] = []
+    for domain, keywords in _DOMAIN_KEYWORDS.items():
+        hits = sum(1 for kw in keywords if kw in q_lower)
+        if hits > 0:
+            scored.append((hits, domain))
+    scored.sort(reverse=True)
+    return [d for _, d in scored[:3]]  # max 3 domains
+
+
+def _get_weights(question: str) -> dict[str, float]:
+    """Return population weights, dynamically adjusted for question domain."""
+    domains = _detect_domains(question)
+    if not domains:
+        return dict(_BASE_WEIGHTS)
+
+    weights = dict(_BASE_WEIGHTS)
+    for domain in domains:
+        boosts = _DOMAIN_BOOSTS.get(domain, {})
+        for tradition, multiplier in boosts.items():
+            if tradition in weights:
+                weights[tradition] *= multiplier
+
+    # Renormalize to sum to 1.0
+    total = sum(weights.values())
+    return {k: v / total for k, v in weights.items()}
 
 # Drift distribution: most people are moderately drifted from their tradition's ideal
 _DRIFT_WEIGHTS = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
 _DRIFT_PROBS   = [0.03, 0.07, 0.12, 0.18, 0.22, 0.18, 0.10, 0.06, 0.04]
 
 
-def _sample_tradition() -> str:
-    keys = list(_POPULATION_WEIGHTS.keys())
-    weights = [_POPULATION_WEIGHTS[k] for k in keys]
-    return random.choices(keys, weights=weights, k=1)[0]
+def _sample_tradition(weights: dict[str, float]) -> str:
+    keys = list(weights.keys())
+    wvals = [weights[k] for k in keys]
+    return random.choices(keys, weights=wvals, k=1)[0]
 
 
 def _sample_drift() -> float:
     return random.choices(_DRIFT_WEIGHTS, weights=_DRIFT_PROBS, k=1)[0]
 
 
-def _secondary_tradition(primary: str) -> Optional[str]:
-    """~60% chance of a secondary tradition influence, never same as primary."""
+def _secondary_tradition(primary: str, weights: dict[str, float]) -> Optional[str]:
+    """~60% chance of a secondary tradition influence, never same as primary.
+    Friction agents never get secondaries — they are roles, not traditions."""
+    if primary.startswith("friction_"):
+        return None
     if random.random() > 0.6:
         return None
-    candidates = [k for k in _POPULATION_WEIGHTS if k != primary]
-    weights = [_POPULATION_WEIGHTS[k] for k in candidates]
-    return random.choices(candidates, weights=weights, k=1)[0]
+    candidates = [k for k in weights if k != primary and not k.startswith("friction_")]
+    wvals = [weights[k] for k in candidates]
+    return random.choices(candidates, weights=wvals, k=1)[0]
 
 
-def generate_agent(agent_id: int) -> dict:
+def generate_agent(agent_id: int, weights: Optional[dict[str, float]] = None) -> dict:
     """
     Generate a single agent: a person shaped by traditions with some drift from the ideal.
     """
-    primary = _sample_tradition()
-    secondary = _secondary_tradition(primary)
-    drift = _sample_drift()
+    w = weights or _BASE_WEIGHTS
+    primary = _sample_tradition(w)
+    secondary = _secondary_tradition(primary, w)
+    # Friction agents are always committed (low drift) — they're roles, not drifters
+    drift = 0.1 if primary.startswith("friction_") else _sample_drift()
     t = TRADITIONS[primary]
 
     # Build a brief persona description (shown in results, not in the prompt)
@@ -803,8 +1088,35 @@ def _build_agent_system_prompt(agent: dict) -> str:
     """
     Build the system prompt for a single agent.
     The 'ought' comes from the tradition; the 'is' comes from drift.
+    Friction agents get a specialized prompt.
     """
     t = TRADITIONS[agent["primary_tradition"]]
+    primary_key = agent["primary_tradition"]
+
+    # Friction agents: specialized prompt, no drift, no secondary
+    if primary_key.startswith("friction_"):
+        return f"""You are a {t['name']} — not a representative of a tradition, but a role
+you play in any group deliberation.
+
+YOUR OPERATING PRINCIPLES:
+{t['core_beliefs']}
+
+HOW YOU REASON:
+{t['epistemic_style']}
+
+YOUR MORAL COMPASS:
+{t['moral_frame']}
+
+YOUR TENSIONS:
+{t['characteristic_tensions']}
+
+IMPORTANT INSTRUCTIONS:
+- You are here to DISRUPT lazy consensus, not to build it.
+- If everyone seems to agree, find the crack. If the majority leans one way, articulate what they're suppressing.
+- Be direct, sharp, and specific. Name the weakness you see.
+- One paragraph. No hedging. Take a position that makes the room uncomfortable.
+- You are {agent['persona']}. Sound like it."""
+
     drift = agent["drift"]
     secondary = agent["secondary_tradition"]
 
@@ -1053,10 +1365,19 @@ the degradation of the first wave in the name of freedom and virtue, but histori
 reason replaces nature, the general will replaces natural law. The Third Wave (Nietzsche-Heidegger)
 destroyed all foundations: if all values are historical, even the second wave's faith in progress
 is baseless. Each wave flows from and is mainly a response to the previous one.
-The premodern traditions (Platonist, Aristotelian, Stoic, Jewish, Christian, Islamic) represent
-the position that all three waves reject — that there is a natural or divine standard
+The premodern traditions (Platonist, Aristotelian, Stoic, Jewish, Christian, Islamic, Scholastic)
+represent the position that all three waves reject — that there is a natural or divine standard
 independent of human will. When analyzing fault lines, attend to whether the deepest
 disagreement runs between ancient and modern, or between the waves of modernity themselves.
+
+The "Contemporary American" agents are divided into four subtypes: Urban Pragmatist (educated,
+outcomes-focused), Rural Traditionalist (faith, family, self-reliance), Digital Native Skeptic
+(ironic, information-saturated, structurally aware), and Spiritual Seeker (eclectic, intuitive,
+growth-oriented). These subtypes disagree with EACH OTHER as much as they disagree with the
+philosophical traditions — attend to where they split.
+
+The swarm also includes friction agents (Socratic Gadfly, Populist Cynic) whose role is to
+disrupt consensus. Their dissents often reveal what the majority is suppressing.
 
 Write a synthesis in four parts, each as a plain paragraph (no headers, no bullet points):
 
@@ -1114,8 +1435,12 @@ async def run_council_swarm(
     """
     random.seed()  # Ensure different population each run
 
+    # Dynamic weights based on question domain
+    weights = _get_weights(question)
+    detected_domains = _detect_domains(question)
+
     # Generate population
-    agents = [generate_agent(i) for i in range(n_agents)]
+    agents = [generate_agent(i, weights) for i in range(n_agents)]
 
     # ── Round 1: Independent deliberation ────────────────────────────────────
     round1_results = await asyncio.gather(*[
@@ -1186,5 +1511,6 @@ async def run_council_swarm(
         "what_shifted": synthesis_data.get("what_shifted", ""),
         "tradition_breakdown": synthesis_data["tradition_breakdown"],
         "round1_summary": population_summary,
+        "detected_domains": detected_domains,
         "agent_details": round2_results,  # full individual results available
     }

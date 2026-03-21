@@ -160,10 +160,23 @@
       position: absolute; background: rgba(16,14,10,0.97); border: 1px solid var(--accent-dim);
       border-radius: 8px; padding: 10px 14px; pointer-events: none; z-index: 20;
       min-width: 190px; max-width: 250px; box-shadow: 0 4px 24px rgba(0,0,0,0.6);
+      backdrop-filter: blur(8px);
     }
     .council-node-tooltip-name { font-size: 13px; font-weight: 600; color: var(--accent); margin-bottom: 2px; }
     .council-node-tooltip-meta { font-size: 10px; color: var(--text-dim); margin-bottom: 6px; letter-spacing: 0.05em; text-transform: uppercase; font-family: var(--font-sans); }
     .council-node-tooltip-quote { font-size: 11px; color: var(--text); line-height: 1.55; font-style: italic; opacity: 0.85; }
+
+    /* ── Swarm legend ── */
+    .swarm-legend {
+      display: flex; flex-wrap: wrap; gap: 8px 16px; justify-content: center;
+      margin: 12px auto 0; max-width: 420px;
+    }
+    .swarm-legend-item {
+      display: flex; align-items: center; gap: 5px;
+      font-family: var(--font-sans); font-size: 9px;
+      color: var(--text-faint); letter-spacing: 0.06em; text-transform: uppercase;
+    }
+    .swarm-legend-dot { width: 7px; height: 7px; border-radius: 50%; }
 
     /* ── Voice wave background overlay ── */
     .voice-wave-bg { pointer-events: none; position: absolute; inset: 0; overflow: hidden; z-index: 0; opacity: 0.5; }
@@ -2610,6 +2623,679 @@ function NeuralCanvas({ thinkers, size = 340, active = false }) {
   );
 }
 
+// ── Swarm Network Canvas — dense force-graph visualization ──────────────────
+// Mirofish-inspired: 40 nodes, tradition-colored, cluster emergence, signal flow
+
+function SwarmNetworkCanvas({ active = false, size = 460, resultData = null }) {
+  const canvasRef = React.useRef(null);
+  const animRef = React.useRef(null);
+  const stateRef = React.useRef(null);
+  const [hoveredNode, setHoveredNode] = React.useState(null);
+  const [tooltipPos, setTooltipPos] = React.useState({ x: 0, y: 0 });
+
+  React.useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = size * dpr;
+    canvas.height = size * dpr;
+    ctx.scale(dpr, dpr);
+    canvas.style.width = size + "px";
+    canvas.style.height = size + "px";
+    const W = size, H = size;
+    const cx = W / 2, cy = H / 2;
+
+    // Generate 40 agent nodes — distributed by tradition
+    const WEIGHTS = {
+      "Urban Pragmatist": 4, "Rural Traditionalist": 3, "Digital Native": 2, "Spiritual Seeker": 2,
+      "Christian": 5, "First Wave": 4, "Third Wave": 3, "Postmodern": 3,
+      "Stoic": 2, "Aristotelian": 2, "Nihilist": 2, "Scholastic": 2,
+      "Jewish": 2, "Islamic": 2, "Second Wave": 1, "Platonist": 1,
+      "Hedonist / Epicurean": 1, "Socratic Gadfly": 1, "Populist Cynic": 1,
+    };
+
+    // Place traditions in family clusters
+    const familyAngles = { ancient: 0, abrahamic: 1.2, modern: 2.4, american: 3.6, alt: 4.8, friction: 5.6 };
+
+    const nodes = [];
+    let nodeId = 0;
+    Object.entries(WEIGHTS).forEach(([tradition, count]) => {
+      const family = TRADITION_FAMILY[tradition] || "alt";
+      const baseAngle = familyAngles[family] || 0;
+      const color = TRADITION_COLORS[tradition] || "#c8a46e";
+      const isFriction = family === "friction";
+      for (let i = 0; i < count; i++) {
+        const angle = baseAngle + (Math.random() - 0.5) * 1.1;
+        const dist = (0.25 + Math.random() * 0.55) * (W * 0.38);
+        nodes.push({
+          id: nodeId++,
+          tradition,
+          family,
+          color,
+          isFriction,
+          x: cx + Math.cos(angle) * dist + (Math.random() - 0.5) * 30,
+          y: cy + Math.sin(angle) * dist + (Math.random() - 0.5) * 30,
+          vx: 0, vy: 0,
+          radius: isFriction ? 4.5 : (3 + count * 0.3 + Math.random() * 1.5),
+          pulsePhase: Math.random() * Math.PI * 2,
+          pulseSpeed: 0.012 + Math.random() * 0.008,
+          glowIntensity: 0,
+          activated: false,
+          activationTime: 0,
+        });
+      }
+    });
+
+    // Build edges — connect within family (strong) and across families (weak)
+    const edges = [];
+    for (let i = 0; i < nodes.length; i++) {
+      for (let j = i + 1; j < nodes.length; j++) {
+        const dx = nodes[j].x - nodes[i].x;
+        const dy = nodes[j].y - nodes[i].y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        const sameFamily = nodes[i].family === nodes[j].family;
+        const sameTradition = nodes[i].tradition === nodes[j].tradition;
+        // Dense within-family connections, sparse cross-family
+        const threshold = sameTradition ? W * 0.5 : sameFamily ? W * 0.35 : W * 0.15;
+        if (dist < threshold) {
+          edges.push({
+            a: i, b: j, dist,
+            strength: sameTradition ? 0.8 : sameFamily ? 0.5 : 0.2,
+            drawProgress: 0,
+          });
+        }
+      }
+    }
+
+    // Signals — traveling packets of light
+    const signals = [];
+    const spawnSignal = (urgent = false) => {
+      if (signals.length > (active ? 60 : 8)) return;
+      const edge = edges[Math.floor(Math.random() * edges.length)];
+      if (!edge) return;
+      const forward = Math.random() > 0.5;
+      const srcNode = nodes[forward ? edge.a : edge.b];
+      signals.push({
+        edge, t: 0, forward,
+        speed: urgent ? 0.012 : (0.003 + Math.random() * 0.005),
+        opacity: 0,
+        color: urgent ? "#f43f5e" : srcNode.color,
+        size: urgent ? 4 : 2,
+        trail: urgent,
+      });
+    };
+
+    // Activation wave — nodes light up in sequence during deliberation
+    let activationIdx = 0;
+    const activateNext = () => {
+      if (activationIdx < nodes.length) {
+        nodes[activationIdx].activated = true;
+        nodes[activationIdx].activationTime = frame;
+        nodes[activationIdx].glowIntensity = 1.5;
+        // Spawn signals from newly activated node
+        const nodeEdges = edges.filter(e => e.a === activationIdx || e.b === activationIdx);
+        nodeEdges.slice(0, 3).forEach(() => spawnSignal(nodes[activationIdx].isFriction));
+        activationIdx++;
+      }
+    };
+
+    // Seed initial signals
+    for (let i = 0; i < (active ? 15 : 4); i++) spawnSignal();
+
+    let frame = 0;
+    stateRef.current = { nodes, edges, signals, spawnSignal };
+
+    // Simple force simulation for gentle node drift
+    const applyForces = () => {
+      // Repulsion between all nodes
+      for (let i = 0; i < nodes.length; i++) {
+        for (let j = i + 1; j < nodes.length; j++) {
+          const dx = nodes[j].x - nodes[i].x;
+          const dy = nodes[j].y - nodes[i].y;
+          const dist = Math.max(Math.sqrt(dx * dx + dy * dy), 1);
+          const minDist = (nodes[i].radius + nodes[j].radius) * 2.5;
+          if (dist < minDist) {
+            const force = (minDist - dist) / minDist * 0.15;
+            const fx = (dx / dist) * force;
+            const fy = (dy / dist) * force;
+            nodes[i].vx -= fx; nodes[i].vy -= fy;
+            nodes[j].vx += fx; nodes[j].vy += fy;
+          }
+        }
+      }
+      // Gravity toward center
+      nodes.forEach(n => {
+        const dx = cx - n.x, dy = cy - n.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist > W * 0.4) {
+          n.vx += dx * 0.001;
+          n.vy += dy * 0.001;
+        }
+      });
+      // Apply velocities with damping
+      nodes.forEach(n => {
+        n.x += n.vx;
+        n.y += n.vy;
+        n.vx *= 0.92;
+        n.vy *= 0.92;
+      });
+    };
+
+    const draw = () => {
+      ctx.clearRect(0, 0, W, H);
+      frame++;
+
+      // Activate nodes sequentially during deliberation
+      if (active && frame % 8 === 0) activateNext();
+
+      // Gentle force simulation
+      if (frame % 3 === 0) applyForces();
+
+      // Spawn signals
+      if (frame % (active ? 12 : 40) === 0) spawnSignal();
+      // Friction agents send disruptive signals occasionally
+      if (active && frame % 25 === 0) {
+        const frictionNodes = nodes.filter(n => n.isFriction && n.activated);
+        if (frictionNodes.length > 0) spawnSignal(true);
+      }
+
+      // ── Draw edges ──
+      edges.forEach(edge => {
+        if (edge.drawProgress < 1) edge.drawProgress = Math.min(1, edge.drawProgress + 0.015);
+        const na = nodes[edge.a], nb = nodes[edge.b];
+        // Only draw if both nodes activated (during deliberation)
+        if (active && (!na.activated || !nb.activated)) return;
+        const tx = na.x + (nb.x - na.x) * edge.drawProgress;
+        const ty = na.y + (nb.y - na.y) * edge.drawProgress;
+        ctx.beginPath();
+        ctx.moveTo(na.x, na.y);
+        ctx.lineTo(tx, ty);
+        const alpha = edge.strength * 0.35 * edge.drawProgress;
+        ctx.strokeStyle = `rgba(200,164,110,${alpha})`;
+        ctx.lineWidth = edge.strength > 0.5 ? 0.8 : 0.4;
+        ctx.stroke();
+      });
+
+      // ── Draw signals ──
+      for (let i = signals.length - 1; i >= 0; i--) {
+        const sig = signals[i];
+        sig.t += sig.speed * (active ? 1.6 : 0.8);
+        if (sig.t < 0.1) sig.opacity = sig.t / 0.1;
+        else if (sig.t > 0.85) sig.opacity = (1 - sig.t) / 0.15;
+        else sig.opacity = 1;
+
+        if (sig.t >= 1) {
+          const destIdx = sig.forward ? sig.edge.b : sig.edge.a;
+          nodes[destIdx].glowIntensity = Math.min(2, nodes[destIdx].glowIntensity + 0.6);
+          signals.splice(i, 1);
+          continue;
+        }
+
+        const na = nodes[sig.edge.a], nb = nodes[sig.edge.b];
+        const [src, dst] = sig.forward ? [na, nb] : [nb, na];
+        const px = src.x + (dst.x - src.x) * sig.t;
+        const py = src.y + (dst.y - src.y) * sig.t;
+
+        // Trail effect for friction signals
+        if (sig.trail) {
+          const grd = ctx.createRadialGradient(px, py, 0, px, py, 14);
+          grd.addColorStop(0, `rgba(244,63,94,${sig.opacity * 0.6})`);
+          grd.addColorStop(1, "transparent");
+          ctx.beginPath();
+          ctx.arc(px, py, 14, 0, Math.PI * 2);
+          ctx.fillStyle = grd;
+          ctx.fill();
+        }
+
+        // Parse signal color (hex) to RGB
+        const sHex = sig.color;
+        const sR = parseInt(sHex.slice(1,3), 16) || 200;
+        const sG = parseInt(sHex.slice(3,5), 16) || 164;
+        const sB = parseInt(sHex.slice(5,7), 16) || 110;
+
+        // Signal glow
+        const grd = ctx.createRadialGradient(px, py, 0, px, py, sig.size + 5);
+        grd.addColorStop(0, `rgba(${sR},${sG},${sB},${sig.opacity * 0.8})`);
+        grd.addColorStop(1, "transparent");
+        ctx.beginPath();
+        ctx.arc(px, py, sig.size + 5, 0, Math.PI * 2);
+        ctx.fillStyle = grd;
+        ctx.fill();
+
+        // Core dot
+        ctx.beginPath();
+        ctx.arc(px, py, sig.size, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(${sR},${sG},${sB},${sig.opacity})`;
+        ctx.fill();
+      }
+
+      // ── Draw nodes ──
+      const hIdx = stateRef.current?.hoveredNodeIdx ?? -1;
+      nodes.forEach((node, ni) => {
+        if (active && !node.activated) return; // Hidden until activated
+
+        node.pulsePhase += node.pulseSpeed;
+        const pulse = Math.sin(node.pulsePhase) * 0.5 + 0.5;
+        node.glowIntensity = Math.max(0, node.glowIntensity - 0.015);
+        const isHovered = ni === hIdx;
+        const glow = node.glowIntensity + (active ? pulse * 0.5 : pulse * 0.2) + (isHovered ? 0.8 : 0);
+
+        // Parse hex color to RGB for glow
+        const hex = node.color;
+        const r = parseInt(hex.slice(1,3), 16);
+        const g = parseInt(hex.slice(3,5), 16);
+        const b = parseInt(hex.slice(5,7), 16);
+
+        // Outer glow — tradition-colored
+        const outerR = node.radius + 3 + glow * 8;
+        const grd = ctx.createRadialGradient(node.x, node.y, node.radius * 0.3, node.x, node.y, outerR);
+        grd.addColorStop(0, `rgba(${r},${g},${b},${0.3 + glow * 0.4})`);
+        grd.addColorStop(0.6, `rgba(${r},${g},${b},${0.08 + glow * 0.12})`);
+        grd.addColorStop(1, "transparent");
+        ctx.beginPath();
+        ctx.arc(node.x, node.y, outerR, 0, Math.PI * 2);
+        ctx.fillStyle = grd;
+        ctx.fill();
+
+        // Core node — solid with slight border
+        ctx.beginPath();
+        ctx.arc(node.x, node.y, node.radius, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(${r},${g},${b},${0.75 + glow * 0.25})`;
+        ctx.fill();
+        if (node.isFriction) {
+          ctx.strokeStyle = `rgba(${r},${g},${b},0.9)`;
+          ctx.lineWidth = 1.5;
+          ctx.stroke();
+        }
+
+        // Label — only show for hovered or friction agents
+        if (isHovered || node.isFriction) {
+          ctx.font = `${isHovered ? 11 : 9}px -apple-system, sans-serif`;
+          ctx.fillStyle = `rgba(${r},${g},${b},${isHovered ? 1 : 0.6})`;
+          ctx.textAlign = "center";
+          ctx.fillText(node.tradition, node.x, node.y - node.radius - 6);
+        }
+      });
+
+      // ── Family region labels (interactive) ──
+      const familyLabelPositions = [];
+      if (!active || frame > 200) {
+        ctx.font = "9px -apple-system, sans-serif";
+        ctx.textAlign = "center";
+        const labelR = W * 0.43;
+        const hFam = stateRef.current?.hoveredFamily || null;
+        Object.entries(familyAngles).forEach(([family, angle]) => {
+          const label = { ancient: "ANCIENTS", abrahamic: "ABRAHAMIC", modern: "MODERNITY", american: "CONTEMPORARY", alt: "ALT", friction: "FRICTION" }[family];
+          if (label) {
+            const lx = cx + Math.cos(angle) * labelR;
+            const ly = cy + Math.sin(angle) * labelR;
+            const isHovered = hFam === family;
+            ctx.fillStyle = isHovered ? "rgba(200,164,110,0.7)" : "rgba(200,164,110,0.2)";
+            if (isHovered) ctx.font = "bold 10px -apple-system, sans-serif";
+            ctx.fillText(label, lx, ly);
+            if (isHovered) ctx.font = "9px -apple-system, sans-serif";
+            familyLabelPositions.push({ family, label, x: lx, y: ly });
+          }
+        });
+      }
+      if (stateRef.current) stateRef.current.familyLabelPositions = familyLabelPositions;
+
+      animRef.current = requestAnimationFrame(draw);
+    };
+
+    draw();
+    return () => { if (animRef.current) cancelAnimationFrame(animRef.current); };
+  }, [active, size]);
+
+  const FAMILY_DESCRIPTIONS = {
+    ancient: { label: "Ancients", desc: "Classical Greek philosophy — Plato, Aristotle, Stoics, Epicureans", traditions: ["Platonist", "Aristotelian", "Stoic", "Hedonist / Epicurean"] },
+    abrahamic: { label: "Abrahamic", desc: "The great monotheistic traditions", traditions: ["Christian", "Islamic", "Jewish", "Scholastic"] },
+    modern: { label: "Modernity", desc: "Enlightenment through postmodernism", traditions: ["First Wave", "Second Wave", "Third Wave", "Postmodern", "Nihilist"] },
+    american: { label: "Contemporary", desc: "Living American perspectives across class and culture", traditions: ["Urban Pragmatist", "Rural Traditionalist", "Digital Native", "Spiritual Seeker"] },
+    alt: { label: "Alt", desc: "Counter-cultural and heterodox voices", traditions: [] },
+    friction: { label: "Friction", desc: "Disruptive agents that stress-test consensus", traditions: ["Socratic Gadfly", "Populist Cynic"] },
+  };
+
+  const [hoveredFamily, setHoveredFamily] = React.useState(null);
+  const [familyTooltipPos, setFamilyTooltipPos] = React.useState({ x: 0, y: 0 });
+
+  // Mouse interaction
+  const handleMouseMove = (e) => {
+    if (!stateRef.current) return;
+    const canvas = canvasRef.current;
+    const rect = canvas.getBoundingClientRect();
+    const mx = (e.clientX - rect.left) * (size / rect.width);
+    const my = (e.clientY - rect.top) * (size / rect.height);
+    const nodes = stateRef.current.nodes;
+
+    // Check family labels first
+    const labels = stateRef.current.familyLabelPositions || [];
+    let foundFamily = null;
+    labels.forEach(lbl => {
+      const d = Math.sqrt((lbl.x - mx) ** 2 + (lbl.y - my) ** 2);
+      if (d < 30) {
+        foundFamily = lbl.family;
+        setFamilyTooltipPos({
+          x: lbl.x * (rect.width / size),
+          y: lbl.y * (rect.height / size),
+        });
+      }
+    });
+    stateRef.current.hoveredFamily = foundFamily;
+    setHoveredFamily(foundFamily);
+
+    // Then check nodes
+    let closest = -1, closestDist = 20;
+    nodes.forEach((n, i) => {
+      if (!n.activated && !n.isFriction) return;
+      const d = Math.sqrt((n.x - mx) ** 2 + (n.y - my) ** 2);
+      if (d < closestDist) { closestDist = d; closest = i; }
+    });
+    stateRef.current.hoveredNodeIdx = closest;
+    setHoveredNode(closest === -1 ? null : closest);
+    if (closest !== -1) {
+      setTooltipPos({
+        x: rect.left + nodes[closest].x * (rect.width / size),
+        y: rect.top + nodes[closest].y * (rect.height / size),
+      });
+    }
+  };
+
+  const hNode = hoveredNode !== null ? stateRef.current?.nodes[hoveredNode] : null;
+  const hFamily = hoveredFamily ? FAMILY_DESCRIPTIONS[hoveredFamily] : null;
+
+  return (
+    <div className="council-graph-wrap" style={{ display: "block", margin: "0 auto", width: size, position: "relative" }}>
+      <canvas ref={canvasRef}
+        onMouseMove={handleMouseMove}
+        onMouseLeave={() => {
+          if (stateRef.current) { stateRef.current.hoveredNodeIdx = -1; stateRef.current.hoveredFamily = null; }
+          setHoveredNode(null);
+          setHoveredFamily(null);
+        }}
+        style={{ display: "block", width: size, height: size, cursor: (hoveredNode !== null || hoveredFamily) ? "pointer" : "default" }} />
+      {hNode && !hoveredFamily && (
+        <div className="council-node-tooltip" style={{
+          left: hNode.x * (canvasRef.current?.getBoundingClientRect().width / size || 1) + 14,
+          top: hNode.y * (canvasRef.current?.getBoundingClientRect().height / size || 1) - 30,
+        }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
+            <div style={{ width: 8, height: 8, borderRadius: "50%", background: hNode.color }} />
+            <div className="council-node-tooltip-name">{hNode.tradition}</div>
+          </div>
+          <div className="council-node-tooltip-meta">
+            {TRADITION_FAMILY[hNode.tradition]?.toUpperCase() || "TRADITION"}
+            {hNode.isFriction ? " · FRICTION AGENT" : ""}
+          </div>
+        </div>
+      )}
+      {hFamily && (
+        <div className="council-node-tooltip" style={{
+          left: familyTooltipPos.x + 14,
+          top: familyTooltipPos.y - 10,
+          minWidth: 180, maxWidth: 240,
+        }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: "var(--text)", marginBottom: 4, fontFamily: "var(--font-sans)" }}>
+            {hFamily.label}
+          </div>
+          <div style={{ fontSize: 11, color: "var(--text-dim)", lineHeight: 1.5, marginBottom: 6, fontFamily: "var(--font-sans)" }}>
+            {hFamily.desc}
+          </div>
+          {hFamily.traditions.length > 0 && (
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+              {hFamily.traditions.map(t => (
+                <span key={t} style={{
+                  fontSize: 9, padding: "2px 6px", borderRadius: 4,
+                  background: `${TRADITION_COLORS[t] || "var(--accent)"}22`,
+                  color: TRADITION_COLORS[t] || "var(--accent)",
+                  fontFamily: "var(--font-sans)",
+                }}>{t}</span>
+              ))}
+            </div>
+          )}
+          <div style={{ fontSize: 9, color: "var(--text-dim)", marginTop: 6, fontFamily: "var(--font-sans)", opacity: 0.6 }}>
+            {stateRef.current?.nodes?.filter(n => TRADITION_FAMILY[n.tradition] === hoveredFamily).length || 0} agents in this family
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Swarm Results Network — post-deliberation visualization ──────────────────
+
+function SwarmResultsGraph({ resultData, size = 420 }) {
+  const canvasRef = React.useRef(null);
+  const animRef = React.useRef(null);
+  const stateRef = React.useRef(null);
+  const [hoveredNode, setHoveredNode] = React.useState(null);
+
+  React.useEffect(() => {
+    if (!resultData?.tradition_breakdown) return;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = size * dpr;
+    canvas.height = size * dpr;
+    ctx.scale(dpr, dpr);
+    canvas.style.width = size + "px";
+    canvas.style.height = size + "px";
+    const W = size, H = size;
+    const cx = W / 2, cy = H / 2;
+
+    // Build nodes from tradition breakdown
+    const breakdown = resultData.tradition_breakdown;
+    const traditions = Object.entries(breakdown).sort((a, b) => b[1].count - a[1].count);
+    const totalAgents = traditions.reduce((s, [, d]) => s + d.count, 0);
+
+    // Map tradition backend names to display names
+    const nameMap = {
+      "Average Contemporary American": "Urban Pragmatist",
+      "Urban Pragmatist American": "Urban Pragmatist",
+      "Rural Traditionalist American": "Rural Traditionalist",
+      "Digital Native Skeptic": "Digital Native",
+      "Spiritual Seeker American": "Spiritual Seeker",
+      "First Wave of Modernity (Machiavelli–Hobbes–Locke)": "First Wave",
+      "Second Wave of Modernity (Rousseau–Kant–Hegel)": "Second Wave",
+      "Third Wave of Modernity (Nietzsche–Heidegger)": "Third Wave",
+      "Postmodern (heir of the Third Wave)": "Postmodern",
+      "Nihilist (the Third Wave's shadow)": "Nihilist",
+      "Christian Scholastic (Augustinian-Thomistic)": "Scholastic",
+      "Hedonist / Epicurean": "Hedonist / Epicurean",
+      "Socratic Gadfly": "Socratic Gadfly",
+      "Populist Cynic": "Populist Cynic",
+    };
+
+    const nodes = traditions.map(([name, data], i) => {
+      const displayName = nameMap[name] || name;
+      const family = TRADITION_FAMILY[displayName] || "alt";
+      const familyAngles = { ancient: 0, abrahamic: 1.2, modern: 2.4, american: 3.6, alt: 4.8, friction: 5.6 };
+      const baseAngle = familyAngles[family] || (i / traditions.length) * Math.PI * 2;
+      const angle = baseAngle + (Math.random() - 0.5) * 0.8;
+      const dist = (0.2 + (data.count / totalAgents) * 0.6) * (W * 0.35);
+      const color = TRADITION_COLORS[displayName] || "#c8a46e";
+      // Radius proportional to agent count
+      const radius = 6 + (data.count / totalAgents) * 30;
+
+      return {
+        name: displayName,
+        backendName: name,
+        count: data.count,
+        positions: data.positions || [],
+        color,
+        family,
+        x: cx + Math.cos(angle) * dist,
+        y: cy + Math.sin(angle) * dist,
+        radius,
+        pulsePhase: Math.random() * Math.PI * 2,
+      };
+    });
+
+    // Edges between traditions that share positions
+    const edges = [];
+    for (let i = 0; i < nodes.length; i++) {
+      for (let j = i + 1; j < nodes.length; j++) {
+        const shared = nodes[i].positions.filter(p => nodes[j].positions.includes(p));
+        if (shared.length > 0) {
+          edges.push({ a: i, b: j, strength: shared.length / Math.max(nodes[i].positions.length, nodes[j].positions.length) });
+        }
+      }
+    }
+
+    stateRef.current = { nodes, edges };
+
+    // Ambient signals
+    const signals = [];
+    const spawnSignal = () => {
+      if (signals.length > 15 || edges.length === 0) return;
+      const edge = edges[Math.floor(Math.random() * edges.length)];
+      signals.push({
+        edge, t: 0, forward: Math.random() > 0.5,
+        speed: 0.004 + Math.random() * 0.004,
+        opacity: 0,
+        color: nodes[edge.a].color,
+      });
+    };
+    for (let i = 0; i < 5; i++) spawnSignal();
+
+    let frame = 0;
+    const draw = () => {
+      ctx.clearRect(0, 0, W, H);
+      frame++;
+      if (frame % 30 === 0) spawnSignal();
+
+      const hIdx = stateRef.current?.hoveredNodeIdx ?? -1;
+
+      // Draw edges
+      edges.forEach(edge => {
+        const na = nodes[edge.a], nb = nodes[edge.b];
+        ctx.beginPath();
+        ctx.moveTo(na.x, na.y);
+        ctx.lineTo(nb.x, nb.y);
+        ctx.strokeStyle = `rgba(200,164,110,${edge.strength * 0.3})`;
+        ctx.lineWidth = edge.strength * 2;
+        ctx.stroke();
+      });
+
+      // Draw signals
+      for (let i = signals.length - 1; i >= 0; i--) {
+        const sig = signals[i];
+        sig.t += sig.speed;
+        sig.opacity = sig.t < 0.15 ? sig.t / 0.15 : sig.t > 0.85 ? (1 - sig.t) / 0.15 : 1;
+        if (sig.t >= 1) { signals.splice(i, 1); continue; }
+        const na = nodes[sig.edge.a], nb = nodes[sig.edge.b];
+        const [src, dst] = sig.forward ? [na, nb] : [nb, na];
+        const px = src.x + (dst.x - src.x) * sig.t;
+        const py = src.y + (dst.y - src.y) * sig.t;
+        ctx.beginPath();
+        ctx.arc(px, py, 2.5, 0, Math.PI * 2);
+        ctx.fillStyle = sig.color;
+        ctx.globalAlpha = sig.opacity * 0.7;
+        ctx.fill();
+        ctx.globalAlpha = 1;
+      }
+
+      // Draw nodes
+      nodes.forEach((node, ni) => {
+        node.pulsePhase += 0.015;
+        const pulse = Math.sin(node.pulsePhase) * 0.3 + 0.7;
+        const isHovered = ni === hIdx;
+
+        const hex = node.color;
+        const r = parseInt(hex.slice(1,3), 16);
+        const g = parseInt(hex.slice(3,5), 16);
+        const b = parseInt(hex.slice(5,7), 16);
+
+        // Glow
+        const outerR = node.radius + (isHovered ? 12 : 6);
+        const grd = ctx.createRadialGradient(node.x, node.y, node.radius * 0.3, node.x, node.y, outerR);
+        grd.addColorStop(0, `rgba(${r},${g},${b},${isHovered ? 0.5 : 0.25 * pulse})`);
+        grd.addColorStop(1, "transparent");
+        ctx.beginPath();
+        ctx.arc(node.x, node.y, outerR, 0, Math.PI * 2);
+        ctx.fillStyle = grd;
+        ctx.fill();
+
+        // Core circle
+        ctx.beginPath();
+        ctx.arc(node.x, node.y, node.radius, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(${r},${g},${b},${isHovered ? 0.95 : 0.7 * pulse})`;
+        ctx.fill();
+
+        // Count label inside
+        if (node.radius > 10) {
+          ctx.font = `bold ${Math.min(node.radius * 0.7, 14)}px -apple-system, sans-serif`;
+          ctx.fillStyle = `rgba(255,255,255,${isHovered ? 0.95 : 0.8})`;
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.fillText(node.count, node.x, node.y);
+        }
+
+        // Name label outside
+        ctx.font = `${isHovered ? 11 : 9}px -apple-system, sans-serif`;
+        ctx.fillStyle = `rgba(${r},${g},${b},${isHovered ? 1 : 0.6})`;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "top";
+        ctx.fillText(node.name, node.x, node.y + node.radius + 4);
+      });
+
+      animRef.current = requestAnimationFrame(draw);
+    };
+    draw();
+    return () => { if (animRef.current) cancelAnimationFrame(animRef.current); };
+  }, [resultData, size]);
+
+  // Mouse interaction
+  const handleMouseMove = (e) => {
+    if (!stateRef.current) return;
+    const canvas = canvasRef.current;
+    const rect = canvas.getBoundingClientRect();
+    const mx = (e.clientX - rect.left) * (size / rect.width);
+    const my = (e.clientY - rect.top) * (size / rect.height);
+    const nodes = stateRef.current.nodes;
+    let closest = -1, closestDist = 30;
+    nodes.forEach((n, i) => {
+      const d = Math.sqrt((n.x - mx) ** 2 + (n.y - my) ** 2);
+      if (d < Math.max(n.radius + 5, closestDist)) { closestDist = d; closest = i; }
+    });
+    stateRef.current.hoveredNodeIdx = closest;
+    setHoveredNode(closest);
+  };
+
+  const hNode = hoveredNode !== null && hoveredNode !== -1 ? stateRef.current?.nodes[hoveredNode] : null;
+
+  return (
+    <div className="council-graph-wrap" style={{ display: "block", margin: "0 auto", width: size, position: "relative" }}>
+      <canvas ref={canvasRef}
+        onMouseMove={handleMouseMove}
+        onMouseLeave={() => { if (stateRef.current) stateRef.current.hoveredNodeIdx = -1; setHoveredNode(null); }}
+        style={{ display: "block", width: size, height: size, cursor: hoveredNode !== null ? "pointer" : "default" }} />
+      {hNode && (
+        <div className="council-node-tooltip" style={{
+          left: hNode.x * (canvasRef.current?.getBoundingClientRect().width / size || 1) + 14,
+          top: hNode.y * (canvasRef.current?.getBoundingClientRect().height / size || 1) - 50,
+        }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
+            <div style={{ width: 8, height: 8, borderRadius: "50%", background: hNode.color }} />
+            <div className="council-node-tooltip-name">{hNode.name}</div>
+          </div>
+          <div className="council-node-tooltip-meta">
+            {hNode.count} agents · {hNode.family?.toUpperCase()}
+          </div>
+          {hNode.positions.length > 0 && (
+            <div className="council-node-tooltip-quote">
+              Position{hNode.positions.length > 1 ? "s" : ""}: {hNode.positions.slice(0, 3).join(", ")}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+
 // ── Council deliberating state — full dramatic canvas with cycling thinker status ──
 const COUNCIL_VERBS = [
   "deliberating", "considering", "reasoning", "formulating",
@@ -2618,9 +3304,32 @@ const COUNCIL_VERBS = [
 
 const SWARM_TRADITIONS = [
   "Platonist", "Aristotelian", "Stoic", "Christian", "Islamic", "Jewish",
-  "Hedonist", "Nihilist", "Postmodern", "Early Modernity", "Late Modernity",
-  "High Modernity", "Contemporary American",
+  "Hedonist / Epicurean", "Nihilist", "Postmodern", "Scholastic",
+  "First Wave", "Second Wave", "Third Wave",
+  "Urban Pragmatist", "Rural Traditionalist", "Digital Native", "Spiritual Seeker",
+  "Socratic Gadfly", "Populist Cynic",
 ];
+
+// Color palette — tradition families share hues, distinct from each other
+const TRADITION_COLORS = {
+  "Platonist": "#a78bfa", "Aristotelian": "#818cf8", "Stoic": "#6366f1",   // Ancients: purple
+  "Christian": "#60a5fa", "Jewish": "#38bdf8", "Islamic": "#22d3ee", "Scholastic": "#93c5fd", // Abrahamic: blue
+  "Hedonist / Epicurean": "#34d399", "Nihilist": "#6b7280", "Postmodern": "#a1a1aa",         // Alt: green/gray
+  "First Wave": "#f59e0b", "Second Wave": "#f97316", "Third Wave": "#ef4444",                // Modernity: warm
+  "Urban Pragmatist": "#c8a46e", "Rural Traditionalist": "#d4a574",
+  "Digital Native": "#a3a3a3", "Spiritual Seeker": "#c084fc",                                // Americans: earth/muted
+  "Socratic Gadfly": "#f43f5e", "Populist Cynic": "#fb923c",                                 // Friction: hot
+};
+
+const TRADITION_FAMILY = {
+  "Platonist": "ancient", "Aristotelian": "ancient", "Stoic": "ancient",
+  "Christian": "abrahamic", "Jewish": "abrahamic", "Islamic": "abrahamic", "Scholastic": "abrahamic",
+  "Hedonist / Epicurean": "alt", "Nihilist": "alt", "Postmodern": "alt",
+  "First Wave": "modern", "Second Wave": "modern", "Third Wave": "modern",
+  "Urban Pragmatist": "american", "Rural Traditionalist": "american",
+  "Digital Native": "american", "Spiritual Seeker": "american",
+  "Socratic Gadfly": "friction", "Populist Cynic": "friction",
+};
 
 function CouncilDeliberating({ thinkers, swarm = false }) {
   const [activeThinker, setActiveThinker] = React.useState(0);
@@ -2655,7 +3364,10 @@ function CouncilDeliberating({ thinkers, swarm = false }) {
       alignItems: "center", justifyContent: "center",
       minHeight: 420, gap: 0,
     }}>
-      <NeuralCanvas thinkers={swarm ? SWARM_TRADITIONS : thinkers} size={380} active={true} />
+      {swarm
+        ? <SwarmNetworkCanvas size={440} active={true} />
+        : <NeuralCanvas thinkers={thinkers} size={380} active={true} />
+      }
 
       {/* Thinker status line */}
       <div style={{
@@ -2664,9 +3376,9 @@ function CouncilDeliberating({ thinkers, swarm = false }) {
       }}>
         <span style={{
           fontFamily: "var(--font)", fontSize: "1.05rem",
-          color: "var(--accent)",
+          color: swarm ? (TRADITION_COLORS[displayNames[activeThinker]] || "var(--accent)") : "var(--accent)",
           opacity: fade ? 1 : 0,
-          transition: "opacity 0.3s ease",
+          transition: "opacity 0.3s ease, color 0.3s ease",
         }}>
           {displayNames[activeThinker]}
         </span>
@@ -2680,16 +3392,31 @@ function CouncilDeliberating({ thinkers, swarm = false }) {
         </span>
       </div>
 
-      {/* Round indicator dots */}
-      <div style={{ display: "flex", gap: 6, marginTop: 16 }}>
-        {displayNames.map((_, i) => (
-          <div key={i} style={{
-            width: 5, height: 5, borderRadius: "50%",
-            background: i === activeThinker ? "var(--accent)" : "var(--border)",
-            transition: "background 0.3s",
-          }} />
-        ))}
-      </div>
+      {/* Round indicator — tradition-colored dots for swarm, plain for council */}
+      {swarm ? (
+        <div style={{ display: "flex", gap: 4, marginTop: 16, flexWrap: "wrap", justifyContent: "center", maxWidth: 320 }}>
+          {displayNames.map((name, i) => (
+            <div key={i} style={{
+              width: 6, height: 6, borderRadius: "50%",
+              background: i === activeThinker
+                ? (TRADITION_COLORS[name] || "var(--accent)")
+                : `${TRADITION_COLORS[name] || "#555"}33`,
+              transition: "background 0.3s, transform 0.3s",
+              transform: i === activeThinker ? "scale(1.6)" : "scale(1)",
+            }} />
+          ))}
+        </div>
+      ) : (
+        <div style={{ display: "flex", gap: 6, marginTop: 16 }}>
+          {displayNames.map((_, i) => (
+            <div key={i} style={{
+              width: 5, height: 5, borderRadius: "50%",
+              background: i === activeThinker ? "var(--accent)" : "var(--border)",
+              transition: "background 0.3s",
+            }} />
+          ))}
+        </div>
+      )}
 
       <div style={{
         marginTop: 20,
@@ -2698,7 +3425,7 @@ function CouncilDeliberating({ thinkers, swarm = false }) {
         textTransform: "uppercase",
       }}>
         {swarm
-          ? `Swarm intelligence · Round ${round} of 2 · 40 agents`
+          ? `Swarm intelligence · Round ${round} of 2 · 40 agents · 19 traditions`
           : "The council convenes"}
       </div>
     </div>
@@ -2742,8 +3469,25 @@ function CouncilView({ isGuest, onNeedAuth }) {
     });
   };
 
+  const [showGuestTeaser, setShowGuestTeaser] = React.useState(false);
+  const [guestTeaserData, setGuestTeaserData] = React.useState(null);
+
+  const GUEST_TEASER_RESPONSES = {
+    advice: [
+      { name: "Socrates", tradition: "Socratic", response: "Before we can answer what you should do, we must first ask: what do you truly want? Not what you think you should want — what draws you, even when no one is watching? The unexamined choice is no choice at all." },
+      { name: "Machiavelli", tradition: "Machiavellian", response: "The question is not what is right, but what is effective. Consider: who benefits from each path? What power do you gain, and what do you lose? Virtue without strategy is merely beautiful failure." },
+    ],
+    predict: [
+      { name: "Aristotle", tradition: "Aristotelian", response: "To predict well, we must understand the nature of the thing in question — its tendencies, its telos. What is the natural trajectory here? The probable follows from character and circumstance." },
+      { name: "William James", tradition: "Pragmatist", response: "Prediction is less about seeing the future than about understanding which possibilities are live, forced, and momentous. What are the practical consequences of each outcome?" },
+    ],
+    writing: [
+      { name: "Jesus", tradition: "Jesus", response: "Speak plainly. The most powerful truths need no decoration. Say what you mean as if speaking to a child or a dying friend — with that clarity and that urgency." },
+      { name: "Socrates", tradition: "Socratic", response: "Does your writing know what it doesn't know? The strongest prose admits its own limits. Question every certainty on the page — if it survives, it deserves to stay." },
+    ],
+  };
+
   const handleSubmit = async () => {
-    if (isGuest) { onNeedAuth(); return; }
     const q = question.trim();
     const p = prose.trim();
     if (mode === "writing" && writingInputMode === "prose" && !p) {
@@ -2753,6 +3497,24 @@ function CouncilView({ isGuest, onNeedAuth }) {
     if (mode === "writing" && writingInputMode === "question" && !q) {
       setError("Ask a question about your writing."); return;
     }
+
+    // Guest teaser flow — show 2 mock responses, then prompt signup
+    if (isGuest) {
+      setError("");
+      setDeliberating(true);
+      setResult(null);
+      // Simulate deliberation delay
+      await new Promise(r => setTimeout(r, 3000 + Math.random() * 2000));
+      setDeliberating(false);
+      setGuestTeaserData({
+        question: q,
+        mode,
+        responses: GUEST_TEASER_RESPONSES[mode] || GUEST_TEASER_RESPONSES.advice,
+      });
+      setShowGuestTeaser(true);
+      return;
+    }
+
     setError("");
     setDeliberating(true);
     setResult(null);
@@ -2851,10 +3613,38 @@ function CouncilView({ isGuest, onNeedAuth }) {
               }}>
                 {result.n_agents} agents · 2 rounds
               </div>
+              {result.detected_domains?.length > 0 && (
+                <div style={{
+                  fontFamily: "var(--font-sans)", fontSize: 10, color: "var(--text-faint)",
+                  letterSpacing: "0.08em", textTransform: "uppercase",
+                }}>
+                  Domain: {result.detected_domains.join(" · ")}
+                </div>
+              )}
+            </div>
+
+            {/* Network graph visualization */}
+            <SwarmResultsGraph resultData={result} size={400} />
+
+            {/* Tradition family legend */}
+            <div className="swarm-legend">
+              {[
+                { label: "Ancients", color: "#818cf8" },
+                { label: "Abrahamic", color: "#60a5fa" },
+                { label: "Modernity", color: "#f59e0b" },
+                { label: "Contemporary", color: "#c8a46e" },
+                { label: "Alt", color: "#34d399" },
+                { label: "Friction", color: "#f43f5e" },
+              ].map(({ label, color }) => (
+                <div key={label} className="swarm-legend-item">
+                  <div className="swarm-legend-dot" style={{ background: color }} />
+                  {label}
+                </div>
+              ))}
             </div>
 
             {/* Synthesis */}
-            <div style={{ marginBottom: 28, padding: "24px 28px", background: "var(--bg-elevated)", borderRadius: "var(--radius)", border: "1px solid var(--border)" }}>
+            <div style={{ marginTop: 24, marginBottom: 28, padding: "24px 28px", background: "var(--bg-elevated)", borderRadius: "var(--radius)", border: "1px solid var(--border)" }}>
               <div className="write-label" style={{ marginBottom: 12, fontSize: 10 }}>THE POPULATION SPEAKS</div>
               <p style={{ fontFamily: "var(--font)", fontSize: "1.05rem", color: "var(--text)", lineHeight: 1.85 }}>
                 {result.synthesis}
@@ -3029,65 +3819,41 @@ function CouncilView({ isGuest, onNeedAuth }) {
 
   return (
     <div className="write-container">
-      <div className="write-section">
-        <div style={{ marginBottom: 8, display: "flex", justifyContent: "center" }}>
-          <NeuralCanvas thinkers={[...thinkers]} size={280} active={false} />
-        </div>
-        <div style={{ display: "flex", alignItems: "baseline", gap: 16, marginBottom: 8 }}>
-          <div className="write-label">The Council</div>
-          <span style={{ fontFamily: "var(--font-sans)", fontSize: 11, color: "var(--accent)", opacity: 0.75, letterSpacing: "0.08em" }}>
-            collective memory active
-          </span>
-        </div>
-        <p style={{ fontFamily: "var(--font-sans)", fontSize: 14, color: "var(--text-dim)", marginBottom: 24, lineHeight: 1.75 }}>
-          {thinkers.size} minds deliberate on your question. They disagree with each other — that is the point.
-          The council remembers every question it has considered.
+      <div className="write-section" style={{ maxWidth: 560 }}>
+
+        {/* ── Hero header ── */}
+        <h1 style={{
+          fontFamily: "var(--font)", fontSize: "2.2rem", fontWeight: 600,
+          color: "var(--text)", margin: "0 0 6px", lineHeight: 1.2,
+        }}>
+          {councilTier === "swarm" ? "Ask 40 Philosophical Minds" : "Summon the Council"}
+        </h1>
+        <p style={{
+          fontFamily: "var(--font-sans)", fontSize: 15, color: "var(--text-dim)",
+          margin: "0 0 28px", lineHeight: 1.65,
+        }}>
+          {councilTier === "swarm"
+            ? "From Plato to Nietzsche, watch traditions deliberate your question in real-time."
+            : `${thinkers.size} of history's sharpest minds deliberate your question. Disagreement is the point.`
+          }
         </p>
 
-        {/* Mode selector */}
-        <div style={{ display: "flex", gap: 8, marginBottom: 24, flexWrap: "wrap" }}>
-          {[["advice", "Seek Advice"], ["predict", "Make a Prediction"], ["writing", "Writing Lesson"]].map(([val, label]) => (
-            <button key={val} onClick={() => setMode(val)} style={{
-              padding: "7px 16px", borderRadius: "var(--radius)",
-              border: `1px solid ${mode === val ? "var(--accent)" : "var(--border)"}`,
-              background: mode === val ? "rgba(200,164,110,0.1)" : "none",
-              color: mode === val ? "var(--accent)" : "var(--text-dim)",
-              fontFamily: "var(--font-sans)", fontSize: 13, cursor: "pointer", transition: "all 0.15s",
-            }}>{label}</button>
-          ))}
-        </div>
-
-        {/* Writing sub-mode */}
-        {mode === "writing" && (
-          <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
-            {[["question", "Ask about craft"], ["prose", "Paste text to critique"]].map(([val, label]) => (
-              <button key={val} onClick={() => setWritingInputMode(val)} style={{
-                padding: "5px 12px", borderRadius: "var(--radius)",
-                border: `1px solid ${writingInputMode === val ? "var(--accent-dim)" : "var(--border)"}`,
-                background: "none",
-                color: writingInputMode === val ? "var(--text)" : "var(--text-faint)",
-                fontFamily: "var(--font-sans)", fontSize: 12, cursor: "pointer", transition: "all 0.15s",
-              }}>{label}</button>
-            ))}
-          </div>
-        )}
-
-        {/* Main input */}
+        {/* ── Main input — THE HERO ── */}
         {(mode !== "writing" || writingInputMode === "question") && (
           <textarea
             value={question}
             onChange={e => setQuestion(e.target.value)}
             placeholder={
-              mode === "advice" ? "What question do you bring before the council?" :
-              mode === "predict" ? "What situation would you like them to reason about?" :
-              "What would you like to understand better about your writing?"
+              mode === "advice" ? "What question do you bring?" :
+              mode === "predict" ? "What do you want them to reason about?" :
+              "What do you want to understand about your writing?"
             }
             style={{
-              width: "100%", minHeight: 120, padding: "12px 14px",
-              background: "var(--bg-elevated)", border: "1px solid var(--border)",
-              borderRadius: "var(--radius)", color: "var(--text)",
-              fontFamily: "var(--font)", fontSize: "1rem", lineHeight: 1.7,
-              resize: "vertical", marginBottom: 16,
+              width: "100%", minHeight: 100, padding: "16px 18px",
+              background: "var(--bg-elevated)", border: "1px solid var(--accent-dim)",
+              borderRadius: "var(--radius-lg, 12px)", color: "var(--text)",
+              fontFamily: "var(--font)", fontSize: "1.1rem", lineHeight: 1.7,
+              resize: "vertical", marginBottom: 12,
             }}
           />
         )}
@@ -3096,48 +3862,119 @@ function CouncilView({ isGuest, onNeedAuth }) {
             <textarea
               value={prose}
               onChange={e => setProse(e.target.value)}
-              placeholder="Paste the text you'd like the council to read and critique…"
+              placeholder="Paste the text you'd like critiqued..."
               style={{
-                width: "100%", minHeight: 180, padding: "12px 14px",
-                background: "var(--bg-elevated)", border: "1px solid var(--border)",
-                borderRadius: "var(--radius)", color: "var(--text)",
-                fontFamily: "var(--font)", fontSize: "1rem", lineHeight: 1.7,
-                resize: "vertical", marginBottom: 10,
+                width: "100%", minHeight: 160, padding: "16px 18px",
+                background: "var(--bg-elevated)", border: "1px solid var(--accent-dim)",
+                borderRadius: "var(--radius-lg, 12px)", color: "var(--text)",
+                fontFamily: "var(--font)", fontSize: "1.1rem", lineHeight: 1.7,
+                resize: "vertical", marginBottom: 8,
               }}
             />
             <textarea
               value={question}
               onChange={e => setQuestion(e.target.value)}
-              placeholder="Anything specific you'd like them to address? (optional)"
+              placeholder="Anything specific to address? (optional)"
               style={{
-                width: "100%", minHeight: 60, padding: "10px 14px",
+                width: "100%", minHeight: 50, padding: "10px 14px",
                 background: "var(--bg-elevated)", border: "1px solid var(--border)",
                 borderRadius: "var(--radius)", color: "var(--text)",
                 fontFamily: "var(--font-sans)", fontSize: 14, lineHeight: 1.6,
-                resize: "vertical", marginBottom: 16,
+                resize: "vertical", marginBottom: 12,
               }}
             />
           </>
         )}
 
-        {/* Swarm / Panel toggle */}
-        <div style={{ display: "flex", alignItems: "center", gap: 0, marginBottom: 20, borderRadius: "var(--radius)", border: "1px solid var(--border)", overflow: "hidden", width: "fit-content" }}>
+        {/* ── Example questions — clickable suggestions ── */}
+        {!question && (mode !== "writing" || writingInputMode === "question") && (
+          <div style={{ display: "flex", gap: 6, marginBottom: 14, flexWrap: "wrap", alignItems: "center" }}>
+            <span style={{ fontFamily: "var(--font-sans)", fontSize: 10, color: "var(--text-faint)", letterSpacing: "0.1em", textTransform: "uppercase", marginRight: 2 }}>Try</span>
+            {(mode === "advice" ? [
+              "Should I be honest even when it hurts?",
+              "How do I find meaning in my work?",
+              "Is it right to forgive someone who isn't sorry?",
+            ] : mode === "predict" ? [
+              "What happens when AI replaces most jobs?",
+              "Will democracy survive the internet?",
+              "What comes after the culture wars?",
+            ] : [
+              "How do I write about grief without sentimentality?",
+              "What makes dialogue feel alive?",
+              "How do I find my voice as a writer?",
+            ]).map(q => (
+              <button key={q} onClick={() => setQuestion(q)} style={{
+                padding: "3px 10px", borderRadius: 16,
+                border: "1px solid var(--border)", background: "none",
+                color: "var(--text-faint)", fontFamily: "var(--font-sans)", fontSize: 11,
+                cursor: "pointer", transition: "all 0.15s",
+                maxWidth: "100%", textAlign: "left", lineHeight: 1.4,
+              }}
+              onMouseEnter={e => { e.target.style.borderColor = "var(--accent-dim)"; e.target.style.color = "var(--text-dim)"; }}
+              onMouseLeave={e => { e.target.style.borderColor = "var(--border)"; e.target.style.color = "var(--text-faint)"; }}
+              >{q}</button>
+            ))}
+          </div>
+        )}
+
+        {/* ── Mode pills — secondary, below input ── */}
+        <div style={{ display: "flex", gap: 6, marginBottom: 20, flexWrap: "wrap", alignItems: "center" }}>
+          <span style={{ fontFamily: "var(--font-sans)", fontSize: 10, color: "var(--text-faint)", letterSpacing: "0.15em", textTransform: "uppercase", marginRight: 4 }}>Mode</span>
+          {[["advice", "Advice"], ["predict", "Prediction"], ["writing", "Writing"]].map(([val, label]) => (
+            <button key={val} onClick={() => setMode(val)} style={{
+              padding: "4px 14px", borderRadius: 20,
+              border: `1px solid ${mode === val ? "var(--accent)" : "var(--border)"}`,
+              background: mode === val ? "rgba(200,164,110,0.12)" : "none",
+              color: mode === val ? "var(--accent)" : "var(--text-faint)",
+              fontFamily: "var(--font-sans)", fontSize: 12, cursor: "pointer", transition: "all 0.15s",
+            }}>{label}</button>
+          ))}
+          {mode === "writing" && (
+            <>
+              <span style={{ opacity: 0.3, margin: "0 2px" }}>|</span>
+              {[["question", "Ask about craft"], ["prose", "Critique text"]].map(([val, label]) => (
+                <button key={val} onClick={() => setWritingInputMode(val)} style={{
+                  padding: "4px 12px", borderRadius: 20,
+                  border: `1px solid ${writingInputMode === val ? "var(--accent-dim)" : "var(--border)"}`,
+                  background: "none",
+                  color: writingInputMode === val ? "var(--text)" : "var(--text-faint)",
+                  fontFamily: "var(--font-sans)", fontSize: 11, cursor: "pointer", transition: "all 0.15s",
+                }}>{label}</button>
+              ))}
+            </>
+          )}
+        </div>
+
+        {/* ── Tier selector — card-based, above submit ── */}
+        <div style={{
+          display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 16,
+        }}>
           {[
             { key: "lite",  label: "Lite",  sub: "3 thinkers · 1 round", cost: 1 },
             { key: "full",  label: "Full",  sub: "6 thinkers · 2 rounds", cost: 3 },
-            { key: "swarm", label: "Swarm", sub: "40 agents · 2 rounds",  cost: 10 },
+            { key: "swarm", label: "Swarm", sub: "40 agents · 19 traditions",  cost: 10, recommended: true },
           ].map(t => (
             <button key={t.key} onClick={() => { setCouncilTier(t.key); setSwarmMode(t.key === "swarm"); }}
               style={{
-                flex: 1, padding: "10px 8px", border: "none",
-                borderRight: t.key !== "swarm" ? "1px solid var(--border)" : "none",
-                background: councilTier === t.key ? "rgba(217,168,60,0.12)" : "none",
-                color: councilTier === t.key ? "var(--accent)" : "var(--text-faint)",
+                position: "relative",
+                padding: "12px 10px", border: `1px solid ${councilTier === t.key ? "var(--accent)" : "var(--border)"}`,
+                borderRadius: "var(--radius)", background: councilTier === t.key ? "rgba(200,164,110,0.08)" : "var(--bg-elevated)",
+                color: councilTier === t.key ? "var(--accent)" : "var(--text-dim)",
                 fontFamily: "var(--font-sans)", cursor: "pointer", transition: "all 0.15s",
+                textAlign: "center",
               }}>
-              <div style={{ fontSize: 13, fontWeight: 500, letterSpacing: "0.04em" }}>{t.label}</div>
-              <div style={{ fontSize: 10, opacity: 0.6, marginTop: 2 }}>{t.sub}</div>
-              <div style={{ fontSize: 10, color: "var(--accent)", marginTop: 3, opacity: 0.8 }}>{t.cost} credit{t.cost !== 1 ? "s" : ""}</div>
+              {t.recommended && (
+                <div style={{
+                  position: "absolute", top: -8, left: "50%", transform: "translateX(-50%)",
+                  padding: "1px 8px", borderRadius: 10,
+                  background: "var(--accent)", color: "var(--bg)",
+                  fontSize: 9, fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase",
+                  whiteSpace: "nowrap",
+                }}>Recommended</div>
+              )}
+              <div style={{ fontSize: 14, fontWeight: 600, letterSpacing: "0.02em", marginBottom: 3 }}>{t.label}</div>
+              <div style={{ fontSize: 10, opacity: 0.55, lineHeight: 1.4 }}>{t.sub}</div>
+              <div style={{ fontSize: 10, color: "var(--accent)", marginTop: 4, opacity: 0.8 }}>{t.cost} credit{t.cost !== 1 ? "s" : ""}</div>
             </button>
           ))}
         </div>
@@ -3154,55 +3991,107 @@ function CouncilView({ isGuest, onNeedAuth }) {
           </div>
         )}
 
-        {councilTier === "swarm" && (
-          <p style={{ fontFamily: "var(--font-sans)", fontSize: 13, color: "var(--text-faint)", marginBottom: 20, lineHeight: 1.7 }}>
-            40 people drawn from 14 philosophical and theological traditions deliberate in two rounds.
-            You see where the population actually lands — not a panel of experts, but a world.
-          </p>
-        )}
-
         {/* Thinker selector — full mode only */}
         {councilTier === "full" && (
-          <div style={{ marginBottom: 20 }}>
-            <div style={{ fontFamily: "var(--font-sans)", fontSize: 11, letterSpacing: "0.2em", textTransform: "uppercase", color: "var(--text-faint)", marginBottom: 10 }}>
+          <div style={{ marginBottom: 16 }}>
+            <div style={{ fontFamily: "var(--font-sans)", fontSize: 10, letterSpacing: "0.2em", textTransform: "uppercase", color: "var(--text-faint)", marginBottom: 8 }}>
               Council Members
             </div>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
               {ALL_THINKERS.map(name => (
                 <button key={name} onClick={() => toggleThinker(name)} style={{
-                  padding: "5px 13px", borderRadius: 20,
+                  padding: "4px 12px", borderRadius: 20,
                   border: `1px solid ${thinkers.has(name) ? "var(--accent-dim)" : "var(--border)"}`,
                   background: thinkers.has(name) ? "rgba(200,164,110,0.1)" : "none",
                   color: thinkers.has(name) ? "var(--text)" : "var(--text-faint)",
-                  fontFamily: "var(--font-sans)", fontSize: 12, cursor: "pointer", transition: "all 0.15s",
+                  fontFamily: "var(--font-sans)", fontSize: 11, cursor: "pointer", transition: "all 0.15s",
                 }}>
                   {name}
-                  <span style={{ marginLeft: 5, fontSize: 10, color: "var(--text-faint)" }}>
+                  <span style={{ marginLeft: 4, fontSize: 9, color: "var(--text-faint)", opacity: 0.6 }}>
                     {TRADITION_LABEL[name]}
                   </span>
                 </button>
               ))}
             </div>
-            <div style={{ marginTop: 6, fontFamily: "var(--font-sans)", fontSize: 11, color: "var(--text-faint)" }}>
-              {thinkers.size} thinker{thinkers.size !== 1 ? "s" : ""} selected · minimum 2
+            <div style={{ marginTop: 5, fontFamily: "var(--font-sans)", fontSize: 10, color: "var(--text-faint)" }}>
+              {thinkers.size} selected · min 2
             </div>
           </div>
         )}
 
         {error && <div style={{ color: "#e07070", fontFamily: "var(--font-sans)", fontSize: 13, marginBottom: 12 }}>{error}</div>}
 
-        {isGuest ? (
-          <div style={{ padding: "16px 18px", background: "var(--bg-elevated)", border: "1px solid var(--border)", borderRadius: "var(--radius)" }}>
-            <p style={{ fontFamily: "var(--font-sans)", fontSize: 14, color: "var(--text-dim)", marginBottom: 12 }}>
-              Create an account to convene the council.
-            </p>
-            <button className="action-btn" onClick={onNeedAuth}>Sign up free →</button>
+        {/* ── Primary CTA — always visible, guests get teaser flow ── */}
+        <button className="action-btn" onClick={handleSubmit} style={{ width: "100%", padding: "14px 0", fontSize: 15 }}>
+          {councilTier === "swarm" ? "Deploy the Swarm" : councilTier === "lite" ? "Quick Council" : "Convene the Council"}
+        </button>
+
+        {/* ── Guest Teaser Modal ── */}
+        {showGuestTeaser && guestTeaserData && (
+          <div style={{
+            position: "fixed", inset: 0, zIndex: 9999,
+            background: "rgba(0,0,0,0.75)", backdropFilter: "blur(8px)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            padding: 24,
+          }} onClick={() => setShowGuestTeaser(false)}>
+            <div onClick={e => e.stopPropagation()} style={{
+              background: "var(--bg-elevated)", border: "1px solid var(--border)",
+              borderRadius: 16, maxWidth: 560, width: "100%", padding: "32px 28px",
+              boxShadow: "0 24px 80px rgba(0,0,0,0.5)",
+              maxHeight: "85vh", overflowY: "auto",
+            }}>
+              <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: 2, color: "var(--accent)", fontFamily: "var(--font-sans)", marginBottom: 8 }}>
+                Preview — 2 of {councilTier === "swarm" ? "40" : "6"} minds responded
+              </div>
+              <div style={{ fontSize: 15, color: "var(--text-dim)", fontFamily: "var(--font-serif)", marginBottom: 20, fontStyle: "italic" }}>
+                "{guestTeaserData.question}"
+              </div>
+
+              {guestTeaserData.responses.map((resp, i) => (
+                <div key={i} style={{
+                  padding: "16px 18px", marginBottom: 12,
+                  background: "rgba(200,164,110,0.04)", border: "1px solid rgba(200,164,110,0.12)",
+                  borderRadius: 10,
+                }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+                    <div style={{ width: 8, height: 8, borderRadius: "50%", background: TRADITION_COLORS[resp.tradition] || "var(--accent)" }} />
+                    <span style={{ fontSize: 13, fontWeight: 600, color: "var(--text)", fontFamily: "var(--font-sans)" }}>{resp.name}</span>
+                    <span style={{ fontSize: 10, color: "var(--text-dim)", fontFamily: "var(--font-sans)", textTransform: "uppercase", letterSpacing: 1 }}>{resp.tradition}</span>
+                  </div>
+                  <div style={{ fontSize: 14, color: "var(--text)", lineHeight: 1.65, fontFamily: "var(--font-serif)" }}>
+                    {resp.response}
+                  </div>
+                </div>
+              ))}
+
+              <div style={{
+                marginTop: 20, padding: "16px 20px",
+                background: "linear-gradient(135deg, rgba(200,164,110,0.08), rgba(200,164,110,0.02))",
+                border: "1px solid rgba(200,164,110,0.2)", borderRadius: 10,
+                textAlign: "center",
+              }}>
+                <div style={{ fontSize: 15, fontWeight: 600, color: "var(--text)", fontFamily: "var(--font-sans)", marginBottom: 6 }}>
+                  {councilTier === "swarm" ? "38 more minds are waiting" : "4 more thinkers are waiting"}
+                </div>
+                <div style={{ fontSize: 13, color: "var(--text-dim)", fontFamily: "var(--font-sans)", marginBottom: 14 }}>
+                  Get the full deliberation — tensions, alliances, and a unified synthesis.
+                </div>
+                <button className="action-btn" onClick={() => { setShowGuestTeaser(false); onNeedAuth(); }}
+                  style={{ padding: "12px 32px", fontSize: 14 }}>
+                  Create free account for full results
+                </button>
+              </div>
+            </div>
           </div>
-        ) : (
-          <button className="action-btn" onClick={handleSubmit}>
-            {councilTier === "swarm" ? "Deploy the Swarm →" : councilTier === "lite" ? "Quick Council →" : "Convene the Council →"}
-          </button>
         )}
+
+        {/* ── Network graph — ambient, below the fold ── */}
+        <div style={{ marginTop: 32, opacity: 0.7 }}>
+          {councilTier === "swarm"
+            ? <SwarmNetworkCanvas size={320} active={false} />
+            : <NeuralCanvas thinkers={[...thinkers]} size={240} active={false} />
+          }
+        </div>
       </div>
     </div>
   );
@@ -4261,17 +5150,41 @@ function App() {
               </button>
             </>
           ) : (
-            <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 24, gap: 12 }}>
-              <svg width="32" height="32" viewBox="0 0 14 14" fill="none" style={{ opacity: 0.3 }}>
-                <circle cx="7" cy="2" r="1.5" fill="var(--accent)"/>
-                <circle cx="2" cy="11" r="1.5" fill="var(--accent)"/>
-                <circle cx="12" cy="11" r="1.5" fill="var(--accent)"/>
-                <line x1="7" y1="2" x2="2" y2="11" stroke="var(--accent)" strokeWidth="0.8"/>
-                <line x1="7" y1="2" x2="12" y2="11" stroke="var(--accent)" strokeWidth="0.8"/>
-                <line x1="2" y1="11" x2="12" y2="11" stroke="var(--accent)" strokeWidth="0.8"/>
-              </svg>
-              <div style={{ fontSize: 11, color: "var(--text-dim)", textAlign: "center", lineHeight: 1.6, fontFamily: "var(--font-sans)" }}>
-                Council needs no profile.<br/>Ask anything.
+            <div style={{ flex: 1, display: "flex", flexDirection: "column", padding: "12px 8px", gap: 2 }}>
+              {[
+                { icon: "✦", label: "New Question", desc: "Ask the council", action: "new" },
+                { icon: "◷", label: "History", desc: "Past deliberations", action: "history" },
+                { icon: "⚡", label: "Quick Prompts", desc: "Pre-built questions", action: "prompts" },
+              ].map(item => (
+                <button key={item.action}
+                  onClick={() => { setMobileSidebarOpen(false); }}
+                  style={{
+                    width: "100%", display: "flex", alignItems: "center", gap: 10,
+                    padding: "10px 12px", background: "none",
+                    border: "none", borderRadius: 6, cursor: "pointer",
+                    color: "var(--text-dim)", fontFamily: "var(--font-sans)", fontSize: 13,
+                    textAlign: "left", transition: "all 0.15s",
+                  }}
+                  onMouseEnter={e => { e.currentTarget.style.background = "var(--accent-glow)"; e.currentTarget.style.color = "var(--accent)"; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = "none"; e.currentTarget.style.color = "var(--text-dim)"; }}
+                >
+                  <span style={{ fontSize: 14, width: 20, textAlign: "center" }}>{item.icon}</span>
+                  <div>
+                    <div style={{ fontWeight: 500 }}>{item.label}</div>
+                    <div style={{ fontSize: 10, opacity: 0.5 }}>{item.desc}</div>
+                  </div>
+                </button>
+              ))}
+
+              <div style={{ flex: 1 }} />
+
+              <div style={{ padding: "12px 12px 8px", borderTop: "1px solid var(--border)" }}>
+                <div style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: 1.5, color: "var(--text-dim)", opacity: 0.4, fontFamily: "var(--font-sans)", marginBottom: 8 }}>
+                  The Council
+                </div>
+                <div style={{ fontSize: 11, color: "var(--text-dim)", lineHeight: 1.6, fontFamily: "var(--font-sans)", opacity: 0.6 }}>
+                  40 agents across 19 philosophical traditions deliberate your question in real time.
+                </div>
               </div>
             </div>
           )}
