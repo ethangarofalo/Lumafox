@@ -3445,6 +3445,10 @@ function CouncilView({ isGuest, onNeedAuth }) {
   const [result, setResult] = useState(null);
   const [error, setError] = useState("");
   const [limitData, setLimitData] = useState(null);
+  // Clarifying intake flow
+  const [intakeQuestions, setIntakeQuestions] = useState(null); // [{q: string, answer: string}]
+  const [intakeLoading, setIntakeLoading] = useState(false);
+  const [enrichedContext, setEnrichedContext] = useState("");
 
   // Load credit balance on mount
   React.useEffect(() => {
@@ -3487,37 +3491,14 @@ function CouncilView({ isGuest, onNeedAuth }) {
     ],
   };
 
-  const handleSubmit = async () => {
+  // Run the actual deliberation (called after intake or directly)
+  const runDeliberation = async (contextStr = "") => {
     const q = question.trim();
     const p = prose.trim();
-    if (mode === "writing" && writingInputMode === "prose" && !p) {
-      setError("Paste the text you'd like the council to read."); return;
-    }
-    if (mode !== "writing" && !q) { setError("Ask the council something."); return; }
-    if (mode === "writing" && writingInputMode === "question" && !q) {
-      setError("Ask a question about your writing."); return;
-    }
-
-    // Guest teaser flow — show 2 mock responses, then prompt signup
-    if (isGuest) {
-      setError("");
-      setDeliberating(true);
-      setResult(null);
-      // Simulate deliberation delay
-      await new Promise(r => setTimeout(r, 3000 + Math.random() * 2000));
-      setDeliberating(false);
-      setGuestTeaserData({
-        question: q,
-        mode,
-        responses: GUEST_TEASER_RESPONSES[mode] || GUEST_TEASER_RESPONSES.advice,
-      });
-      setShowGuestTeaser(true);
-      return;
-    }
-
     setError("");
     setDeliberating(true);
     setResult(null);
+    setIntakeQuestions(null);
     try {
       const body = {
         question: q || "Please read and respond to this passage.",
@@ -3526,6 +3507,7 @@ function CouncilView({ isGuest, onNeedAuth }) {
         council_tier: councilTier,
         swarm: councilTier === "swarm",
       };
+      if (contextStr) body.context = contextStr;
       if (mode === "writing" && p) body.prose = p;
       const r = await api("/council", { method: "POST", body: JSON.stringify(body) });
       if (r.credits_remaining !== undefined) {
@@ -3542,7 +3524,71 @@ function CouncilView({ isGuest, onNeedAuth }) {
     setDeliberating(false);
   };
 
-  const handleReset = () => { setResult(null); setQuestion(""); setProse(""); };
+  const handleSubmit = async () => {
+    const q = question.trim();
+    const p = prose.trim();
+    if (mode === "writing" && writingInputMode === "prose" && !p) {
+      setError("Paste the text you'd like the council to read."); return;
+    }
+    if (mode !== "writing" && !q) { setError("Ask the council something."); return; }
+    if (mode === "writing" && writingInputMode === "question" && !q) {
+      setError("Ask a question about your writing."); return;
+    }
+
+    // Guest teaser flow — show 2 mock responses, then prompt signup
+    if (isGuest) {
+      setError("");
+      setDeliberating(true);
+      setResult(null);
+      await new Promise(r => setTimeout(r, 3000 + Math.random() * 2000));
+      setDeliberating(false);
+      setGuestTeaserData({
+        question: q, mode,
+        responses: GUEST_TEASER_RESPONSES[mode] || GUEST_TEASER_RESPONSES.advice,
+      });
+      setShowGuestTeaser(true);
+      return;
+    }
+
+    // Step 1: Ask the backend if this question needs clarification
+    setError("");
+    setIntakeLoading(true);
+    try {
+      const clarify = await api("/council/clarify", {
+        method: "POST",
+        body: JSON.stringify({ question: q, mode }),
+      });
+      if (clarify.needs_clarification && clarify.questions?.length > 0) {
+        // Show intake questions
+        setIntakeQuestions(clarify.questions.map(q => ({ q, answer: "" })));
+        setIntakeLoading(false);
+        return;
+      }
+    } catch (e) {
+      // If clarify fails, just proceed without it
+    }
+    setIntakeLoading(false);
+
+    // No clarification needed — run directly
+    await runDeliberation();
+  };
+
+  const handleIntakeSubmit = async () => {
+    // Build context string from answered intake questions
+    const contextParts = intakeQuestions
+      .filter(iq => iq.answer.trim())
+      .map(iq => `Q: ${iq.q}\nA: ${iq.answer.trim()}`);
+    const contextStr = contextParts.join("\n\n");
+    setEnrichedContext(contextStr);
+    await runDeliberation(contextStr);
+  };
+
+  const handleSkipIntake = async () => {
+    setIntakeQuestions(null);
+    await runDeliberation();
+  };
+
+  const handleReset = () => { setResult(null); setQuestion(""); setProse(""); setIntakeQuestions(null); setEnrichedContext(""); };
 
   if (limitData) {
     return (
@@ -3579,6 +3625,93 @@ function CouncilView({ isGuest, onNeedAuth }) {
           <div style={{ marginTop: 16, fontSize: 11, color: "var(--text-dim)", opacity: 0.6 }}>
             Usage resets every Monday. {limitData.used}/{limitData.limit} used this week.
           </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Intake loading state ──
+  if (intakeLoading) {
+    return (
+      <div className="write-container" style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: 400 }}>
+        <div style={{ textAlign: "center" }}>
+          <div style={{ fontSize: 14, color: "var(--text-dim)", fontFamily: "var(--font-sans)", letterSpacing: 1 }}>
+            Reading your question...
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Clarifying intake questions ──
+  if (intakeQuestions) {
+    return (
+      <div className="write-container" style={{ maxWidth: 620, margin: "0 auto", padding: "40px 24px" }}>
+        <div style={{ marginBottom: 28 }}>
+          <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: 2, color: "var(--accent)", fontFamily: "var(--font-sans)", marginBottom: 8 }}>
+            Before the council convenes
+          </div>
+          <div style={{ fontSize: 22, fontWeight: 700, color: "var(--text)", fontFamily: "var(--font-serif)", marginBottom: 8 }}>
+            Help us understand your situation
+          </div>
+          <div style={{ fontSize: 14, color: "var(--text-dim)", fontFamily: "var(--font-sans)", lineHeight: 1.6 }}>
+            Your question sounds personal. A few details will help the council give you
+            specific, informed guidance instead of generic philosophy.
+          </div>
+        </div>
+
+        <div style={{
+          padding: "16px 18px", marginBottom: 24,
+          background: "rgba(200,164,110,0.04)", border: "1px solid rgba(200,164,110,0.12)",
+          borderRadius: 10, fontStyle: "italic", fontSize: 14,
+          color: "var(--text-dim)", fontFamily: "var(--font-serif)",
+        }}>
+          "{question}"
+        </div>
+
+        {intakeQuestions.map((iq, i) => (
+          <div key={i} style={{ marginBottom: 18 }}>
+            <label style={{
+              display: "block", fontSize: 14, fontWeight: 500,
+              color: "var(--text)", fontFamily: "var(--font-sans)", marginBottom: 6,
+            }}>
+              {iq.q}
+            </label>
+            <textarea
+              value={iq.answer}
+              onChange={e => {
+                const next = [...intakeQuestions];
+                next[i] = { ...iq, answer: e.target.value };
+                setIntakeQuestions(next);
+              }}
+              placeholder="Your answer..."
+              rows={2}
+              style={{
+                width: "100%", padding: "10px 14px", fontSize: 14,
+                fontFamily: "var(--font-sans)", background: "var(--bg-elevated)",
+                border: "1px solid var(--border)", borderRadius: 8,
+                color: "var(--text)", resize: "vertical", lineHeight: 1.5,
+              }}
+            />
+          </div>
+        ))}
+
+        <div style={{ display: "flex", gap: 10, marginTop: 24 }}>
+          <button className="action-btn" onClick={handleIntakeSubmit}
+            disabled={intakeQuestions.every(iq => !iq.answer.trim())}
+            style={{
+              flex: 1, padding: "14px 0", fontSize: 15,
+              opacity: intakeQuestions.every(iq => !iq.answer.trim()) ? 0.5 : 1,
+            }}>
+            {councilTier === "swarm" ? "Deploy the Swarm" : "Convene the Council"} →
+          </button>
+          <button onClick={handleSkipIntake} style={{
+            padding: "14px 20px", fontSize: 13, fontFamily: "var(--font-sans)",
+            background: "none", border: "1px solid var(--border)", borderRadius: 8,
+            color: "var(--text-dim)", cursor: "pointer",
+          }}>
+            Skip
+          </button>
         </div>
       </div>
     );

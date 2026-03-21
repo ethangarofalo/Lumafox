@@ -1099,11 +1099,96 @@ async def get_voice_text(
 
 # ── Council ──────────────────────────────────────────────────────────────────
 
+
+class ClarifyRequest(BaseModel):
+    question: str = Field(..., min_length=4, max_length=2000)
+    mode: str = Field("advice")
+
+
+_CLARIFY_CALLER = None
+
+def _get_clarify_caller():
+    global _CLARIFY_CALLER
+    if _CLARIFY_CALLER is None and os.environ.get("ANTHROPIC_API_KEY"):
+        _CLARIFY_CALLER = make_claude_caller(
+            model="claude-haiku-4-20250414", max_tokens=600, temperature=0.3,
+        )
+    return _CLARIFY_CALLER
+
+
+@app.post("/council/clarify")
+async def clarify_question(
+    req: ClarifyRequest,
+    user_id: str = Depends(get_current_user),
+):
+    """Determine if a question needs clarifying context before deliberation.
+
+    Uses a fast Haiku call to detect personal/situational questions and generate
+    2-4 follow-up questions to gather the context the council needs to give
+    informed, specific advice rather than generic philosophy.
+    """
+    import json as _json
+
+    caller = _get_clarify_caller()
+    if not caller:
+        return {"needs_clarification": False, "questions": []}
+
+    try:
+        prompt = f"""Analyze this question that someone wants to ask a council of philosophers:
+
+"{req.question}"
+
+Mode: {req.mode}
+
+Determine: does this question describe a PERSONAL SITUATION or SPECIFIC DECISION that requires understanding the person's circumstances to give good advice? Or is it an ABSTRACT/PHILOSOPHICAL question that can be answered without personal context?
+
+Examples of questions that NEED clarification:
+- "Should I accept the PhD offer?" (need: current situation, goals, field, alternatives)
+- "Is it time to leave my job?" (need: why unhappy, financial situation, what next)
+- "Should I forgive my father?" (need: what happened, current relationship, what forgiveness means to them)
+- "How do I handle this conflict with my partner?" (need: nature of conflict, relationship context)
+
+Examples that DON'T need clarification:
+- "Is democracy the best form of government?" (abstract)
+- "What is the meaning of suffering?" (philosophical)
+- "Should AI be regulated?" (general policy)
+- "Is revenge ever justified?" (abstract ethical)
+
+If the question NEEDS clarification, respond with JSON:
+{{"needs_clarification": true, "questions": ["question1", "question2", "question3"]}}
+
+Generate 2-4 questions that are:
+- Warm and conversational, not clinical
+- Specific to what the council would need to know
+- Short (one sentence each)
+- Designed to understand the person's actual situation, stakes, and values
+
+If the question does NOT need clarification:
+{{"needs_clarification": false, "questions": []}}
+
+Respond with ONLY the JSON object, no other text."""
+
+        import asyncio
+        text = await asyncio.to_thread(caller, prompt)
+        text = text.strip()
+        result = _json.loads(text)
+        return {
+            "needs_clarification": bool(result.get("needs_clarification", False)),
+            "questions": result.get("questions", [])[:4],
+        }
+    except Exception as exc:
+        import traceback; traceback.print_exc()
+        # If anything fails, skip clarification — don't block the user
+        return {"needs_clarification": False, "questions": []}
+
+
 class CouncilRequest(BaseModel):
     question: str = Field(..., min_length=4, max_length=2000)
     mode: str = Field("advice")
     thinkers: list[str] = Field(default_factory=lambda: list(COUNCIL_NAMES))
     prose: str = Field(default="", max_length=4000)
+    # Clarifying context gathered from intake questions
+    context: str = Field(default="", max_length=4000)
     # council_tier: "lite" | "full" | "swarm"
     council_tier: str = Field(default="full")
     # Legacy swarm flag — maps to council_tier="swarm"
@@ -1145,6 +1230,13 @@ async def convene_council(
         raise HTTPException(400, f"mode must be one of {sorted(VALID_MODES)}")
 
     question = req.question
+    # Enrich question with clarifying context if provided
+    if req.context.strip():
+        question = (
+            f"{req.question}\n\n"
+            f"--- Additional context from the person asking ---\n"
+            f"{req.context.strip()}"
+        )
     if req.mode == "writing" and req.prose.strip():
         question = (
             f"Please critique this passage and advise how to make it truer, clearer, "
