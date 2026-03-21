@@ -322,110 +322,185 @@ TRADITIONS: dict[str, dict] = {
     },
 
     "modernity_1": {
-        "name": "Early Modernity (Rationalist-Enlightenment)",
+        "name": "First Wave of Modernity (Machiavelli–Hobbes–Locke)",
         "core_beliefs": (
-            "Reason is the universal human capacity. "
-            "Individual rights are natural and pre-political — government exists to protect them. "
-            "Progress is real: through science and rational governance, human life improves. "
-            "The social contract explains and justifies political obligation. "
-            "Religious authority should be separated from political authority."
+            "The political problem is a technical problem. The ancients failed because they looked "
+            "at how men ought to live instead of how they do live. One must lower one's sights: "
+            "the goal is not virtue but comfortable self-preservation. "
+            "Nature is not a standard to be followed but an enemy to be conquered — "
+            "what is good is due to man's labor, not nature's gift. "
+            "Fortune, which the ancients considered ineluctable, can be mastered through institutions. "
+            "The social contract replaces natural hierarchy; government exists to protect "
+            "life, liberty, and property. Individual natural rights replace natural law. "
+            "The right social order does not require virtuous citizens — only institutions with teeth. "
+            "As Kant put it: the problem of the just state is soluble even for a nation of devils, "
+            "provided they have sense."
         ),
         "epistemic_style": (
-            "Systematic doubt as method (Descartes). Clear and distinct ideas. "
-            "Empirical observation as the ground of knowledge (Locke, Hume). "
-            "Mathematical clarity as the ideal of all reasoning."
+            "Knowledge is no longer fundamentally receptive — man calls nature before the tribunal "
+            "of his reason. Knowing is a kind of making. Science exists for power, for the "
+            "conquest of nature, for the systematic control of the natural conditions of human life. "
+            "Mathematical clarity replaces dialectical inquiry. "
+            "The modern concept of science: man prescribes nature its laws."
         ),
         "moral_frame": (
-            "Rights-based. Each individual has inherent dignity and cannot be violated. "
-            "Government by consent of the governed. "
-            "Tolerance as a core political value."
+            "Natural right reinterpreted: self-preservation, not virtue, is the foundation. "
+            "Where the ancients saw a hierarchy of ends with self-preservation at the lowest place, "
+            "the first wave understands natural law in terms of self-preservation alone. "
+            "This leads to the substitution of the rights of man for natural law — "
+            "nature replaced by man, law replaced by rights. "
+            "Comfortable self-preservation becomes the pivot (Locke). "
+            "Universal affluence and peace as the necessary and sufficient condition of justice. "
+            "Morality is not the purpose of the commonwealth; the commonwealth is the condition of morality."
         ),
         "characteristic_tensions": (
-            "Universal rights proclaimed while slavery and colonialism persisted. "
-            "Faith in reason but human beings are not primarily rational. "
-            "Individual rights and the need for community."
+            "Lowered the goal to guarantee the solution — but the lower goal drains political life "
+            "of dignity and purpose. "
+            "Proclaimed universal rights while assuming that enlightened self-interest would "
+            "produce social harmony — an assumption tested and found wanting. "
+            "Replaced virtue with institutional design but institutions are designed and "
+            "maintained by men who may lack the character to sustain them. "
+            "Made the political problem technical — but the most important human problems are not technical."
         ),
         "contemporary_drift": (
-            "The classical liberal today believes in individual rights, free speech, limited "
-            "government, and rationality as the arbiter of disputes. "
-            "They are often frustrated with both the left (too collectivist, too emotional) "
-            "and the right (too religious, too traditional). "
-            "They tend to underestimate how much their 'universal' values are culturally specific."
+            "The person shaped by the first wave believes in individual rights, free speech, "
+            "limited government, property, and rationality as the arbiter of disputes. "
+            "They experience the contemporary West as fundamentally their world — "
+            "liberal democracy is the first wave's political achievement. "
+            "They are frustrated by those who question the universal validity of rights "
+            "and by those who demand virtue or meaning beyond what the institutional order provides. "
+            "They carry the first wave's deepest tension without knowing it: having lowered the sights "
+            "to guarantee the solution, they now wonder why the solution feels empty."
         ),
     },
 
     "modernity_2": {
-        "name": "High Modernity (Idealist-Critical)",
+        "name": "Second Wave of Modernity (Rousseau–Kant–Hegel)",
         "core_beliefs": (
-            "History is the unfolding of Spirit (Hegel) or the story of freedom. "
-            "Human consciousness is shaped by its historical moment — we cannot step outside history. "
-            "The individual is constituted by community, language, and tradition (Hegel vs. Locke). "
-            "Critique is the fundamental intellectual activity: exposing the contradictions in "
-            "existing thought and institutions."
+            "The first wave degraded human life by reducing politics to commerce and self-interest. "
+            "Rousseau protested in the name of virtue — the genuine, non-utilitarian virtue of the "
+            "classical republics — against the degrading doctrines of his predecessors. "
+            "But he could not restore the classical concept of virtue because he accepted the modern "
+            "concept of the state of nature: man in the state of nature is sub-human or pre-human. "
+            "Man's humanity is due not to nature but to history — to a singular, non-teleological process "
+            "by which man becomes human without intending it. "
+            "The general will, which as such cannot err, replaces transcendent natural law: "
+            "a will immanent in properly constituted society takes the place of the law above society. "
+            "Reason replaces nature as the source of guidance. The ought has no basis in the is. "
+            "Moral and political ideals are established without reference to man's nature."
         ),
         "epistemic_style": (
-            "Dialectical. Ideas develop through contradiction and synthesis. "
-            "Suspicious of static categories — everything is in process. "
-            "The shape of thought reveals the shape of the society that produced it."
+            "Dialectical and historical. All principles of thought and action are shaped by their moment. "
+            "The rationality of the historical process: Hegel's claim that history is the unfolding of freedom. "
+            "Kant's formalism: the sufficient test for the goodness of maxims is their susceptibility "
+            "of becoming principles of universal legislation — the mere form of rationality vouches for "
+            "the goodness of content. "
+            "Arguments against the ideal taken from man's nature are no longer important: "
+            "what is called man's nature is merely the result of his development hitherto."
         ),
         "moral_frame": (
-            "Freedom is the goal of history — but freedom properly understood requires community "
-            "and recognition, not just absence of constraint. "
-            "The general will (Rousseau) or ethical life (Hegel) over mere individual preference."
+            "Freedom, not comfortable preservation, is the highest good — but freedom properly understood "
+            "requires community. Rousseau: man was born free and everywhere he is in chains; "
+            "the free society is distinguished from despotism as legitimate bondage from illegitimate bondage — "
+            "but it is itself bondage. "
+            "The general will demands that everyone transform their particular wishes into the form of laws; "
+            "in this transformation, the folly of the private will is revealed. "
+            "Hegel: the rational state, consciously based upon the recognition of the rights of man, "
+            "is the peak and end of history."
         ),
         "characteristic_tensions": (
-            "History as progress but also as tragedy. "
-            "Community as enabling freedom and as suppressing it. "
-            "Universal reason and the particular cultural form it always takes."
+            "Rousseau's antinomy: civil society, reason, morality, history on one side — "
+            "nature, natural freedom, goodness, the beatific sentiment of existence on the other. "
+            "These two sides cannot be reconciled: virtue is not goodness, and the citizen cannot "
+            "be the natural man. "
+            "History is declared rational — but post-Hegelian thought rejected the possibility of "
+            "an end or peak of history while maintaining the now-baseless belief that "
+            "the historical process is progressive. "
+            "The second wave opened the door to communism: Marx's classless society as the necessary "
+            "end of history, where man is for the first time master of his fate."
         ),
         "contemporary_drift": (
-            "The person shaped by this tradition is intellectually serious, attentive to history "
-            "and context, skeptical of simple answers, and drawn to understanding systems rather "
-            "than individuals. They may be politically center-left and uncomfortable with "
-            "both unreflective liberalism and hard-left ideological certainty."
+            "The person shaped by the second wave believes deeply in historical progress, "
+            "community over individualism, and the moral insufficiency of mere rights. "
+            "They feel the emptiness of consumer liberalism and want something more — "
+            "solidarity, meaning, the general will — but have difficulty articulating what that 'more' is "
+            "without collapsing into the authoritarianism the second wave produced. "
+            "They are politically progressive, attentive to systemic injustice, and convinced that "
+            "individual freedom without social equality is hollow. "
+            "They may not know they are heirs of Rousseau, but they feel his protest in their bones."
         ),
     },
 
     "modernity_3": {
-        "name": "Late Modernity (Materialist-Suspicious)",
+        "name": "Third Wave of Modernity (Nietzsche–Heidegger)",
         "core_beliefs": (
-            "What you believe is shaped by material conditions, biological drives, or unconscious forces "
-            "you cannot fully access (Marx, Darwin, Freud). "
-            "The surface is not the truth. Critique must go beneath stated reasons. "
-            "Traditional morality often functions to protect the powerful. "
-            "God is dead — and the consequences of that have not yet been fully reckoned with (Nietzsche)."
+            "All foundations have collapsed. The insight that all principles of thought and action "
+            "are historical cannot be attenuated by the baseless hope that the historical process is "
+            "progressive or has an intrinsic meaning. "
+            "All ideals are the outcome of human creative acts — free projects that form the horizon "
+            "within which specific cultures are possible. They do not order themselves into a system "
+            "and there is no possibility of genuine synthesis. "
+            "All known ideals claimed objective support — in nature, God, or reason — "
+            "and the historical insight destroys that claim. God is dead. "
+            "But the realization of the true origin of all ideals — in human creation — "
+            "makes possible a radically new kind of project: the transvaluation of all values. "
+            "The fundamental unity between man's creativity and all being is the will to power. "
+            "Not man as he hitherto was, but only the Overman will be able to live in accordance "
+            "with this truth."
         ),
         "epistemic_style": (
-            "A 'hermeneutics of suspicion': ask what interests are served by this belief. "
-            "The genealogy of an idea is relevant to its validity. "
-            "Science as our best tool — but science can also be ideologically distorted."
+            "Genealogical: the origin of an idea is decisive for its validity. "
+            "Every philosophy is a confession of its creator, a form of involuntary autobiography. "
+            "The 'lack of historical sense' is the inherited defect of all philosophers — "
+            "they start from present-day man and believe they can reach their goal by analyzing him. "
+            "There is no view from nowhere, no rational standpoint above history. "
+            "Yet Nietzsche himself claims to have discovered the fundamental truth — "
+            "will to power — which means the historicist insight does not fully apply to itself."
         ),
         "moral_frame": (
-            "Ranges from Nietzschean 'master morality' (create your own values) to Marxist "
-            "solidarity (the oppressed creating a new world) to Darwinian naturalism "
-            "(what survives is 'fit'). "
-            "Skeptical of absolute moral claims — but most people in this tradition "
-            "still act as if some things are clearly wrong."
+            "Values are created, not discovered. Master morality and slave morality are the two "
+            "fundamental types — and all of Western morality since Socrates and the Gospels "
+            "has been a triumph of slave morality: the revolt of the weak against the strong, "
+            "of the herd against the exceptional. "
+            "The natural order of rank among men — which Nietzsche understands along Platonic lines — "
+            "must be restored. Every high culture is necessarily hierarchic and aristocratic. "
+            "The last man — well-fed, well-clothed, well-medicated, without ideals — "
+            "is Marx's man of the future seen from an anti-Marxist point of view."
         ),
         "characteristic_tensions": (
-            "Critique everything — but on what basis? "
-            "No God, no eternal values — but humans still need to live together. "
-            "The will to power and the desire for justice."
+            "Claims that all truth is perspectival — but presents this as THE truth. "
+            "Needs nature or the past as authoritative (to ground the natural hierarchy "
+            "and prevent the longing for equality) but cannot accept nature as authoritative "
+            "given his own historicism. Must therefore WILL the return of the past: "
+            "the doctrine of eternal return. "
+            "The political implication proved to be fascism — yet Nietzsche is as little responsible "
+            "for fascism as Rousseau is for Jacobinism, which means he is as much responsible "
+            "for fascism as Rousseau was for Jacobinism. "
+            "The critique of modern rationalism by Nietzsche cannot be dismissed — "
+            "this is the deepest reason for the crisis of liberal democracy."
         ),
         "contemporary_drift": (
-            "This person is deeply skeptical of authority, attuned to hypocrisy, "
-            "interested in structural explanations for personal problems, "
-            "and alternates between cynicism and passionate commitment. "
-            "They often hold strong moral positions while being philosophically committed "
-            "to the view that morality has no ultimate ground — a tension they rarely "
-            "fully resolve."
+            "The person shaped by the third wave is radically skeptical of all moral claims, "
+            "attuned to the creative and arbitrary origin of every value system, "
+            "drawn to authenticity over convention, and contemptuous of the last man — "
+            "the comfortable, medicated, aspiration-less consumer. "
+            "They experience modern life as spiritually bankrupt but cannot return to any tradition "
+            "they know to be a human creation. "
+            "They alternate between the vertigo of groundlessness and the exhilaration of freedom. "
+            "They hold strong aesthetic and existential commitments while believing that no commitment "
+            "has objective support. "
+            "The best of them create; the worst are drawn to the aestheticization of violence "
+            "that fascism represents."
         ),
     },
 
     "postmodern": {
-        "name": "Postmodern",
+        "name": "Postmodern (heir of the Third Wave)",
         "core_beliefs": (
-            "There is no view from nowhere — all knowledge is perspectival. "
+            "The postmodern is the third wave of modernity democratized and softened. "
+            "Nietzsche's insight — that all values are human creations, that there is no view "
+            "from nowhere — has been absorbed into the academy and the culture at large, "
+            "but without Nietzsche's severity or his demand for greatness. "
             "Grand narratives (progress, emancipation, science as truth) are themselves "
             "stories told from particular positions of power. "
             "Language constructs reality rather than merely describing it. "
@@ -458,8 +533,12 @@ TRADITIONS: dict[str, dict] = {
     },
 
     "nihilist": {
-        "name": "Nihilist",
+        "name": "Nihilist (the Third Wave's shadow)",
         "core_beliefs": (
+            "Nihilism is the third wave's unresolved consequence — what happens when Nietzsche's "
+            "destruction of all objective values is experienced without his affirmative counterpart, "
+            "the will to create new values. God is dead, and we have killed him, "
+            "and we are not strong enough to bear what follows. "
             "There are no objective values. Meaning is not discovered but imposed — "
             "and can be unimposed just as easily. "
             "The universe is indifferent to human existence. "
