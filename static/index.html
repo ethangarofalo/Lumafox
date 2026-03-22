@@ -4819,16 +4819,231 @@ function VoiceMaturityMeter({ refinementCount }) {
 }
 
 
+// ── Voice Discovery Quiz ──
+const DISCOVERY_PAIRS = [
+  {
+    dimension: "sentence_length",
+    prompt: "Explaining why something matters",
+    a: "It matters because without it we are building on sand, and sand shifts, and what shifts cannot hold, and what cannot hold will fall.",
+    b: "It matters. Full stop. The rest is noise.",
+    aLabel: "Long, building sentences that accumulate meaning",
+    bLabel: "Short, declarative sentences that cut",
+  },
+  {
+    dimension: "diction",
+    prompt: "Describing a difficult truth",
+    a: "The epistemic foundations of our collective understanding have undergone a fundamental recalibration.",
+    b: "We used to know things. Now we don't. That's the whole problem.",
+    aLabel: "Latinate, formal vocabulary",
+    bLabel: "Anglo-Saxon, plain-spoken words",
+  },
+  {
+    dimension: "structure",
+    prompt: "Opening a piece about change",
+    a: "Through the accumulation of small, nearly imperceptible shifts — a habit dropped here, a conversation avoided there, a mirror glanced at rather than studied — the transformation was complete before anyone thought to measure it.",
+    b: "Everything changed. I want to tell you how, but first I need to tell you what it was like before.",
+    aLabel: "Periodic: build suspense, delay the main point",
+    bLabel: "Cumulative: state the point, then elaborate",
+  },
+  {
+    dimension: "tone",
+    prompt: "Critiquing something popular",
+    a: "One might gently observe that the emperor's new clothes, while enthusiastically reviewed, remain — upon closer inspection — absent.",
+    b: "It's bad. Everyone knows it's bad. The people praising it know it's bad. They praise it anyway, because that's what we do now.",
+    aLabel: "Ironic and understated",
+    bLabel: "Direct and unflinching",
+  },
+  {
+    dimension: "imagery",
+    prompt: "Describing ambition",
+    a: "Ambition is the hand that reaches for the next rung before the foot has found its hold — that gorgeous, reckless lean into nothing.",
+    b: "Ambition is simple math: the distance between where you are and where you refuse to stay.",
+    aLabel: "Sensory, embodied, physical metaphors",
+    bLabel: "Abstract, conceptual, clean metaphors",
+  },
+  {
+    dimension: "rhythm",
+    prompt: "Making an argument",
+    a: "We were told it would work, and we believed it, and we built our lives around that belief, and now — well. Now we know better.",
+    b: "The promise was simple. The reality, less so. Between the two lies everything that matters.",
+    aLabel: "Polysyndeton: piling clauses with 'and'",
+    bLabel: "Asyndeton: crisp, separated phrases",
+  },
+  {
+    dimension: "stance",
+    prompt: "Talking about what you know",
+    a: "I could be wrong about this — I often am — but it seems to me that the thing most people miss is how much of expertise is just organized doubt.",
+    b: "Here's what I know after twenty years: expertise isn't knowing the answers. It's knowing which questions to stop asking.",
+    aLabel: "Hedged and self-questioning",
+    bLabel: "Confident and authoritative",
+  },
+  {
+    dimension: "punctuation",
+    prompt: "Expressing a complex thought",
+    a: "The problem isn't ignorance — it's the illusion of understanding; the comfortable lie we tell ourselves (and each other) that we've thought things through.",
+    b: "The problem isn't ignorance. It's the illusion of understanding. The comfortable lie we tell ourselves that we've thought things through.",
+    aLabel: "Dashes, semicolons, parentheses — layered punctuation",
+    bLabel: "Periods. Clean breaks. One thought at a time.",
+  },
+];
+
+function VoiceDiscoveryQuiz({ profileId, profileName, onComplete }) {
+  const [step, setStep] = useState(0);
+  const [choices, setChoices] = useState({});
+  const [loading, setLoading] = useState(false);
+
+  const pair = DISCOVERY_PAIRS[step];
+  const total = DISCOVERY_PAIRS.length;
+  const progress = Object.keys(choices).length / total;
+
+  const handleChoice = (choice) => {
+    const next = { ...choices, [pair.dimension]: choice };
+    setChoices(next);
+    if (step < total - 1) {
+      setStep(step + 1);
+    }
+  };
+
+  const handleBack = () => {
+    if (step > 0) setStep(step - 1);
+  };
+
+  const handleSubmit = async () => {
+    setLoading(true);
+    try {
+      // Build a natural-language description from choices
+      const preferences = DISCOVERY_PAIRS.map(p => {
+        const c = choices[p.dimension];
+        if (!c) return null;
+        return c === "a" ? p.aLabel : p.bLabel;
+      }).filter(Boolean);
+
+      const description = "VOICE STYLE PREFERENCES (from guided discovery):\n" +
+        preferences.map((p, i) => `${i + 1}. ${p}`).join("\n");
+
+      // Save as the first refinement via teach
+      await api(`/profiles/${profileId}/teach`, {
+        method: "POST",
+        body: JSON.stringify({
+          message: description,
+          command: "principle",
+          conversation_history: [],
+        }),
+      });
+
+      if (onComplete) onComplete();
+    } catch (e) { toastError(e.message); }
+    setLoading(false);
+  };
+
+  const allAnswered = Object.keys(choices).length === total;
+
+  return (
+    <div className="write-container">
+      <div className="write-section" style={{ maxWidth: 600 }}>
+        <div style={{ marginBottom: 24 }}>
+          <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: 2, color: "var(--accent)", fontFamily: "var(--font-sans)", marginBottom: 6 }}>
+            Voice Discovery
+          </div>
+          <div style={{ fontSize: 22, fontWeight: 700, color: "var(--text)", fontFamily: "var(--font-serif, var(--font))", marginBottom: 6 }}>
+            Which sounds more like you?
+          </div>
+          <div style={{ fontSize: 13, color: "var(--text-dim)", fontFamily: "var(--font-sans)", lineHeight: 1.5 }}>
+            Pick the sentence that feels closer to how you write — or how you <em>want</em> to write. No wrong answers.
+          </div>
+        </div>
+
+        {/* Progress bar */}
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
+          <div style={{ flex: 1, height: 3, background: "rgba(200,164,110,0.1)", borderRadius: 2, overflow: "hidden" }}>
+            <div style={{ height: "100%", width: `${progress * 100}%`, background: "var(--accent)", borderRadius: 2, transition: "width 0.3s ease" }} />
+          </div>
+          <span style={{ fontSize: 11, color: "var(--text-faint)", fontFamily: "var(--font-sans)", whiteSpace: "nowrap" }}>
+            {step + 1} / {total}
+          </span>
+        </div>
+
+        {/* Dimension label */}
+        <div style={{ fontSize: 11, color: "var(--text-faint)", fontFamily: "var(--font-sans)", marginBottom: 12, textTransform: "uppercase", letterSpacing: 1 }}>
+          {pair.prompt}
+        </div>
+
+        {/* Choice A */}
+        <button
+          onClick={() => handleChoice("a")}
+          style={{
+            width: "100%", textAlign: "left", padding: "16px 18px", marginBottom: 10,
+            background: choices[pair.dimension] === "a" ? "rgba(200,164,110,0.08)" : "var(--bg-elevated, #141414)",
+            border: `1px solid ${choices[pair.dimension] === "a" ? "var(--accent)" : "var(--border)"}`,
+            borderRadius: 10, color: "var(--text)", cursor: "pointer",
+            fontFamily: "var(--font)", fontSize: 15, lineHeight: 1.7,
+            transition: "all 0.15s",
+          }}
+        >
+          <div style={{ marginBottom: 8 }}>{pair.a}</div>
+          <div style={{ fontSize: 11, color: choices[pair.dimension] === "a" ? "var(--accent)" : "var(--text-faint)", fontFamily: "var(--font-sans)", fontStyle: "italic" }}>
+            {pair.aLabel}
+          </div>
+        </button>
+
+        {/* Choice B */}
+        <button
+          onClick={() => handleChoice("b")}
+          style={{
+            width: "100%", textAlign: "left", padding: "16px 18px", marginBottom: 16,
+            background: choices[pair.dimension] === "b" ? "rgba(200,164,110,0.08)" : "var(--bg-elevated, #141414)",
+            border: `1px solid ${choices[pair.dimension] === "b" ? "var(--accent)" : "var(--border)"}`,
+            borderRadius: 10, color: "var(--text)", cursor: "pointer",
+            fontFamily: "var(--font)", fontSize: 15, lineHeight: 1.7,
+            transition: "all 0.15s",
+          }}
+        >
+          <div style={{ marginBottom: 8 }}>{pair.b}</div>
+          <div style={{ fontSize: 11, color: choices[pair.dimension] === "b" ? "var(--accent)" : "var(--text-faint)", fontFamily: "var(--font-sans)", fontStyle: "italic" }}>
+            {pair.bLabel}
+          </div>
+        </button>
+
+        {/* Navigation */}
+        <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+          {step > 0 && (
+            <button onClick={handleBack} style={{
+              padding: "10px 18px", fontSize: 13, fontFamily: "var(--font-sans)",
+              background: "none", border: "1px solid var(--border)", borderRadius: 8,
+              color: "var(--text-dim)", cursor: "pointer",
+            }}>
+              ← Back
+            </button>
+          )}
+          <div style={{ flex: 1 }} />
+          {allAnswered && (
+            <button className="action-btn" onClick={handleSubmit} disabled={loading} style={{ padding: "12px 28px" }}>
+              {loading ? <span>Building your voice<LoadingDots /></span> : "Build my voice →"}
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
 function HomeView({ profile, onMode }) {
   const isNew = profile.refinement_count === 0;
 
   const actions = isNew ? [
     {
+      icon: "◈",
+      title: "Discover your style",
+      desc: "Pick between sentence pairs — we'll map your voice in 2 minutes.",
+      mode: "discover",
+      primary: true,
+    },
+    {
       icon: "✦",
       title: "Teach this voice",
       desc: "Give it principles, examples, and rules. Tell it how you think.",
       mode: "teach",
-      primary: true,
     },
     {
       icon: "↑",
@@ -5681,6 +5896,13 @@ function App() {
               {/* position:relative + zIndex:1 ensures views float above the particle canvas */}
               {mode === "home" && (
                 <HomeView profile={activeProfile} onMode={setMode} />
+              )}
+              {mode === "discover" && (
+                <VoiceDiscoveryQuiz
+                  profileId={activeProfile.profile_id}
+                  profileName={activeProfile.name}
+                  onComplete={() => { handleRefinementSaved(1); setMode("home"); toastSuccess("Voice style mapped! Now teach it details."); }}
+                />
               )}
               <div style={{ display: mode === "teach" ? "contents" : "none", position: "relative", zIndex: 1 }}>
                 <TeachView profileId={activeProfile.profile_id} profileName={activeProfile.name} refinementCount={activeProfile.refinement_count} onRefinementSaved={handleRefinementSaved} />
