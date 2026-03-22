@@ -1885,6 +1885,127 @@ function WriteView({ profileId, profileName }) {
 }
 
 
+// ── Translate / Render View ──
+function TranslateView({ profileId, profileName }) {
+  const [sourceText, setSourceText] = useState("");
+  const [sourceLang, setSourceLang] = useState("");
+  const [notes, setNotes] = useState("");
+  const [output, setOutput] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [showOptions, setShowOptions] = useState(false);
+
+  useEffect(() => { setOutput(""); setSourceText(""); setSourceLang(""); setNotes(""); }, [profileId]);
+
+  const LANGUAGES = [
+    "", "Ancient Greek", "Latin", "French", "German", "Italian", "Spanish",
+    "Arabic", "Hebrew", "Chinese", "Japanese", "Russian", "Other",
+  ];
+
+  const translate = async () => {
+    if (!sourceText.trim() || loading) return;
+    setLoading(true);
+    setOutput("");
+    try {
+      const result = await api(`/profiles/${profileId}/translate`, {
+        method: "POST",
+        body: JSON.stringify({
+          source_text: sourceText.trim(),
+          source_language: sourceLang,
+          notes: notes.trim(),
+        }),
+      });
+      setOutput(result.text);
+    } catch (e) { setOutput(`Error: ${e.message}`); toastError(e.message); }
+    setLoading(false);
+  };
+
+  return (
+    <div className="write-container">
+      <div className="write-section">
+        <div style={{ marginBottom: 20 }}>
+          <div className="write-label" style={{ marginBottom: 4 }}>Paste a passage to render in your voice</div>
+          <div style={{ fontSize: 12, color: "var(--text-dim)", fontFamily: "var(--font-sans)", lineHeight: 1.5 }}>
+            Any language, any difficulty. Aristotle in Greek, Heidegger in German,
+            a dense journal article — rendered as <em>you</em> would explain it.
+          </div>
+        </div>
+        <textarea
+          className="write-textarea" rows={6}
+          placeholder={"e.g., πᾶσα τέχνη καὶ πᾶσα μέθοδος, ὁμοίως δὲ πρᾶξίς τε καὶ προαίρεσις, ἀγαθοῦ τινος ἐφίεσθαι δοκεῖ...\n\nor paste any dense passage you want to understand in your own words"}
+          value={sourceText} onChange={e => setSourceText(e.target.value)}
+        />
+
+        {!showOptions ? (
+          <button
+            className="action-btn secondary" style={{ marginTop: 12, fontSize: 12 }}
+            onClick={() => setShowOptions(true)}
+          >
+            + Language & context
+          </button>
+        ) : (
+          <div style={{ marginTop: 14, display: "flex", gap: 12, flexWrap: "wrap", alignItems: "flex-end" }}>
+            <div style={{ flex: "0 0 auto" }}>
+              <div style={{ fontSize: 11, color: "var(--text-dim)", fontFamily: "var(--font-sans)", marginBottom: 4, textTransform: "uppercase", letterSpacing: 1 }}>
+                Source Language
+              </div>
+              <select
+                value={sourceLang} onChange={e => setSourceLang(e.target.value)}
+                style={{
+                  padding: "8px 12px", fontSize: 13, fontFamily: "var(--font-sans)",
+                  background: "var(--bg-elevated)", border: "1px solid var(--border)",
+                  borderRadius: 8, color: "var(--text)", cursor: "pointer",
+                }}
+              >
+                <option value="">Auto-detect</option>
+                {LANGUAGES.filter(Boolean).map(l => <option key={l} value={l}>{l}</option>)}
+              </select>
+            </div>
+            <div style={{ flex: 1, minWidth: 200 }}>
+              <div style={{ fontSize: 11, color: "var(--text-dim)", fontFamily: "var(--font-sans)", marginBottom: 4, textTransform: "uppercase", letterSpacing: 1 }}>
+                Context
+              </div>
+              <input
+                type="text"
+                placeholder="e.g., 'Nicomachean Ethics, Book II' or 'Hegel's Phenomenology intro'"
+                value={notes} onChange={e => setNotes(e.target.value)}
+                style={{
+                  width: "100%", padding: "8px 12px", fontSize: 13,
+                  fontFamily: "var(--font-sans)", background: "var(--bg-elevated)",
+                  border: "1px solid var(--border)", borderRadius: 8,
+                  color: "var(--text)",
+                }}
+              />
+            </div>
+          </div>
+        )}
+
+        <button className="action-btn" style={{ marginTop: 16 }} onClick={translate} disabled={loading || !sourceText.trim()}>
+          {loading ? <span>Rendering<LoadingDots /></span> : `Render as ${profileName}`}
+        </button>
+
+        {output && (
+          <>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 32 }}>
+              <div className="write-label" style={{ marginTop: 0 }}>
+                Rendered in your voice
+                {sourceLang && <span style={{ fontWeight: 400, color: "var(--text-dim)", fontSize: 12, marginLeft: 8 }}>from {sourceLang}</span>}
+              </div>
+              <div style={{ display: "flex", gap: 8 }}>
+                <button className="action-btn secondary" style={{ fontSize: 12, padding: "4px 12px" }}
+                  onClick={() => copyText(output)}>Copy</button>
+                <button className="action-btn secondary" style={{ fontSize: 12, padding: "4px 12px" }}
+                  onClick={translate} disabled={loading}>Re-render</button>
+              </div>
+            </div>
+            <div className="write-output">{output}</div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+
 // ── Analyze View ──
 function AnalyzeView({ profileId, profileName }) {
   const [text, setText] = useState("");
@@ -4539,6 +4660,12 @@ function HomeView({ profile, onMode }) {
       desc: "Paste writing and get a breakdown of how well it matches your voice.",
       mode: "analyze",
     },
+    {
+      icon: "⟐",
+      title: "Translate into your voice",
+      desc: "Render a passage from any language or dense text into your own words.",
+      mode: "translate",
+    },
   ] : [
     {
       icon: "✎",
@@ -4558,6 +4685,12 @@ function HomeView({ profile, onMode }) {
       title: "Analyze a draft",
       desc: "Check how well a piece of writing matches this voice.",
       mode: "analyze",
+    },
+    {
+      icon: "⟐",
+      title: "Translate into your voice",
+      desc: "Render Aristotle, Heidegger, or any dense text in your own words.",
+      mode: "translate",
     },
     {
       icon: "↗",
@@ -5363,6 +5496,9 @@ function App() {
               </div>
               <div style={{ display: mode === "write" ? "contents" : "none", position: "relative", zIndex: 1 }}>
                 <WriteView profileId={activeProfile.profile_id} profileName={activeProfile.name} />
+              </div>
+              <div style={{ display: mode === "translate" ? "contents" : "none", position: "relative", zIndex: 1 }}>
+                <TranslateView profileId={activeProfile.profile_id} profileName={activeProfile.name} />
               </div>
               <div style={{ display: mode === "analyze" ? "contents" : "none", position: "relative", zIndex: 1 }}>
                 <AnalyzeView profileId={activeProfile.profile_id} profileName={activeProfile.name} />

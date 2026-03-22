@@ -48,6 +48,7 @@ from voice_engine import (
     save_conversation_session,
     list_conversation_sessions,
     load_conversation_session,
+    translate_with_voice,
 )
 
 # ── LLM Setup ──
@@ -413,6 +414,18 @@ class WriteResponse(BaseModel):
     text: str
     profile_name: str
     refinement_count: int
+
+
+class TranslateRequest(BaseModel):
+    source_text: str = Field(..., description="The passage to translate/render", max_length=6000)
+    source_language: str = Field(default="", description="Source language hint (e.g. 'Ancient Greek', 'Latin')")
+    notes: str = Field(default="", description="Optional context (e.g. 'From Nicomachean Ethics Book II')", max_length=1000)
+
+
+class TranslateResponse(BaseModel):
+    text: str
+    profile_name: str
+    source_language: str
 
 
 class AnalyzeRequest(BaseModel):
@@ -795,6 +808,36 @@ async def write_in_voice(
         text=text,
         profile_name=profile.name,
         refinement_count=profile.refinement_count,
+    )
+
+
+# ── Translate / Render Endpoint ──
+
+@app.post("/profiles/{profile_id}/translate", response_model=TranslateResponse)
+async def translate_in_voice(
+    profile_id: str,
+    req: TranslateRequest,
+    user_id: str = Depends(get_current_user),
+):
+    """Translate or render a text through a trained voice profile."""
+    profile = load_profile(profile_id)
+    if not profile:
+        raise HTTPException(status_code=404, detail="Profile not found")
+    if profile.owner_id != user_id:
+        raise HTTPException(status_code=403, detail="Not your profile")
+
+    text = translate_with_voice(
+        profile_id=profile_id,
+        source_text=req.source_text,
+        llm_call=LLM_CALL,
+        source_language=req.source_language,
+        notes=req.notes,
+    )
+
+    return TranslateResponse(
+        text=text,
+        profile_name=profile.name,
+        source_language=req.source_language or "auto-detected",
     )
 
 

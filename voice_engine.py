@@ -792,6 +792,81 @@ level of grammar, not just feeling."""
     return llm_call(prompt).strip()
 
 
+# ── Translate / Render Mode ──
+
+def translate_with_voice(profile_id: str, source_text: str, llm_call,
+                         source_language: str = "", notes: str = "",
+                         max_tokens: int = 3000) -> str:
+    """Translate or render a text through a trained voice profile.
+
+    Takes a source text — which may be in another language (Greek, Latin,
+    German, French, etc.) or dense academic English — and re-renders it
+    in the user's own voice. This is not mechanical translation; it's
+    comprehension-first rendering: understand the idea fully, then express
+    it as this voice would naturally express it.
+
+    Args:
+        profile_id: The voice profile ID
+        source_text: The passage to translate/render
+        llm_call: The LLM caller function
+        source_language: Optional hint (e.g. "Ancient Greek", "Latin")
+        notes: Optional notes (e.g. "This is from Nicomachean Ethics Book II")
+
+    Returns:
+        The source text rendered in the profile's voice.
+    """
+    voice_text = get_full_voice_text(profile_id)
+    profile = load_profile(profile_id)
+    if not profile:
+        return "Profile not found."
+
+    lang_hint = ""
+    if source_language:
+        lang_hint = f"\nThe source text is in {source_language}.\n"
+
+    notes_block = ""
+    if notes:
+        notes_block = f"\nTRANSLATOR'S NOTES:\n{notes}\n"
+
+    prompt = f"""You are a scholar-translator working in a specific voice. Your task is to
+take the source text below and render it in this voice — not as a mechanical
+word-for-word translation, but as a comprehension-first rendering.
+
+Your process:
+1. UNDERSTAND the source text completely — its argument, its nuances, its
+   rhetorical structure, what the author is actually trying to say.
+2. RENDER it in the target voice — using this voice's sentence architecture,
+   diction, figurative habits, and rhythm. The result should read as if this
+   voice were explaining the idea in its own natural way.
+
+The goal is NOT a "translation" in the academic sense. It is a rendering —
+the way a brilliant friend who happens to read the original language would
+explain it to you over coffee, except that friend writes exactly like you do.
+
+Preserve the intellectual content faithfully. Do not dumb it down. But make
+it accessible through the voice's own cognitive style — its way of building
+sentences, choosing words, and structuring thought.
+
+THE VOICE:
+{voice_text}
+
+LINGUISTIC REFERENCE (use this to match the voice precisely):
+{LINGUISTIC_TAXONOMY}
+{lang_hint}
+{notes_block}
+SOURCE TEXT:
+{source_text}
+
+Output ONLY the rendered text. No preamble, no "Here is my translation,"
+no footnotes unless the voice itself would use footnotes. Begin immediately.
+
+Match the voice's sentence style (cumulative, periodic, etc.), diction level
+(Anglo-Saxon vs. Latinate), punctuation habits, and rhetorical devices.
+The output should sound like this person wrote it — not like a translation."""
+
+    return llm_call(prompt).strip()
+
+
 # ── Analysis Mode ──
 
 def analyze_text(profile_id: str, text: str, llm_call) -> str:
