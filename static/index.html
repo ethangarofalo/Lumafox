@@ -4753,65 +4753,89 @@ function getVoiceMaturity(count) {
 function VoiceMaturityMeter({ refinementCount }) {
   const { current, next, progress, milestoneIndex } = getVoiceMaturity(refinementCount);
   const totalStages = VOICE_MILESTONES.length;
+  const overallProgress = (milestoneIndex + progress) / (totalStages - 1);
 
   return (
     <div style={{
-      margin: "0 0 24px", padding: "16px 18px",
+      margin: "0 0 24px", padding: "18px 20px",
       background: "rgba(200,164,110,0.03)", border: "1px solid rgba(200,164,110,0.1)",
       borderRadius: 12,
     }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <span style={{ fontSize: 18 }}>{current.icon}</span>
-          <div>
-            <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text)", fontFamily: "var(--font-sans)" }}>
-              {current.label}
-            </div>
-            <div style={{ fontSize: 11, color: "var(--text-dim)", fontFamily: "var(--font-sans)" }}>
-              {current.desc}
-            </div>
+      {/* Top row: icon + stage name + count */}
+      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 14 }}>
+        <div style={{
+          width: 40, height: 40, borderRadius: 10,
+          background: `linear-gradient(135deg, rgba(200,164,110,${0.06 + overallProgress * 0.12}), rgba(200,164,110,${0.02 + overallProgress * 0.06}))`,
+          border: "1px solid rgba(200,164,110,0.15)",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          fontSize: 20, flexShrink: 0,
+        }}>
+          {current.icon}
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 14, fontWeight: 600, color: "var(--text)", fontFamily: "var(--font-sans)" }}>
+            {current.label}
+          </div>
+          <div style={{ fontSize: 11, color: "var(--text-dim)", fontFamily: "var(--font-sans)" }}>
+            {current.desc}
           </div>
         </div>
-        <div style={{ textAlign: "right" }}>
-          <div style={{ fontSize: 18, fontWeight: 700, color: "var(--accent)", fontFamily: "var(--font-sans)" }}>
+        <div style={{
+          padding: "4px 10px", borderRadius: 8,
+          background: "rgba(200,164,110,0.08)", border: "1px solid rgba(200,164,110,0.12)",
+          textAlign: "center", flexShrink: 0,
+        }}>
+          <div style={{ fontSize: 16, fontWeight: 700, color: "var(--accent)", fontFamily: "var(--font-sans)", lineHeight: 1.2 }}>
             {refinementCount}
-          </div>
-          <div style={{ fontSize: 10, color: "var(--text-faint)", fontFamily: "var(--font-sans)", textTransform: "uppercase", letterSpacing: 1 }}>
-            refinements
           </div>
         </div>
       </div>
 
-      {/* Progress bar */}
+      {/* Progress bar — taller, more visual */}
       <div style={{
-        height: 4, background: "rgba(200,164,110,0.08)", borderRadius: 2,
-        overflow: "hidden", marginBottom: 8,
+        height: 6, background: "rgba(200,164,110,0.06)", borderRadius: 3,
+        overflow: "hidden", marginBottom: 10,
       }}>
         <div style={{
-          height: "100%", borderRadius: 2,
+          height: "100%", borderRadius: 3,
           background: "linear-gradient(90deg, var(--accent), #e8c87a)",
-          width: `${((milestoneIndex + progress) / (totalStages - 1)) * 100}%`,
+          width: `${Math.max(overallProgress * 100, 2)}%`,
           transition: "width 0.6s ease",
+          boxShadow: overallProgress > 0.05 ? "0 0 8px rgba(217,168,60,0.3)" : "none",
         }} />
       </div>
 
-      {/* Milestone dots */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+      {/* Milestone markers with labels on hover */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: next ? 10 : 0 }}>
         {VOICE_MILESTONES.map((m, i) => (
-          <div key={i} title={`${m.label} (${m.at} refinements)`}
+          <div key={i} title={`${m.label} — ${m.at} refinements`}
             style={{
-              width: 7, height: 7, borderRadius: "50%",
-              background: i <= milestoneIndex ? "var(--accent)" : "rgba(200,164,110,0.15)",
-              transition: "background 0.3s",
+              display: "flex", flexDirection: "column", alignItems: "center", gap: 3,
               cursor: "default",
             }}
-          />
+          >
+            <div style={{
+              width: i <= milestoneIndex ? 9 : 7,
+              height: i <= milestoneIndex ? 9 : 7,
+              borderRadius: "50%",
+              background: i <= milestoneIndex ? "var(--accent)" : "rgba(200,164,110,0.12)",
+              border: i === milestoneIndex + 1 ? "1px solid rgba(200,164,110,0.3)" : "none",
+              transition: "all 0.3s",
+              boxShadow: i === milestoneIndex ? "0 0 6px rgba(217,168,60,0.4)" : "none",
+            }} />
+          </div>
         ))}
       </div>
 
+      {/* Next milestone callout */}
       {next && (
-        <div style={{ fontSize: 11, color: "var(--text-faint)", fontFamily: "var(--font-sans)", marginTop: 8, textAlign: "center" }}>
-          {next.at - refinementCount} more refinement{next.at - refinementCount !== 1 ? "s" : ""} to <strong style={{ color: "var(--text-dim)" }}>{next.label}</strong>
+        <div style={{
+          fontSize: 12, color: "var(--text-dim)", fontFamily: "var(--font-sans)",
+          textAlign: "center", lineHeight: 1.4,
+        }}>
+          {next.at - refinementCount === 1 ? "1 refinement" : `${next.at - refinementCount} refinements`} to{" "}
+          <strong style={{ color: "var(--accent)" }}>{next.label}</strong>
+          <span style={{ color: "var(--text-faint)", marginLeft: 4 }}>{next.icon}</span>
         </div>
       )}
     </div>
@@ -5031,45 +5055,13 @@ function VoiceDiscoveryQuiz({ profileId, profileName, onComplete }) {
 function HomeView({ profile, onMode }) {
   const isNew = profile.refinement_count === 0;
 
-  const actions = isNew ? [
-    {
-      icon: "◈",
-      title: "Discover your style",
-      desc: "Pick between sentence pairs — we'll map your voice in 2 minutes.",
-      mode: "discover",
-      primary: true,
-    },
-    {
-      icon: "✦",
-      title: "Teach this voice",
-      desc: "Give it principles, examples, and rules. Tell it how you think.",
-      mode: "teach",
-    },
-    {
-      icon: "↑",
-      title: "Upload your writing",
-      desc: "Drop in past work so the voice can learn your patterns directly.",
-      mode: "upload",
-    },
-    {
-      icon: "✎",
-      title: "Write something now",
-      desc: "See what the voice produces — then correct it until it sounds right.",
-      mode: "write",
-    },
-    {
-      icon: "◎",
-      title: "Analyze a draft",
-      desc: "Paste writing and get a breakdown of how well it matches your voice.",
-      mode: "analyze",
-    },
-    {
-      icon: "⟐",
-      title: "Translate into your voice",
-      desc: "Render a passage from any language or dense text into your own words.",
-      mode: "translate",
-    },
-  ] : [
+  const secondaryActionsNew = [
+    { icon: "✦", title: "Teach directly", desc: "Give it principles, examples, and rules.", mode: "teach" },
+    { icon: "↑", title: "Upload writing", desc: "Drop in past work to learn your patterns.", mode: "upload" },
+    { icon: "✎", title: "Write something", desc: "See what it produces — then correct it.", mode: "write" },
+  ];
+
+  const actions = isNew ? [] : [
     {
       icon: "✎",
       title: "Write something",
@@ -5121,19 +5113,77 @@ function HomeView({ profile, onMode }) {
 
       <VoiceMaturityMeter refinementCount={profile.refinement_count} />
 
-      <div className="home-actions">
-        {actions.map(a => (
+      {/* Hero Discovery CTA for new profiles */}
+      {isNew && (
+        <>
           <button
-            key={a.mode}
-            className={`home-action-card${a.primary ? " primary" : ""}`}
-            onClick={() => onMode(a.mode)}
+            onClick={() => onMode("discover")}
+            style={{
+              width: "100%", textAlign: "left", padding: "24px 28px", marginBottom: 16,
+              background: "linear-gradient(135deg, rgba(200,164,110,0.08) 0%, rgba(200,164,110,0.02) 100%)",
+              border: "1px solid var(--accent-dim, rgba(200,164,110,0.3))",
+              borderRadius: 14, cursor: "pointer",
+              transition: "all 0.2s ease", position: "relative", overflow: "hidden",
+            }}
+            onMouseEnter={e => { e.currentTarget.style.borderColor = "var(--accent)"; e.currentTarget.style.transform = "translateY(-1px)"; e.currentTarget.style.boxShadow = "0 4px 20px rgba(217,168,60,0.15)"; }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = "var(--accent-dim, rgba(200,164,110,0.3))"; e.currentTarget.style.transform = "none"; e.currentTarget.style.boxShadow = "none"; }}
           >
-            <div className="home-action-icon">{a.icon}</div>
-            <div className="home-action-title">{a.title}</div>
-            <div className="home-action-desc">{a.desc}</div>
+            <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+              <div style={{
+                width: 48, height: 48, borderRadius: 12,
+                background: "linear-gradient(135deg, rgba(200,164,110,0.15), rgba(200,164,110,0.05))",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                fontSize: 24, flexShrink: 0,
+              }}>
+                ◈
+              </div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: 2, color: "var(--accent)", fontFamily: "var(--font-sans)", marginBottom: 4 }}>
+                  Recommended
+                </div>
+                <div style={{ fontSize: 18, fontWeight: 700, color: "var(--text)", fontFamily: "var(--font-sans)", marginBottom: 4 }}>
+                  Discover your style
+                </div>
+                <div style={{ fontSize: 13, color: "var(--text-dim)", fontFamily: "var(--font-sans)", lineHeight: 1.5 }}>
+                  Pick between sentence pairs and we'll map your voice in 2 minutes. No writing required.
+                </div>
+              </div>
+              <div style={{ fontSize: 20, color: "var(--accent)", flexShrink: 0, opacity: 0.6 }}>→</div>
+            </div>
           </button>
-        ))}
-      </div>
+
+          <div style={{ fontSize: 11, color: "var(--text-faint)", fontFamily: "var(--font-sans)", textAlign: "center", marginBottom: 14, textTransform: "uppercase", letterSpacing: 1 }}>
+            or start another way
+          </div>
+
+          <div className="home-actions">
+            {secondaryActionsNew.map(a => (
+              <button key={a.mode} className="home-action-card" onClick={() => onMode(a.mode)}>
+                <div className="home-action-icon">{a.icon}</div>
+                <div className="home-action-title">{a.title}</div>
+                <div className="home-action-desc">{a.desc}</div>
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+
+      {/* Standard action grid for trained profiles */}
+      {!isNew && (
+        <div className="home-actions">
+          {actions.map(a => (
+            <button
+              key={a.mode}
+              className={`home-action-card${a.primary ? " primary" : ""}`}
+              onClick={() => onMode(a.mode)}
+            >
+              <div className="home-action-icon">{a.icon}</div>
+              <div className="home-action-title">{a.title}</div>
+              <div className="home-action-desc">{a.desc}</div>
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
