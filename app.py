@@ -1371,6 +1371,10 @@ STATIC_DIR = Path(__file__).parent / "static"
 async def serve_landing():
     return FileResponse(STATIC_DIR / "landing.html")
 
+@app.get("/privacy")
+async def serve_privacy():
+    return FileResponse(STATIC_DIR / "privacy.html")
+
 @app.get("/app")
 async def serve_app():
     return FileResponse(STATIC_DIR / "index.html")
