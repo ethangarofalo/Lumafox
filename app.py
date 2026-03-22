@@ -428,6 +428,22 @@ class TranslateResponse(BaseModel):
     source_language: str
 
 
+class ConverseRequest(BaseModel):
+    message: str = Field(..., description="What the user said", max_length=8000)
+    conversation_history: list[dict] = Field(
+        default_factory=list,
+        description="Recent conversation messages [{role, content}, ...]",
+    )
+
+
+class ConverseResponse(BaseModel):
+    response: str
+    intent: str  # "chat" | "write" | "translate"
+    refinement_saved: bool = False
+    refinement_type: Optional[str] = None
+    refinement_count: int = 0
+
+
 class AnalyzeRequest(BaseModel):
     text: str = Field(..., description="The text to analyze against the voice profile")
 
@@ -839,6 +855,104 @@ async def translate_in_voice(
         profile_name=profile.name,
         source_language=req.source_language or "auto-detected",
     )
+
+
+# ── Unified Converse Endpoint ──
+
+_INTENT_CLASSIFIER = None
+
+def _get_intent_classifier():
+    global _INTENT_CLASSIFIER
+    if _INTENT_CLASSIFIER is None and os.environ.get("ANTHROPIC_API_KEY"):
+        _INTENT_CLASSIFIER = make_claude_caller(
+            model="claude-haiku-4-20250414", max_tokens=60, temperature=0.0,
+        )
+    return _INTENT_CLASSIFIER
+
+
+_INTENT_PROMPT = """Classify this user message into exactly one category.
+
+WRITE — The user wants you to generate/draft/compose text for them.
+  Examples: "Write an opening paragraph about grief", "Draft a tweet about...", "An essay on why...", "A short story about..."
+
+TRANSLATE — The user pasted text in another language or dense/archaic text and wants it rendered in plain language or their voice. Look for non-Latin scripts, explicit "translate"/"render" requests, or pasted passages that are clearly source material to be re-expressed.
+  Examples: "τὸ γὰρ αὐτὸ νοεῖν ἐστίν τε καὶ εἶναι", "Translate this passage from Heidegger...", "Render this in my voice: [dense academic text]"
+
+CHAT — Everything else: conversation, feedback, corrections, teaching rules, asking questions, discussing preferences.
+  Examples: "I never use semicolons", "That last piece was too formal", "What do you know about my voice?", "Show me an example"
+
+Respond with exactly one word: WRITE, TRANSLATE, or CHAT"""
+
+
+@app.post("/profiles/{profile_id}/converse", response_model=ConverseResponse)
+async def converse_with_voice(
+    profile_id: str,
+    req: ConverseRequest,
+    user_id: str = Depends(get_current_user),
+):
+    """Unified voice conversation — classifies intent and routes to write, translate, or chat."""
+    profile = load_profile(profile_id)
+    if not profile:
+        raise HTTPException(status_code=404, detail="Profile not found")
+    if profile.owner_id != user_id:
+        raise HTTPException(status_code=403, detail="Not your profile")
+
+    # ── Classify intent ──
+    intent = "chat"  # default fallback
+    classifier = _get_intent_classifier()
+    if classifier:
+        try:
+            classification = classifier([
+                {"role": "user", "content": f"{_INTENT_PROMPT}\n\nUser message:\n{req.message[:2000]}"},
+            ]).strip().upper()
+            if classification in ("WRITE", "TRANSLATE", "CHAT"):
+                intent = classification.lower()
+        except Exception:
+            pass  # fall back to chat
+
+    # ── Route based on intent ──
+    if intent == "write":
+        text = write_with_voice(
+            profile_id=profile_id,
+            instruction=req.message,
+            llm_call=LLM_CALL,
+        )
+        updated = load_profile(profile_id)
+        return ConverseResponse(
+            response=text,
+            intent="write",
+            refinement_count=updated.refinement_count if updated else 0,
+        )
+
+    elif intent == "translate":
+        text = translate_with_voice(
+            profile_id=profile_id,
+            source_text=req.message,
+            llm_call=LLM_CALL,
+        )
+        updated = load_profile(profile_id)
+        return ConverseResponse(
+            response=text,
+            intent="translate",
+            refinement_count=updated.refinement_count if updated else 0,
+        )
+
+    else:  # chat
+        result = teach_interaction(
+            profile_id=profile_id,
+            message=req.message,
+            command="auto",
+            conversation_history=req.conversation_history,
+            llm_call=LLM_CALL,
+        )
+        updated = load_profile(profile_id)
+        return ConverseResponse(
+            response=result["response"],
+            intent="chat",
+            refinement_saved=result["refinement_saved"],
+            refinement_type=result["refinement_type"],
+            refinement_count=updated.refinement_count if updated else 0,
+        )
 
 
 # ── Analyze Endpoint ──
