@@ -5056,7 +5056,7 @@ function HomeView({ profile, onMode }) {
   const isNew = profile.refinement_count === 0;
 
   const secondaryActionsNew = [
-    { icon: "✦", title: "Teach directly", desc: "Give it principles, examples, and rules.", mode: "teach" },
+    { icon: "✦", title: "Chat with your voice", desc: "Talk to it directly — give it rules and examples.", mode: "teach" },
     { icon: "↑", title: "Upload writing", desc: "Drop in past work to learn your patterns.", mode: "upload" },
     { icon: "✎", title: "Write something", desc: "See what it produces — then correct it.", mode: "write" },
   ];
@@ -5064,33 +5064,39 @@ function HomeView({ profile, onMode }) {
   const actions = isNew ? [] : [
     {
       icon: "✎",
-      title: "Write something",
-      desc: "Generate text in this voice — then correct it if it's off.",
+      title: "Write",
+      desc: "Generate text in this voice. Correct it to teach.",
       mode: "write",
       primary: true,
     },
     {
+      icon: "⟐",
+      title: "Translate",
+      desc: "Render any language or dense text in your voice.",
+      mode: "translate",
+    },
+    {
       icon: "✦",
-      title: "Teach it something new",
-      desc: "Add a principle, example, or rule to sharpen the voice.",
+      title: "Chat",
+      desc: "Talk to your voice — refine it through conversation.",
       mode: "teach",
     },
     {
       icon: "◎",
-      title: "Analyze a draft",
-      desc: "Check how well a piece of writing matches this voice.",
+      title: "Analyze",
+      desc: "Score a draft against this voice profile.",
       mode: "analyze",
     },
     {
-      icon: "⟐",
-      title: "Translate into your voice",
-      desc: "Render Aristotle, Heidegger, or any dense text in your own words.",
-      mode: "translate",
+      icon: "↑",
+      title: "Upload",
+      desc: "Feed it more of your writing.",
+      mode: "upload",
     },
     {
       icon: "↗",
-      title: "Export this voice",
-      desc: "Copy the voice prompt to use in any AI tool you already use.",
+      title: "Export",
+      desc: "Copy the voice prompt for any AI tool.",
       mode: "export",
     },
   ];
@@ -5402,11 +5408,12 @@ function ParticleField() {
 
 // ── Voice Nav — top-level dropdown, one of two halves of Lumafox ──
 const VOICE_MODES = [
-  { key: "teach",   label: "Teach",   desc: "Train the voice",       needsVoice: false },
-  { key: "upload",  label: "Upload",  desc: "Import your writing",   needsVoice: false },
-  { key: "write",   label: "Write",   desc: "Write in your voice",   needsVoice: true  },
-  { key: "analyze", label: "Analyze", desc: "Score a draft",         needsVoice: true  },
-  { key: "export",  label: "Export",  desc: "Export voice profile",  needsVoice: true  },
+  { key: "teach",     label: "Chat",      desc: "Refine through conversation", needsVoice: false },
+  { key: "upload",    label: "Upload",    desc: "Import your writing",         needsVoice: false },
+  { key: "write",     label: "Write",     desc: "Write in your voice",         needsVoice: true  },
+  { key: "translate", label: "Translate", desc: "Render text in your voice",   needsVoice: true  },
+  { key: "analyze",   label: "Analyze",   desc: "Score a draft",              needsVoice: true  },
+  { key: "export",    label: "Export",    desc: "Export voice profile",        needsVoice: true  },
 ];
 
 function VoiceNav({ mode, setMode, refinementCount }) {
@@ -5835,11 +5842,12 @@ function App() {
               {activeProfile && (
                 <div style={{ padding: "8px 8px 0" }}>
                   {[
-                    { key: "teach",   label: "Teach",   desc: "Train the voice",       needsVoice: false },
-                    { key: "upload",  label: "Upload",  desc: "Import writing",         needsVoice: false },
-                    { key: "write",   label: "Write",   desc: "Generate in your voice", needsVoice: true  },
-                    { key: "analyze", label: "Analyze", desc: "Score a draft",          needsVoice: true  },
-                    { key: "export",  label: "Export",  desc: "Export profile",         needsVoice: true  },
+                    { key: "teach",     label: "Chat",      desc: "Refine through conversation", needsVoice: false },
+                    { key: "upload",    label: "Upload",    desc: "Import writing",              needsVoice: false },
+                    { key: "write",     label: "Write",     desc: "Generate in your voice",      needsVoice: true  },
+                    { key: "translate", label: "Translate", desc: "Render in your voice",        needsVoice: true  },
+                    { key: "analyze",   label: "Analyze",   desc: "Score a draft",               needsVoice: true  },
+                    { key: "export",    label: "Export",    desc: "Export profile",               needsVoice: true  },
                   ].map(m => {
                     const locked = (activeProfile.refinement_count === 0) && m.needsVoice;
                     return (
@@ -5941,6 +5949,35 @@ function App() {
                   <button className="header-action danger" onClick={handleDelete}>Delete</button>
                 </div>
               </div>
+
+              {/* ── Persistent tool nav ── */}
+              {mode !== "home" && mode !== "discover" && (
+                <div style={{
+                  display: "flex", alignItems: "center", gap: 2, padding: "6px 14px",
+                  borderBottom: "1px solid var(--border)", position: "relative", zIndex: 1,
+                  background: "var(--bg-surface, #111)", overflowX: "auto",
+                  scrollbarWidth: "none", WebkitOverflowScrolling: "touch",
+                }}>
+                  {[
+                    { key: "home", label: "◈", title: "Home" },
+                    { key: "write", label: "Write" },
+                    { key: "teach", label: "Chat" },
+                    { key: "translate", label: "Translate" },
+                    { key: "analyze", label: "Analyze" },
+                    { key: "upload", label: "Upload" },
+                    { key: "export", label: "Export" },
+                  ].map(t => (
+                    <button key={t.key} title={t.title || t.label} onClick={() => setMode(t.key)} style={{
+                      padding: t.key === "home" ? "5px 8px" : "5px 12px",
+                      fontSize: 12, fontFamily: "var(--font-sans)", fontWeight: mode === t.key ? 600 : 400,
+                      background: mode === t.key ? "rgba(200,164,110,0.1)" : "none",
+                      border: "none", borderRadius: 6,
+                      color: mode === t.key ? "var(--accent)" : "var(--text-dim)",
+                      cursor: "pointer", transition: "all 0.15s", whiteSpace: "nowrap",
+                    }}>{t.label}</button>
+                  ))}
+                </div>
+              )}
 
               {/* Keep all views mounted so state (write output, analyze results) survives tab switches */}
               {/* position:relative + zIndex:1 ensures views float above the particle canvas */}
