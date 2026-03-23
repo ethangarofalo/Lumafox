@@ -2371,16 +2371,19 @@ function VoiceView({ profileId, profileName, refinementCount, onRefinementSaved,
         </button>
       </div>
 
-      <div className="chat-messages">
+      <div className="chat-messages" style={
+        /* When only greeting/onboarding, stack content near the bottom so it sits right above the input */
+        (messages.length <= 1 && (messages.length === 0 || messages[0]?.isGreeting))
+          ? { display: "flex", flexDirection: "column", justifyContent: "flex-end" }
+          : {}
+      }>
         {/* ── Empty state with capability hints ── */}
         {messages.length === 0 && (
-          <div className="chat-empty">
-            <div className="chat-empty-title">What would you like to do?</div>
-            <div className="chat-empty-hint" style={{ marginBottom: 20 }}>
-              Write, translate, teach, correct — all from here.<br />
-              Just say what you need. The voice figures out the rest.
+          <div style={{ maxWidth: 520, marginBottom: 16 }}>
+            <div style={{ fontSize: 14, color: "var(--text-dim)", fontFamily: "var(--font-sans)", marginBottom: 16, lineHeight: 1.5 }}>
+              Write, translate, teach, correct — all from here.
             </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 8, maxWidth: 480 }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
               {hints.map((h, i) => (
                 <button key={i} onClick={() => send(h.text)} style={{
                   display: "flex", alignItems: "center", gap: 10,
@@ -2402,7 +2405,7 @@ function VoiceView({ profileId, profileName, refinementCount, onRefinementSaved,
         {isNew && onDiscover && (
           <button onClick={onDiscover} style={{
             display: "flex", alignItems: "center", gap: 12,
-            width: "100%", padding: "14px 18px", marginBottom: 8,
+            width: "100%", maxWidth: 520, padding: "12px 16px", marginBottom: 8,
             background: "linear-gradient(135deg, rgba(200,164,110,0.06), rgba(200,164,110,0.02))",
             border: "1px solid rgba(200,164,110,0.15)", borderRadius: 10,
             color: "var(--text)", cursor: "pointer", textAlign: "left",
@@ -2411,16 +2414,16 @@ function VoiceView({ profileId, profileName, refinementCount, onRefinementSaved,
             onMouseEnter={e => e.currentTarget.style.borderColor = "rgba(200,164,110,0.35)"}
             onMouseLeave={e => e.currentTarget.style.borderColor = "rgba(200,164,110,0.15)"}
           >
-            <span style={{ fontSize: 20, flexShrink: 0 }}>◇</span>
+            <span style={{ fontSize: 18, flexShrink: 0 }}>◇</span>
             <div>
-              <div style={{ fontSize: 13, fontWeight: 600, fontFamily: "var(--font-sans)", color: "var(--accent)", marginBottom: 2 }}>
+              <div style={{ fontSize: 12, fontWeight: 600, fontFamily: "var(--font-sans)", color: "var(--accent)", marginBottom: 1 }}>
                 Discover your style
               </div>
-              <div style={{ fontSize: 12, color: "var(--text-dim)", fontFamily: "var(--font-sans)" }}>
-                Pick between sentence pairs — maps your voice in 2 minutes
+              <div style={{ fontSize: 11, color: "var(--text-dim)", fontFamily: "var(--font-sans)" }}>
+                Pick between sentence pairs — 2 minutes
               </div>
             </div>
-            <span style={{ marginLeft: "auto", color: "var(--text-dim)", fontSize: 16 }}>→</span>
+            <span style={{ marginLeft: "auto", color: "var(--text-dim)", fontSize: 14 }}>→</span>
           </button>
         )}
 
@@ -2432,7 +2435,7 @@ function VoiceView({ profileId, profileName, refinementCount, onRefinementSaved,
           const isGenerated = isWrite || isTranslate;
 
           return (
-            <div key={i} className={`msg ${m.role}`}>
+            <div key={i} className={`msg ${m.role}`} style={m.isGreeting ? { marginBottom: 12 } : {}}>
               <div className="msg-label">
                 {m.role === "user"
                   ? "you"
