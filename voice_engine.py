@@ -652,14 +652,7 @@ The teacher wants you to demonstrate this voice on the following topic.
 Write AS this voice — not about it, but from within it. Use its characteristic
 rhythm, its natural mode of expression, its particular way of seeing.
 
-CRITICAL — avoid AI writing patterns:
-- Do NOT produce tidy, clever metaphors that "land" perfectly — rougher is more human
-- Do NOT structure as thesis → complication → nuanced resolution (AI essay architecture)
-- Do NOT use balanced parallelism ("The X who Y; the X who Z") as closers
-- Do NOT maintain a consistent smooth register — shift between elevated and blunt
-- PRESERVE unusual word choices and collocations from the voice profile — they are features
-- Let the thought accumulate and circle back rather than marching through a clean argument
-- Let some tensions remain unresolved — don't always play devil's advocate with yourself
+Write AS this voice — not about it, but from within it.
 
 TOPIC: {message}
 
@@ -948,52 +941,8 @@ voice would produce it, at its best.
 When in doubt, match the voice's sentence style (cumulative, periodic, etc.),
 diction level (Anglo-Saxon vs. Latinate), punctuation habits (dashes vs. semicolons),
 and rhetorical devices (asyndeton, anaphora, etc.) — not just its "tone."
-
-CRITICAL — AVOID AI WRITING PATTERNS:
-The biggest danger is writing that is too clean, too balanced, too well-crafted.
-AI writing is detectable precisely because it is MORE polished than human writing.
-You must produce text that reads as a human mind working through ideas, not an
-algorithm optimizing for eloquence.
-
-SPECIFIC TRAPS TO AVOID:
-1. THE CLEVER METAPHOR: Do NOT produce tidy, surprising metaphors that "land" perfectly
-   ("His presence becomes furniture"). These are AI signatures — too neat, too packaged.
-   This voice's metaphors should be rougher, more extended, sometimes imperfect.
-   A thought reaching for the right image and finding one that's close but not gift-wrapped.
-
-2. THE DIALECTICAL TURN: Do NOT structure paragraphs as "thesis → complication → nuanced
-   resolution." The pattern "But there's something almost cruel in..." followed by
-   acknowledging the other side, followed by "And maybe that's the real..." is the most
-   recognizable AI essay structure in existence. Let some tensions remain unresolved.
-   Let some paragraphs be one-sided. Don't always play devil's advocate with yourself.
-
-3. BALANCED PARALLELISM: "The son who stayed inherited the house; the son who left
-   inherited the father's heart" is a tell. Humans use parallelism sparingly and
-   often imperfectly. Do not write aphoristic closers that balance two clauses neatly
-   against each other unless the voice profile's examples specifically show this pattern.
-
-4. CONSISTENT REGISTER: Do NOT maintain one smooth essayistic voice throughout. The
-   actual voice's examples show register shifts — biblical language crashing into
-   blunt directness, formal syntax interrupted by colloquial emphasis. Preserve these
-   shifts. Do NOT smooth them into a uniform "contemporary essayistic register."
-
-5. COLLOCATIONAL SAFETY: AI always picks the "right" word — the expected collocation.
-   "Presumed to be lost" instead of "concluded to be lost." "Squanders his inheritance"
-   instead of "devours his inheritance, with harlots." If the voice profile uses unusual
-   collocations, PRESERVE them. They are features, not errors. The writer's idiosyncratic
-   word choices are what make the voice human. Do not correct them toward convention.
-
-6. STRUCTURAL TIDINESS: Do NOT give every paragraph an equal role in a clean argument arc.
-   Human essays accumulate — they circle back, repeat with variation, leave threads hanging.
-   The thought should feel like it's being WORKED OUT, not presented.
-
-WHAT TO DO INSTEAD:
-- Let sentences accumulate clauses organically, even if they get unwieldy
-- Use emphasis that feels personal, not polished (dashes, capitalization, exclamation)
-- Allow the argument to be lopsided — not every point needs a counterpoint
-- Prefer the writer's actual unusual word choices over conventionally "better" ones
-- Let some images be unglamorous — not every metaphor needs to surprise
-- Write as if thinking aloud to a reader, not presenting a finished essay"""
+The output should be indistinguishable from the person's actual work at the
+level of grammar, not just feeling."""
 
     return llm_call(prompt).strip()
 
