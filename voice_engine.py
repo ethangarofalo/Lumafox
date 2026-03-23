@@ -829,7 +829,7 @@ TEACHER: {message}"""
 
         refinement_saved = False
         refinement_type = None
-        _safe = not any(marker in _msg_lower for marker in _INJECTION_MARKERS)
+        _safe = not any(marker in _msg_low for marker in _INJECTION_MARKERS)
 
         # Save explicit TEACH refinement if detected
         if teach_tag and teach_tag in _type_map and _safe:
@@ -867,7 +867,7 @@ TEACHER: {message}"""
             refinement_saved = True
             refinement_type = refinement_type or "voice_note"
 
-        return {"response": response_text, "refinement_saved": False, "refinement_type": None}
+        return {"response": response_text, "refinement_saved": refinement_saved, "refinement_type": refinement_type}
 
     else:  # dialogue (explicit — kept for power users / advanced mode)
         prompt = f"""You are learning and embodying a voice called "{voice_name}".
