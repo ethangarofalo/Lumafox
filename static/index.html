@@ -2098,15 +2098,25 @@ function TranslateView({ profileId, profileName }) {
 // Intent is classified server-side; responses are tagged so the UI
 // can show contextual actions (correct, copy, re-render, save as refinement).
 
-const CAPABILITY_HINTS = [
-  { icon: "✎", text: "Write an opening paragraph about why most modern writing is lifeless" },
-  { icon: "⟐", text: "τὸ γὰρ αὐτὸ νοεῖν ἐστίν τε καὶ εἶναι — render this in my voice" },
-  { icon: "✦", text: "I never start sentences with 'There is' or 'There are'" },
-  { icon: "✎", text: "A short essay on what Shakespeare understood about power" },
-  { icon: "⟐", text: "Translate this Heidegger passage into something a human would say" },
-  { icon: "✦", text: "My sentences should be short. Under 20 words whenever possible." },
-  { icon: "✎", text: "Draft a tweet about why people read less than they used to" },
-  { icon: "◎", text: "Show me what my voice sounds like right now — write anything" },
+// Prompt starters — shown in the empty state to drive first interaction
+const PROMPT_STARTERS = [
+  { icon: "📋", text: "Paste something you wrote recently — I'll learn your patterns", onboard: true },
+  { icon: "🎯", text: "Describe how you want your writing to sound", onboard: true },
+  { icon: "✎", text: "Write me an opening paragraph about something you care about", onboard: false },
+  { icon: "✦", text: "Here's a rule I always follow when I write…", onboard: true },
+  { icon: "⟐", text: "Translate a dense passage into something a human would say", onboard: false },
+  { icon: "◎", text: "Show me what my voice sounds like right now — write anything", onboard: false },
+];
+
+// Rotating placeholder examples
+const PLACEHOLDER_EXAMPLES = [
+  "Paste a paragraph that sounds like you at your best…",
+  "\"Every dawn, he returns to the water with mended nets…\"",
+  "Write me an essay about why most modern writing is lifeless…",
+  "I never use semicolons. Period. Full stop.",
+  "Translate this passage from Aristotle into plain English…",
+  "My sentences are short. My ideas are not.",
+  "Describe the feeling of finishing a book that changed you…",
 ];
 
 function VoiceView({ profileId, profileName, refinementCount, onRefinementSaved, onDiscover }) {
@@ -2353,11 +2363,25 @@ function VoiceView({ profileId, profileName, refinementCount, onRefinementSaved,
     } catch {}
   };
 
-  // Pick 3 random capability hints
-  const [hints] = useState(() => {
-    const shuffled = [...CAPABILITY_HINTS].sort(() => Math.random() - 0.5);
-    return shuffled.slice(0, 3);
+  // Pick 5 prompt starters — prioritize onboarding ones for new profiles
+  const [starters] = useState(() => {
+    if (isNew) {
+      const onboard = PROMPT_STARTERS.filter(p => p.onboard);
+      const rest = PROMPT_STARTERS.filter(p => !p.onboard).sort(() => Math.random() - 0.5);
+      return [...onboard, ...rest].slice(0, 5);
+    }
+    const shuffled = [...PROMPT_STARTERS].sort(() => Math.random() - 0.5);
+    return shuffled.slice(0, 5);
   });
+
+  // Rotating placeholder text
+  const [placeholderIdx, setPlaceholderIdx] = useState(0);
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setPlaceholderIdx(prev => (prev + 1) % PLACEHOLDER_EXAMPLES.length);
+    }, 4000);
+    return () => clearInterval(timer);
+  }, []);
 
   return (
     <div className="chat-container">
@@ -2377,24 +2401,27 @@ function VoiceView({ profileId, profileName, refinementCount, onRefinementSaved,
           ? { display: "flex", flexDirection: "column", justifyContent: "flex-end" }
           : {}
       }>
-        {/* ── Empty state with capability hints ── */}
-        {messages.length === 0 && (
-          <div style={{ maxWidth: 520, marginBottom: 16 }}>
-            <div style={{ fontSize: 14, color: "var(--text-dim)", fontFamily: "var(--font-sans)", marginBottom: 16, lineHeight: 1.5 }}>
-              Write, translate, teach, correct — all from here.
+        {/* ── Prompt starters — show when no real conversation yet ── */}
+        {(messages.length === 0 || (messages.length === 1 && messages[0]?.isGreeting)) && (
+          <div style={{ maxWidth: 540, marginBottom: 12 }}>
+            <div style={{ fontSize: 12, color: "var(--text-faint)", fontFamily: "var(--font-sans)", marginBottom: 10, textTransform: "uppercase", letterSpacing: 1 }}>
+              Try something
             </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-              {hints.map((h, i) => (
-                <button key={i} onClick={() => send(h.text)} style={{
+            <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+              {starters.map((s, i) => (
+                <button key={i} onClick={() => send(s.text)} style={{
                   display: "flex", alignItems: "center", gap: 10,
-                  padding: "10px 14px", background: "rgba(200,164,110,0.04)",
-                  border: "1px solid rgba(200,164,110,0.12)", borderRadius: 8,
+                  padding: "9px 14px", background: "rgba(200,164,110,0.03)",
+                  border: "1px solid rgba(200,164,110,0.10)", borderRadius: 8,
                   color: "var(--text-dim)", fontSize: 13, fontFamily: "var(--font-sans)",
                   cursor: "pointer", textAlign: "left", transition: "all 0.15s",
                   lineHeight: 1.4,
-                }}>
-                  <span style={{ color: "var(--accent)", fontSize: 16, flexShrink: 0 }}>{h.icon}</span>
-                  <span>{h.text}</span>
+                }}
+                  onMouseEnter={e => { e.currentTarget.style.borderColor = "rgba(200,164,110,0.25)"; e.currentTarget.style.background = "rgba(200,164,110,0.06)"; }}
+                  onMouseLeave={e => { e.currentTarget.style.borderColor = "rgba(200,164,110,0.10)"; e.currentTarget.style.background = "rgba(200,164,110,0.03)"; }}
+                >
+                  <span style={{ fontSize: 15, flexShrink: 0 }}>{s.icon}</span>
+                  <span>{s.text}</span>
                 </button>
               ))}
             </div>
@@ -2599,7 +2626,7 @@ function VoiceView({ profileId, profileName, refinementCount, onRefinementSaved,
           <textarea
             ref={textareaRef}
             className="chat-textarea" rows={1}
-            placeholder="Write, translate, teach, correct — or attach writing samples…"
+            placeholder={PLACEHOLDER_EXAMPLES[placeholderIdx]}
             value={input} onChange={handleInput} onKeyDown={handleKeyDown}
           />
           <button className="send-btn" onClick={() => send()} disabled={loading || !input.trim()}>
