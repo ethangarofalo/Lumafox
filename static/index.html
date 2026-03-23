@@ -1600,21 +1600,22 @@ const REFINEMENT_TYPES = [
 
 function SaveRefinementPicker({ agentMsg, userMsg, profileId, onSaved, onClose }) {
   const [saving, setSaving] = useState(false);
-  const [note, setNote] = useState(agentMsg || "");
+  const [selectedType, setSelectedType] = useState(null);
+  const [note, setNote] = useState("");
 
-  const save = async (rtype) => {
+  const save = async () => {
+    if (!selectedType || !note.trim()) return;
     setSaving(true);
     try {
-      // Build a context-aware message: if userMsg available, prepend it
-      const fullMsg = userMsg
-        ? `Context — what I wrote or said: "${userMsg}"\n\nWhat I'd prefer / correction:\n${note}`
+      const fullMsg = selectedType === "correct"
+        ? `Context — what Voice wrote: "${agentMsg}"\n\nMy correction:\n${note}`
         : note;
       const history = userMsg
         ? [{ role: "user", content: userMsg }, { role: "agent", content: agentMsg }]
         : [];
       const result = await api(`/profiles/${profileId}/teach`, {
         method: "POST",
-        body: JSON.stringify({ message: fullMsg, command: rtype, conversation_history: history }),
+        body: JSON.stringify({ message: fullMsg, command: selectedType, conversation_history: history }),
       });
       toastSuccess(`${result.refinement_type} saved · ${result.refinement_count} total`);
       onSaved && onSaved(result.refinement_count);
@@ -1625,25 +1626,85 @@ function SaveRefinementPicker({ agentMsg, userMsg, profileId, onSaved, onClose }
     }
   };
 
+  const placeholders = {
+    correct: "What would you change? e.g. \"Use 'note' instead of 'catalog' — simpler word fits better here\"",
+    example: "Paste or type a passage that shows your voice…",
+    principle: "State a rule your voice follows, e.g. \"I never start sentences with 'There is'\"",
+    voice: "Describe how you want to sound, e.g. \"More direct, less poetic\"",
+    never: "What should this voice avoid? e.g. \"Never use semicolons\"",
+  };
+
+  // Step 1: pick a type. Step 2: write the note.
+  if (!selectedType) {
+    return (
+      <div className="refine-picker-overlay" onClick={onClose}>
+        <div className="refine-picker" onClick={e => e.stopPropagation()}>
+          <div className="refine-picker-title">Save as refinement</div>
+          <div style={{ fontSize: 13, color: "var(--text-dim)", marginBottom: 12, lineHeight: 1.5 }}>
+            What kind of teaching is this?
+          </div>
+          <div className="refine-picker-types">
+            {REFINEMENT_TYPES.map(r => (
+              <button key={r.key} className="refine-type-btn" onClick={() => {
+                setSelectedType(r.key);
+                // Pre-fill with agent text for example/voice types, empty for corrections
+                if (r.key !== "correct") setNote(agentMsg || "");
+              }}>
+                <span className="refine-type-label">{r.label}</span>
+                <span className="refine-type-desc">{r.desc}</span>
+              </button>
+            ))}
+          </div>
+          <button className="refine-picker-cancel" onClick={onClose}>cancel</button>
+        </div>
+      </div>
+    );
+  }
+
+  // Step 2: write the refinement content
+  const typeLabel = REFINEMENT_TYPES.find(r => r.key === selectedType)?.label || selectedType;
   return (
     <div className="refine-picker-overlay" onClick={onClose}>
       <div className="refine-picker" onClick={e => e.stopPropagation()}>
-        <div className="refine-picker-title">Save as refinement</div>
+        <div className="refine-picker-title" style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <button onClick={() => { setSelectedType(null); setNote(""); }}
+            style={{ background: "none", border: "none", color: "var(--text-dim)", cursor: "pointer", fontSize: 16, padding: 0 }}>
+            ←
+          </button>
+          {typeLabel}
+        </div>
+
+        {/* For corrections, show what Voice wrote as read-only context */}
+        {selectedType === "correct" && agentMsg && (
+          <div style={{
+            fontSize: 13, color: "var(--text-dim)", lineHeight: 1.6,
+            padding: "10px 14px", background: "var(--bg-elevated)",
+            borderRadius: 8, marginBottom: 10, maxHeight: 120, overflowY: "auto",
+            border: "1px solid var(--border)",
+          }}>
+            <div style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: "0.1em", color: "var(--text-faint)", marginBottom: 4 }}>
+              Voice wrote:
+            </div>
+            {agentMsg.length > 300 ? agentMsg.slice(0, 300) + "…" : agentMsg}
+          </div>
+        )}
+
         <textarea
           className="refine-picker-textarea"
           value={note}
           onChange={e => setNote(e.target.value)}
-          placeholder="Edit to show exactly how you'd say it…"
+          placeholder={placeholders[selectedType] || "Type your refinement…"}
           rows={4}
+          autoFocus
         />
-        <div className="refine-picker-types">
-          {REFINEMENT_TYPES.map(r => (
-            <button key={r.key} className="refine-type-btn" onClick={() => save(r.key)} disabled={saving}>
-              <span className="refine-type-label">{r.label}</span>
-              <span className="refine-type-desc">{r.desc}</span>
-            </button>
-          ))}
-        </div>
+        <button
+          className="refine-type-btn"
+          onClick={save}
+          disabled={saving || !note.trim()}
+          style={{ marginTop: 8, textAlign: "center", justifyContent: "center", opacity: note.trim() ? 1 : 0.4 }}
+        >
+          <span className="refine-type-label">{saving ? "Saving…" : `Save ${typeLabel}`}</span>
+        </button>
         <button className="refine-picker-cancel" onClick={onClose}>cancel</button>
       </div>
     </div>
@@ -2709,7 +2770,7 @@ function VoiceView({ profileId, profileName, refinementCount, onRefinementSaved,
     return shuffled.slice(0, 5);
   });
 
-  // Rotating placeholder text
+  // Contextual placeholder — adapts based on last message
   const [placeholderIdx, setPlaceholderIdx] = useState(0);
   useEffect(() => {
     const timer = setInterval(() => {
@@ -2717,6 +2778,15 @@ function VoiceView({ profileId, profileName, refinementCount, onRefinementSaved,
     }, 4000);
     return () => clearInterval(timer);
   }, []);
+
+  const lastMsg = messages[messages.length - 1];
+  const lastWasVoiceWriting = lastMsg?.role === "agent" && lastMsg?.intent === "write";
+  const lastWasVoiceChat = lastMsg?.role === "agent" && !lastMsg?.intent && !lastMsg?.isGreeting;
+  const contextPlaceholder = lastWasVoiceWriting
+    ? "Suggest a correction, continue the discussion, or ask for something new…"
+    : lastWasVoiceChat
+    ? "Respond, share an example, or ask it to write something…"
+    : PLACEHOLDER_EXAMPLES[placeholderIdx];
 
   return (
     <div className="chat-container">
@@ -2976,7 +3046,7 @@ function VoiceView({ profileId, profileName, refinementCount, onRefinementSaved,
           <textarea
             ref={textareaRef}
             rows={1}
-            placeholder={PLACEHOLDER_EXAMPLES[placeholderIdx]}
+            placeholder={contextPlaceholder}
             value={input} onChange={handleInput} onKeyDown={handleKeyDown}
             style={{
               flex: 1, resize: "none", minHeight: 36, maxHeight: 160,
