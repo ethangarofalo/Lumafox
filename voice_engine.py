@@ -652,13 +652,14 @@ The teacher wants you to demonstrate this voice on the following topic.
 Write AS this voice — not about it, but from within it. Use its characteristic
 rhythm, its natural mode of expression, its particular way of seeing.
 
-CRITICAL — write like a human drafting, not an AI performing:
-- Vary sentence length dramatically (short fragments, then long compound sentences)
-- Break register mid-paragraph (elevated → concrete without warning)
-- Don't smoothly bridge every paragraph — let some ideas end abruptly
-- Name specific things rather than reaching for abstractions
-- Resist defaulting to parallel structure — break patterns on the third iteration
-- Asymmetric paragraphs (some one sentence, some six)
+CRITICAL — avoid AI writing patterns:
+- Do NOT produce tidy, clever metaphors that "land" perfectly — rougher is more human
+- Do NOT structure as thesis → complication → nuanced resolution (AI essay architecture)
+- Do NOT use balanced parallelism ("The X who Y; the X who Z") as closers
+- Do NOT maintain a consistent smooth register — shift between elevated and blunt
+- PRESERVE unusual word choices and collocations from the voice profile — they are features
+- Let the thought accumulate and circle back rather than marching through a clean argument
+- Let some tensions remain unresolved — don't always play devil's advocate with yourself
 
 TOPIC: {message}
 
@@ -948,38 +949,51 @@ When in doubt, match the voice's sentence style (cumulative, periodic, etc.),
 diction level (Anglo-Saxon vs. Latinate), punctuation habits (dashes vs. semicolons),
 and rhetorical devices (asyndeton, anaphora, etc.) — not just its "tone."
 
-CRITICAL — HUMAN TEXTURE:
-The output must read as a human *draft*, not a polished AI performance. This means:
+CRITICAL — AVOID AI WRITING PATTERNS:
+The biggest danger is writing that is too clean, too balanced, too well-crafted.
+AI writing is detectable precisely because it is MORE polished than human writing.
+You must produce text that reads as a human mind working through ideas, not an
+algorithm optimizing for eloquence.
 
-1. IRREGULAR RHYTHM: Vary sentence length dramatically. Three short declarations
-   then one sprawling compound sentence. A fragment. Then a long periodic sentence
-   that delays its main clause. Never write four sentences of similar length in a row.
+SPECIFIC TRAPS TO AVOID:
+1. THE CLEVER METAPHOR: Do NOT produce tidy, surprising metaphors that "land" perfectly
+   ("His presence becomes furniture"). These are AI signatures — too neat, too packaged.
+   This voice's metaphors should be rougher, more extended, sometimes imperfect.
+   A thought reaching for the right image and finding one that's close but not gift-wrapped.
 
-2. REGISTER BREAKS: Shift altitude mid-paragraph. Move from the elevated to the
-   concrete without transition. "The kingdom of God" → "with harlots." Biblical
-   cadence → street-level specificity. This is how actual writers create force.
+2. THE DIALECTICAL TURN: Do NOT structure paragraphs as "thesis → complication → nuanced
+   resolution." The pattern "But there's something almost cruel in..." followed by
+   acknowledging the other side, followed by "And maybe that's the real..." is the most
+   recognizable AI essay structure in existence. Let some tensions remain unresolved.
+   Let some paragraphs be one-sided. Don't always play devil's advocate with yourself.
 
-3. IMPERFECT TRANSITIONS: Do not smoothly connect every paragraph. Let some ideas
-   end abruptly. Start the next thought as if picking up a different thread. Use
-   "But" or "And yet" or a simple line break instead of elegant bridges. Resist
-   the urge to make every paragraph flow into the next.
+3. BALANCED PARALLELISM: "The son who stayed inherited the house; the son who left
+   inherited the father's heart" is a tell. Humans use parallelism sparingly and
+   often imperfectly. Do not write aphoristic closers that balance two clauses neatly
+   against each other unless the voice profile's examples specifically show this pattern.
 
-4. CONCRETE OVER ABSTRACT: Name things. Specific objects, textures, actions. Where
-   you want to write "desolation," consider whether "standing in the barren field"
-   does more. Abstractions are earned by concrete images, not substituted for them.
+4. CONSISTENT REGISTER: Do NOT maintain one smooth essayistic voice throughout. The
+   actual voice's examples show register shifts — biblical language crashing into
+   blunt directness, formal syntax interrupted by colloquial emphasis. Preserve these
+   shifts. Do NOT smooth them into a uniform "contemporary essayistic register."
 
-5. ASYMMETRIC STRUCTURE: Not every paragraph should be the same length. Not every
-   paragraph needs three sentences. Some paragraphs are one sentence. Some are six.
-   The shape of the thought determines the shape of the paragraph.
+5. COLLOCATIONAL SAFETY: AI always picks the "right" word — the expected collocation.
+   "Presumed to be lost" instead of "concluded to be lost." "Squanders his inheritance"
+   instead of "devours his inheritance, with harlots." If the voice profile uses unusual
+   collocations, PRESERVE them. They are features, not errors. The writer's idiosyncratic
+   word choices are what make the voice human. Do not correct them toward convention.
 
-6. RESIST PARALLELISM: Human writers use parallel structure selectively for emphasis.
-   AI tends to default to it. Vary your clause patterns. If you catch yourself
-   writing "The X who Y. The Z who W." — break the pattern on the third iteration.
+6. STRUCTURAL TIDINESS: Do NOT give every paragraph an equal role in a clean argument arc.
+   Human essays accumulate — they circle back, repeat with variation, leave threads hanging.
+   The thought should feel like it's being WORKED OUT, not presented.
 
-The goal: writing that could not be identified as AI-generated by statistical
-analysis. High perplexity (unpredictable word choices), high burstiness (uneven
-sentence lengths), and the productive messiness of a mind working through ideas
-in real time."""
+WHAT TO DO INSTEAD:
+- Let sentences accumulate clauses organically, even if they get unwieldy
+- Use emphasis that feels personal, not polished (dashes, capitalization, exclamation)
+- Allow the argument to be lopsided — not every point needs a counterpoint
+- Prefer the writer's actual unusual word choices over conventionally "better" ones
+- Let some images be unglamorous — not every metaphor needs to surprise
+- Write as if thinking aloud to a reader, not presenting a finished essay"""
 
     return llm_call(prompt).strip()
 
