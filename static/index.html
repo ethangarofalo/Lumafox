@@ -7143,7 +7143,6 @@ function App() {
                   {[
                     { key: "voice",    label: "Voice",    desc: "Write, translate, teach",    needsVoice: false },
                     { key: "analyze",  label: "Analyze",  desc: "Score a draft",              needsVoice: true  },
-                    { key: "export",   label: "Export",   desc: "Export profile",             needsVoice: true  },
                   ].map(m => {
                     const locked = (activeProfile.refinement_count === 0) && m.needsVoice;
                     return (
@@ -7284,7 +7283,6 @@ function App() {
                   {[
                     { key: "voice", label: "Voice" },
                     { key: "analyze", label: "Analyze" },
-                    { key: "export", label: "Export" },
                   ].map(t => {
                     const isActive = t.key === "voice"
                       ? ["voice","teach","write","translate"].includes(mode)
