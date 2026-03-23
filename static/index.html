@@ -1401,11 +1401,7 @@ function InlineCouncilPanel({ question, onClose }) {
 }
 
 // ── Teach View (Chat) ──
-const ONBOARDING_GREETING = `Most writers have a ceiling — a version of themselves that shows up when everything clicks. Your best sentence, your clearest paragraph, the piece you re-read and thought: that's actually what I meant.
-
-That's the version I'm trying to learn. Not how you write every day, but how you write at your best.
-
-Tell me about a piece you're proud of — or describe how you want to sound when you're writing at your best. What does that version of your writing do that most writing doesn't?`;
+const ONBOARDING_GREETING = `I learn how you write at your best. Tell me a rule you follow, show me something you've written, or ask me to write something — then correct what I get wrong.`;
 
 // ── Save-as-Refinement picker ──
 const REFINEMENT_TYPES = [
@@ -2133,11 +2129,13 @@ function VoiceView({ profileId, profileName, refinementCount, onRefinementSaved 
   const [showHistory, setShowHistory] = useState(false);
   const [savingPicker, setSavingPicker] = useState(null);
   const [inlineCouncil, setInlineCouncil] = useState(null);
-  const [correctingIdx, setCorrectingIdx] = useState(null); // index of message being corrected
+  const [correctingIdx, setCorrectingIdx] = useState(null);
   const [correctionText, setCorrectionText] = useState("");
   const [correctionLoading, setCorrectionLoading] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const messagesEnd = useRef(null);
   const textareaRef = useRef(null);
+  const fileInputRef = useRef(null);
 
   const userTurns = messages.filter(m => m.role === "user").length;
 
@@ -2278,6 +2276,54 @@ function VoiceView({ profileId, profileName, refinementCount, onRefinementSaved 
       toastError(e.message);
     }
     setCorrectionLoading(false);
+  };
+
+  // ── File upload via paperclip ──
+  const handleFileUpload = async (e) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+    setUploading(true);
+
+    const names = files.map(f => f.name).join(", ");
+    setMessages(prev => [...prev, { role: "user", content: `📎 ${names}`, isUpload: true }]);
+
+    try {
+      for (const file of files) {
+        const formData = new FormData();
+        formData.append("file", file);
+        await fetch(`/profiles/${profileId}/upload`, {
+          method: "POST",
+          headers: { "Authorization": `Bearer ${localStorage.getItem("auth_token")}` },
+          body: formData,
+        });
+      }
+
+      // Auto-ingest
+      setMessages(prev => [...prev, { role: "agent", content: "Reading your writing…", isProcessing: true }]);
+      const result = await api(`/profiles/${profileId}/ingest`, { method: "POST" });
+
+      setMessages(prev => {
+        const updated = [...prev];
+        updated[updated.length - 1] = {
+          role: "agent",
+          content: result.new_refinements > 0
+            ? `Extracted ${result.new_refinements} refinement${result.new_refinements > 1 ? "s" : ""} from your writing. ${result.total_refinements} total.`
+            : `Read your writing — nothing new to extract. Try uploading longer or more distinctive samples.`,
+          intent: "chat",
+        };
+        return updated;
+      });
+
+      if (result.new_refinements > 0) {
+        toastSuccess(`${result.new_refinements} refinements extracted`);
+        onRefinementSaved && onRefinementSaved(result.total_refinements);
+      }
+    } catch (err) {
+      setMessages(prev => [...prev, { role: "agent", content: `Upload failed: ${err.message}` }]);
+      toastError(err.message);
+    }
+    setUploading(false);
+    if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
   const handleKeyDown = (e) => {
@@ -2502,10 +2548,29 @@ function VoiceView({ profileId, profileName, refinementCount, onRefinementSaved 
               Ask the Council?
             </button>
           )}
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            accept=".txt,.md,.pdf,.doc,.docx"
+            style={{ display: "none" }}
+            onChange={handleFileUpload}
+          />
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploading}
+            title="Upload writing samples"
+            style={{
+              background: "none", border: "none", cursor: "pointer",
+              color: uploading ? "var(--accent)" : "var(--text-dim)",
+              padding: "6px 8px", fontSize: 18, lineHeight: 1,
+              transition: "color 0.15s", flexShrink: 0,
+            }}
+          >{uploading ? "…" : "📎"}</button>
           <textarea
             ref={textareaRef}
             className="chat-textarea" rows={1}
-            placeholder="Write, translate, teach, ask — just talk to your voice…"
+            placeholder="Write, translate, teach, correct — or attach writing samples…"
             value={input} onChange={handleInput} onKeyDown={handleKeyDown}
           />
           <button className="send-btn" onClick={() => send()} disabled={loading || !input.trim()}>
@@ -5499,29 +5564,22 @@ function HomeView({ profile, onMode }) {
   const isNew = profile.refinement_count === 0;
 
   const secondaryActionsNew = [
-    { icon: "✦", title: "Talk to your voice", desc: "Write, translate, teach — all from one conversation.", mode: "voice" },
-    { icon: "↑", title: "Upload writing", desc: "Drop in past work to learn your patterns.", mode: "upload" },
+    { icon: "✦", title: "Talk to your voice", desc: "Write, teach, translate, upload — all from one place.", mode: "voice" },
   ];
 
   const actions = isNew ? [] : [
     {
       icon: "✦",
       title: "Talk to your voice",
-      desc: "Write, translate, teach, correct — all from one conversation.",
+      desc: "Write, translate, teach, upload — one conversation.",
       mode: "voice",
       primary: true,
     },
     {
       icon: "◎",
-      title: "Analyze",
-      desc: "Score a draft against this voice profile.",
+      title: "Analyze a draft",
+      desc: "Score writing against this voice.",
       mode: "analyze",
-    },
-    {
-      icon: "↑",
-      title: "Upload",
-      desc: "Feed it more of your writing.",
-      mode: "upload",
     },
     {
       icon: "↗",
@@ -5839,7 +5897,6 @@ function ParticleField() {
 // ── Voice Nav — top-level dropdown, one of two halves of Lumafox ──
 const VOICE_MODES = [
   { key: "voice",    label: "Voice",    desc: "Write, translate, teach",    needsVoice: false },
-  { key: "upload",   label: "Upload",   desc: "Import your writing",       needsVoice: false },
   { key: "analyze",  label: "Analyze",  desc: "Score a draft",             needsVoice: true  },
   { key: "export",   label: "Export",   desc: "Export voice profile",      needsVoice: true  },
 ];
@@ -6271,7 +6328,6 @@ function App() {
                 <div style={{ padding: "8px 8px 0" }}>
                   {[
                     { key: "voice",    label: "Voice",    desc: "Write, translate, teach",    needsVoice: false },
-                    { key: "upload",   label: "Upload",   desc: "Import writing",             needsVoice: false },
                     { key: "analyze",  label: "Analyze",  desc: "Score a draft",              needsVoice: true  },
                     { key: "export",   label: "Export",   desc: "Export profile",             needsVoice: true  },
                   ].map(m => {
@@ -6388,7 +6444,6 @@ function App() {
                     { key: "home", label: "◈", title: "Home" },
                     { key: "voice", label: "Voice" },
                     { key: "analyze", label: "Analyze" },
-                    { key: "upload", label: "Upload" },
                     { key: "export", label: "Export" },
                   ].map(t => (
                     <button key={t.key} title={t.title || t.label} onClick={() => setMode(t.key)} style={{
