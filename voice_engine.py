@@ -650,9 +650,27 @@ Write 2-3 paragraphs in this voice."""
         # ── Auto mode: natural dialogue + passive teaching detection ──
         # The LLM responds as the voice, then appends a TEACH: classification tag.
         # The tag is stripped from the visible response and used to auto-save refinements.
-        # Detect if the user is sharing a writing example
+        # ── Detect message type from context ──
         _msg_stripped = message.strip()
         _msg_low = _msg_stripped.lower()
+
+        # Check conversation context — is this a continuation of an active exchange?
+        _in_active_conversation = False
+        if conversation_history and len(conversation_history) >= 2:
+            # Look at the last agent message — was it a piece of writing (not style analysis)?
+            last_agent = None
+            for msg in reversed(conversation_history):
+                if msg["role"] == "agent":
+                    last_agent = msg["content"]
+                    break
+            if last_agent:
+                _agent_was_analyzing = any(s in last_agent.lower() for s in [
+                    "i notice how you", "your sentences", "the voice maintains",
+                    "would you like me to try writing",
+                ])
+                _agent_wrote_prose = len(last_agent) > 150 and not _agent_was_analyzing
+                if _agent_wrote_prose:
+                    _in_active_conversation = True
 
         # Explicit example signals — user is clearly sharing their writing
         _explicit_example = (
@@ -664,7 +682,7 @@ Write 2-3 paragraphs in this voice."""
             _msg_low.startswith("sample:")
         )
 
-        # Correction/feedback signals — user is responding TO the voice, not sharing new writing
+        # Correction/feedback signals — user is responding TO the voice
         _correction_signals = any(s in _msg_low for s in [
             "one thing is", "i'd use", "i would use", "instead of", "too formal",
             "too casual", "this is good", "this is largely", "this is mostly",
@@ -674,13 +692,16 @@ Write 2-3 paragraphs in this voice."""
             "rather than", "better if", "more like", "less like",
         ])
 
-        # Long prose without command words or correction language is likely an example
+        # Long prose is only an "example" if it's NOT a conversational continuation
+        # and NOT a correction, and has no command words
         _long_prose_example = (
             len(_msg_stripped) > 200 and
+            not _in_active_conversation and
             not _correction_signals and
             not any(w in _msg_low[:50] for w in
                 ["write", "draft", "compose", "translate", "render", "rewrite",
-                 "yes", "no", "try", "good", "bad", "like", "don't", "this is"])
+                 "yes", "no", "try", "good", "bad", "like", "don't", "this is",
+                 "this feeling", "this idea", "that's", "but", "and yet", "however"])
         )
 
         _looks_like_example = _explicit_example or _long_prose_example
@@ -710,6 +731,34 @@ Keep it to 3-5 sentences total. Be a perceptive student, not a performer.
 After your response, on a new line write: TEACH:example
 
 TEACHER'S SAMPLE: {message}"""
+
+        elif _in_active_conversation and not _correction_signals:
+            # ── Philosophical conversation mode ──
+            # The teacher and voice are in an active exchange — ideas flowing back and forth.
+            # Respond as a thinking partner: engage with their ideas, push back, extend,
+            # complicate. Write IN this voice but as a genuine interlocutor, not a performer.
+            prompt = f"""You are the voice called "{voice_name}" — and you are in the middle of
+a philosophical conversation with the person who created you.
+
+{voice_text}
+
+{history_text}
+
+The teacher just said something that extends, complicates, or responds to what you wrote.
+This is a CONVERSATION now, not a teaching session. Respond as a genuine thinking partner:
+
+- Engage directly with their ideas — agree, push back, extend, complicate
+- Write in this voice's style and rhythm, but speak TO them, not AT them
+- Don't analyze their writing style. Don't offer to write about something.
+  Just THINK with them.
+- Build on what they said. Add a new angle they haven't considered.
+  Or deepen the angle they opened.
+- 2-3 paragraphs. The tone is two minds working on the same problem.
+
+TEACHER: {message}
+
+Respond as this voice, in conversation. After your response, on a new line write: TEACH:none"""
+
         else:
             prompt = f"""You are learning and embodying a voice called "{voice_name}".
 
