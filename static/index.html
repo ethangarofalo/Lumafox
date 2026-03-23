@@ -1270,18 +1270,60 @@ function LoadingDots() {
 }
 
 // ── Visible Intelligence — thinking animation ──
-const ANALYSIS_LABELS = [
+const FALLBACK_LABELS = [
   "sentence rhythm", "vocabulary register", "metaphor density",
   "rhetorical structure", "tonal range", "diction patterns",
-  "paragraph architecture", "punctuation signatures",
 ];
 
-function VoiceThinking({ profileName }) {
+// Extract thematic labels from the user's message for contextual thinking display
+function extractThemes(text) {
+  if (!text || text.length < 30) return null;
+  const stripped = text.replace(/^(example:|here's my writing:?|sample:)/i, "").trim();
+  // Pull quoted phrases first
+  const quoted = [];
+  stripped.replace(/"([^"]{3,40})"/g, (_, q) => { quoted.push(q); });
+  // Extract key noun phrases: look for abstract/philosophical concepts
+  const conceptPatterns = [
+    /\b(the (?:idea|concept|notion|feeling|paradox|nature|role|problem|question|mystery|power|weight|cost|beauty|danger|comfort|fear|joy|meaning) of [a-z ]{3,30})/gi,
+    /\b((?:human|moral|spiritual|inner|cosmic|divine|essential) [a-z]{4,})/gi,
+    /\b((?:innocence|justice|virtue|suffering|happiness|love|death|truth|beauty|freedom|dignity|mortality|fragility|guilt|anger|grace|mercy|wisdom|folly|ambition|gratitude|dissatisfaction|imagination|perception|imperfection) (?:and|of|in|without|against|through|within) [a-z ]{3,25})/gi,
+    /\b(innocence|justice|virtue|suffering|happiness|love|mortality|fragility|guilt|anger|grace|mercy|wisdom|dissatisfaction|imagination|imperfection)\b/gi,
+  ];
+  const found = new Set(quoted);
+  for (const pat of conceptPatterns) {
+    let m;
+    while ((m = pat.exec(stripped)) !== null) {
+      const phrase = m[1].toLowerCase().trim();
+      if (phrase.length > 4 && phrase.length < 45) found.add(phrase);
+      if (found.size >= 6) break;
+    }
+  }
+  // If we still have few, extract capitalized multi-word phrases
+  if (found.size < 3) {
+    const sentences = stripped.split(/[.!?]+/);
+    for (const s of sentences.slice(0, 3)) {
+      const words = s.trim().split(/\s+/).filter(w => w.length > 3);
+      if (words.length >= 3) {
+        const key = words.slice(0, 4).join(" ").toLowerCase();
+        if (key.length > 10 && key.length < 45) found.add(key);
+      }
+    }
+  }
+  const arr = [...found].slice(0, 4);
+  return arr.length >= 2 ? arr : null;
+}
+
+function VoiceThinking({ profileName, userMessage }) {
   const [phase, setPhase] = useState(0);
   const [labels] = useState(() => {
-    const shuffled = [...ANALYSIS_LABELS].sort(() => Math.random() - 0.5);
+    const themes = extractThemes(userMessage);
+    if (themes) return themes;
+    const shuffled = [...FALLBACK_LABELS].sort(() => Math.random() - 0.5);
     return shuffled.slice(0, 4);
   });
+  const headerText = extractThemes(userMessage)
+    ? `Thinking about ${profileName}'s ideas…`
+    : `Analyzing ${profileName}'s voice…`;
 
   useEffect(() => {
     const timers = [];
@@ -1295,7 +1337,7 @@ function VoiceThinking({ profileName }) {
   return (
     <div style={{ fontSize: 13, fontFamily: "var(--font-sans)", color: "var(--text-faint)", lineHeight: 2 }}>
       <div style={{ color: "var(--text-dim)", marginBottom: 4, opacity: phase >= 0 ? 1 : 0, transition: "opacity 0.3s" }}>
-        Analyzing {profileName}'s voice…
+        {headerText}
       </div>
       {labels.map((label, i) => (
         <div key={i} style={{
@@ -2976,7 +3018,7 @@ function VoiceView({ profileId, profileName, refinementCount, onRefinementSaved,
               <span className="msg-avatar"><img src="/static/lumafox-icon.png" alt="" /></span>
               voice
             </div>
-            <div className="msg-content"><VoiceThinking profileName={profileName} /></div>
+            <div className="msg-content"><VoiceThinking profileName={profileName} userMessage={messages.filter(m => m.role === "user").slice(-1)[0]?.content || ""} /></div>
           </div>
         )}
         <div ref={messagesEnd} />

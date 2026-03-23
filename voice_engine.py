@@ -757,7 +757,17 @@ This is a CONVERSATION now, not a teaching session. Respond as a genuine thinkin
 
 TEACHER: {message}
 
-Respond as this voice, in conversation. After your response, on a new line write: TEACH:none"""
+Respond as this voice, in conversation.
+
+After your response, add two classification lines:
+1. On a new line: TEACH:none (or TEACH:correction / TEACH:principle / TEACH:voice / TEACH:never if
+   the teacher's message implicitly teaches you something about how they think, what they value,
+   or what patterns their mind follows — even if they didn't frame it that way)
+2. If you detected a teachable insight, on another new line write:
+   INSIGHT: [one sentence capturing what you learned about how this person thinks]
+   Example: "INSIGHT: Values simplicity in diction when discussing ordinary mysteries — prefers 'note' over 'catalog'"
+   Example: "INSIGHT: Sees human greatness as emerging from individual dissatisfaction, not collective progress"
+   Only include INSIGHT if there's a genuine, specific observation. Skip it for pure back-and-forth."""
 
         else:
             prompt = f"""You are learning and embodying a voice called "{voice_name}".
@@ -783,46 +793,69 @@ TEACHER: {message}"""
 
         raw = llm_call(prompt).strip()
 
-        # Parse and strip the TEACH tag
+        # Parse and strip TEACH: and INSIGHT: tags from response
         lines = raw.split("\n")
-        last = lines[-1].strip() if lines else ""
-        detected_type = None
-        if last.startswith("TEACH:"):
-            tag = last[6:].strip().lower()
-            response_text = "\n".join(lines[:-1]).strip()
-            _type_map = {
-                "correction": "correction",
-                "principle": "principle",
-                "example": "example",
-                "voice": "voice_note",
-                "never": "anti_pattern",
+        response_lines = []
+        teach_tag = None
+        insight_text = None
+        for line in lines:
+            stripped = line.strip()
+            if stripped.startswith("TEACH:"):
+                teach_tag = stripped[6:].strip().lower()
+            elif stripped.startswith("INSIGHT:"):
+                insight_text = stripped[8:].strip()
+            else:
+                response_lines.append(line)
+
+        response_text = "\n".join(response_lines).strip() or raw
+
+        _type_map = {
+            "correction": "correction",
+            "principle": "principle",
+            "example": "example",
+            "voice": "voice_note",
+            "never": "anti_pattern",
+        }
+
+        refinement_saved = False
+        refinement_type = None
+        _safe = not any(marker in _msg_lower for marker in _INJECTION_MARKERS)
+
+        # Save explicit TEACH refinement if detected
+        if teach_tag and teach_tag in _type_map and _safe:
+            detected_type = _type_map[teach_tag]
+            context = ""
+            if teach_tag == "correction" and conversation_history:
+                for msg in reversed(conversation_history):
+                    if msg["role"] == "agent":
+                        context = msg["content"][:200]
+                        break
+            refinement = {
+                "type": detected_type,
+                "content": message,
+                "context": context,
+                "timestamp": datetime.now().isoformat(),
+                "session": load_profile(profile_id).refinement_count,
+                "auto_detected": True,
             }
-            if tag in _type_map:
-                detected_type = _type_map[tag]
-                # Injection check before auto-saving
-                if not any(marker in _msg_lower for marker in _INJECTION_MARKERS):
-                    context = ""
-                    if tag == "correction" and conversation_history:
-                        for msg in reversed(conversation_history):
-                            if msg["role"] == "agent":
-                                context = msg["content"][:200]
-                                break
-                    refinement = {
-                        "type": detected_type,
-                        "content": message,
-                        "context": context,
-                        "timestamp": datetime.now().isoformat(),
-                        "session": load_profile(profile_id).refinement_count,
-                        "auto_detected": True,
-                    }
-                    save_refinement(profile_id, refinement)
-                    return {
-                        "response": response_text,
-                        "refinement_saved": True,
-                        "refinement_type": detected_type,
-                    }
-        else:
-            response_text = raw
+            save_refinement(profile_id, refinement)
+            refinement_saved = True
+            refinement_type = detected_type
+
+        # Save conversational INSIGHT as a voice_note refinement
+        if insight_text and _safe:
+            insight_refinement = {
+                "type": "voice_note",
+                "content": f"[Conversational insight] {insight_text}",
+                "context": message[:200],
+                "timestamp": datetime.now().isoformat(),
+                "session": load_profile(profile_id).refinement_count,
+                "auto_detected": True,
+                "source": "conversation",
+            }
+            save_refinement(profile_id, insight_refinement)
+            refinement_saved = True
+            refinement_type = refinement_type or "voice_note"
 
         return {"response": response_text, "refinement_saved": False, "refinement_type": None}
 
