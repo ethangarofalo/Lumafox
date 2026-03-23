@@ -213,6 +213,16 @@ def load_conversation_session(profile_id: str, session_id: str) -> Optional[dict
         return None
 
 
+def delete_conversation_session(profile_id: str, session_id: str) -> bool:
+    """Delete a specific conversation session. Returns True if deleted."""
+    d = _conversations_dir(profile_id)
+    session_file = d / f"{session_id}.json"
+    if session_file.exists():
+        session_file.unlink()
+        return True
+    return False
+
+
 def build_refinement_context(refinements: list[dict]) -> str:
     """Build a prompt-ready summary of all refinements.
 

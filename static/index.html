@@ -1754,8 +1754,75 @@ function SaveRefinementPicker({ agentMsg, userMsg, profileId, onSaved, onClose }
 }
 
 // ── Past Conversations panel ──
+// ── Profile overflow menu (⋯) ──
+function ProfileMenu({ onExport, onDelete }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const close = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener("mousedown", close);
+    return () => document.removeEventListener("mousedown", close);
+  }, [open]);
+
+  return (
+    <div ref={ref} style={{ position: "relative" }}>
+      <button onClick={() => setOpen(!open)}
+        style={{
+          background: "none", border: "1px solid var(--border)", borderRadius: 8,
+          color: "var(--text-dim)", cursor: "pointer", padding: "4px 10px",
+          fontSize: 18, lineHeight: 1, letterSpacing: "0.1em", transition: "all 0.15s",
+        }}
+        onMouseEnter={e => { e.currentTarget.style.borderColor = "var(--accent-dim)"; e.currentTarget.style.color = "var(--text)"; }}
+        onMouseLeave={e => { e.currentTarget.style.borderColor = "var(--border)"; e.currentTarget.style.color = "var(--text-dim)"; }}
+        title="Profile options"
+      >
+        ···
+      </button>
+      {open && (
+        <div style={{
+          position: "absolute", right: 0, top: "calc(100% + 6px)",
+          background: "var(--bg-elevated)", border: "1px solid var(--border)",
+          borderRadius: 10, overflow: "hidden", minWidth: 180,
+          boxShadow: "0 8px 24px rgba(0,0,0,0.4)", zIndex: 100,
+        }}>
+          <button onClick={() => { onExport(); setOpen(false); }}
+            style={{
+              display: "flex", alignItems: "center", gap: 10, width: "100%",
+              background: "none", border: "none", color: "var(--text)",
+              padding: "12px 16px", cursor: "pointer", fontSize: 14,
+              fontFamily: "var(--font-sans)", textAlign: "left",
+            }}
+            onMouseEnter={e => e.currentTarget.style.background = "rgba(200,164,110,0.08)"}
+            onMouseLeave={e => e.currentTarget.style.background = "none"}
+          >
+            <span style={{ fontSize: 15, opacity: 0.7 }}>↗</span>
+            Export profile
+          </button>
+          <div style={{ height: 1, background: "var(--border)", margin: "0 12px" }} />
+          <button onClick={() => { onDelete(); setOpen(false); }}
+            style={{
+              display: "flex", alignItems: "center", gap: 10, width: "100%",
+              background: "none", border: "none", color: "#c55",
+              padding: "12px 16px", cursor: "pointer", fontSize: 14,
+              fontFamily: "var(--font-sans)", textAlign: "left",
+            }}
+            onMouseEnter={e => e.currentTarget.style.background = "rgba(220,80,80,0.06)"}
+            onMouseLeave={e => e.currentTarget.style.background = "none"}
+          >
+            <span style={{ fontSize: 15 }}>🗑</span>
+            Delete profile
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function PastConversationsPanel({ profileId, onLoad, onClose }) {
   const [sessions, setSessions] = useState(null);
+  const [confirmDelete, setConfirmDelete] = useState(null); // session_id pending confirmation
 
   useEffect(() => {
     api(`/profiles/${profileId}/conversations`)
@@ -1770,6 +1837,17 @@ function PastConversationsPanel({ profileId, onLoad, onClose }) {
       onClose();
     } catch (e) {
       toastError("Couldn't load conversation");
+    }
+  };
+
+  const deleteSession = async (sessionId) => {
+    try {
+      await api(`/profiles/${profileId}/conversations/${sessionId}`, { method: "DELETE" });
+      setSessions(prev => prev.filter(s => s.session_id !== sessionId));
+      setConfirmDelete(null);
+      toastSuccess("Conversation deleted");
+    } catch (e) {
+      toastError("Couldn't delete conversation");
     }
   };
 
@@ -1793,10 +1871,33 @@ function PastConversationsPanel({ profileId, onLoad, onClose }) {
             <div className="past-conv-empty">No saved conversations yet. They'll appear here after your first exchange.</div>
           )}
           {sessions && sessions.map(s => (
-            <button key={s.session_id} className="past-conv-item" onClick={() => load(s.session_id)}>
-              <div className="past-conv-item-title">{s.title || "Conversation"}</div>
-              <div className="past-conv-item-meta">{formatDate(s.updated_at)} · {s.message_count} messages</div>
-            </button>
+            <div key={s.session_id} className="past-conv-item" style={{ display: "flex", alignItems: "center", gap: 0 }}>
+              <button style={{ flex: 1, textAlign: "left", background: "none", border: "none", color: "inherit", padding: "12px 14px", cursor: "pointer", minWidth: 0 }}
+                onClick={() => load(s.session_id)}>
+                <div className="past-conv-item-title">{s.title || "Conversation"}</div>
+                <div className="past-conv-item-meta">{formatDate(s.updated_at)} · {s.message_count} messages</div>
+              </button>
+              {confirmDelete === s.session_id ? (
+                <div style={{ display: "flex", gap: 4, paddingRight: 10, flexShrink: 0 }}>
+                  <button onClick={() => deleteSession(s.session_id)}
+                    style={{ background: "rgba(220,80,80,0.15)", border: "1px solid rgba(220,80,80,0.3)", color: "#e55", borderRadius: 6, padding: "4px 10px", cursor: "pointer", fontSize: 12 }}>
+                    Delete
+                  </button>
+                  <button onClick={() => setConfirmDelete(null)}
+                    style={{ background: "none", border: "1px solid var(--border)", color: "var(--text-dim)", borderRadius: 6, padding: "4px 8px", cursor: "pointer", fontSize: 12 }}>
+                    Cancel
+                  </button>
+                </div>
+              ) : (
+                <button onClick={(e) => { e.stopPropagation(); setConfirmDelete(s.session_id); }}
+                  title="Delete conversation"
+                  style={{ background: "none", border: "none", color: "var(--text-faint)", cursor: "pointer", padding: "8px 10px", fontSize: 14, flexShrink: 0, opacity: 0.5, transition: "opacity 0.15s" }}
+                  onMouseEnter={e => e.currentTarget.style.opacity = "1"}
+                  onMouseLeave={e => e.currentTarget.style.opacity = "0.5"}>
+                  🗑
+                </button>
+              )}
+            </div>
           ))}
         </div>
       </div>
@@ -7164,8 +7265,11 @@ function App() {
                     </div>
                   </div>
                 </div>
-                <div className="profile-header-actions">
-                  <button className="header-action danger" onClick={handleDelete}>Delete</button>
+                <div className="profile-header-actions" style={{ position: "relative" }}>
+                  <ProfileMenu
+                    onExport={() => setMode("export")}
+                    onDelete={handleDelete}
+                  />
                 </div>
               </div>
 

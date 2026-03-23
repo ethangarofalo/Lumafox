@@ -48,6 +48,7 @@ from voice_engine import (
     save_conversation_session,
     list_conversation_sessions,
     load_conversation_session,
+    delete_conversation_session,
     translate_with_voice,
 )
 
@@ -666,6 +667,24 @@ async def get_conversation(
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
     return session
+
+
+@app.delete("/profiles/{profile_id}/conversations/{session_id}")
+async def delete_conversation(
+    profile_id: str,
+    session_id: str,
+    user_id: str = Depends(get_current_user),
+):
+    """Delete a specific conversation session."""
+    profile = load_profile(profile_id)
+    if not profile:
+        raise HTTPException(status_code=404, detail="Profile not found")
+    if profile.owner_id != user_id:
+        raise HTTPException(status_code=403, detail="Not your profile")
+    deleted = delete_conversation_session(profile_id, session_id)
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Session not found")
+    return {"deleted": True}
 
 
 # ── File Upload (Bring Your Voice) ──
