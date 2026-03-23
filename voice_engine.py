@@ -652,17 +652,38 @@ Write 2-3 paragraphs in this voice."""
         # The tag is stripped from the visible response and used to auto-save refinements.
         # Detect if the user is sharing a writing example
         _msg_stripped = message.strip()
-        _looks_like_example = (
-            _msg_stripped.lower().startswith("example:") or
-            _msg_stripped.lower().startswith("here's my writing") or
-            _msg_stripped.lower().startswith("here is my writing") or
-            _msg_stripped.lower().startswith("here's a sample") or
-            _msg_stripped.lower().startswith("here's something i wrote") or
-            _msg_stripped.lower().startswith("sample:") or
-            # Long prose without an explicit command word is likely an example
-            (len(_msg_stripped) > 200 and not any(w in _msg_stripped.lower()[:40] for w in
-                ["write", "draft", "compose", "translate", "render", "rewrite"]))
+        _msg_low = _msg_stripped.lower()
+
+        # Explicit example signals — user is clearly sharing their writing
+        _explicit_example = (
+            _msg_low.startswith("example:") or
+            _msg_low.startswith("here's my writing") or
+            _msg_low.startswith("here is my writing") or
+            _msg_low.startswith("here's a sample") or
+            _msg_low.startswith("here's something i wrote") or
+            _msg_low.startswith("sample:")
         )
+
+        # Correction/feedback signals — user is responding TO the voice, not sharing new writing
+        _correction_signals = any(s in _msg_low for s in [
+            "one thing is", "i'd use", "i would use", "instead of", "too formal",
+            "too casual", "this is good", "this is largely", "this is mostly",
+            "i also think", "i don't think", "i prefer", "not quite", "close but",
+            "almost right", "you should", "you used", "you wrote", "where you",
+            "that assumes", "it assumes", "don't like", "shouldn't", "try using",
+            "rather than", "better if", "more like", "less like",
+        ])
+
+        # Long prose without command words or correction language is likely an example
+        _long_prose_example = (
+            len(_msg_stripped) > 200 and
+            not _correction_signals and
+            not any(w in _msg_low[:50] for w in
+                ["write", "draft", "compose", "translate", "render", "rewrite",
+                 "yes", "no", "try", "good", "bad", "like", "don't", "this is"])
+        )
+
+        _looks_like_example = _explicit_example or _long_prose_example
 
         if _looks_like_example:
             prompt = f"""You are learning a voice called "{voice_name}".

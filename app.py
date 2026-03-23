@@ -904,13 +904,11 @@ async def converse_with_voice(
     msg_stripped = req.message.strip()
     msg_lower = msg_stripped.lower()
 
-    # Hard override: pasted writing examples are always CHAT, never WRITE
+    # Hard override: explicit writing examples are always CHAT, never WRITE
     _example_signals = msg_lower.startswith(("example:", "here's my writing", "here is my writing",
                                               "here's a sample", "here's something i wrote", "sample:"))
-    _long_prose_no_command = (len(msg_stripped) > 200 and
-        not any(w in msg_lower[:50] for w in ["write", "draft", "compose", "translate", "render", "rewrite"]))
 
-    if _example_signals or _long_prose_no_command:
+    if _example_signals:
         intent = "chat"
     else:
         classifier = _get_intent_classifier()

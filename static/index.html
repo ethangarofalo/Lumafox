@@ -359,7 +359,7 @@
     .msg { margin-bottom: 28px; max-width: 720px; }
     .msg.user .msg-content { color: var(--text); }
     .msg.agent .msg-content {
-      color: var(--text-dim);
+      color: var(--text);
       padding: 16px 20px; border-radius: 10px;
       background: rgba(200,164,110,0.02);
       border-left: 2px solid rgba(200,164,110,0.12);
@@ -6286,15 +6286,13 @@ function ParticleField() {
       targetIntensity = 0;
       thinkingIntensity = 0;  // Snap to zero immediately — no lingering glow
       travelers = [];          // Clear all pulse travelers instantly
-      // Push particles back outward from center
-      const cx = W / 2, cy = H / 2;
+      // Scatter particles back to random positions across the full canvas
       particles.forEach(p => {
-        const dx = p.x - cx, dy = p.y - cy;
-        const d = Math.sqrt(dx * dx + dy * dy);
-        if (d < 150 && d > 0) {
-          p.vx += (dx / d) * 0.5;
-          p.vy += (dy / d) * 0.5;
-        }
+        p.x = Math.random() * (W || 800);
+        p.y = Math.random() * (H || 600);
+        p.vx = (Math.random() - 0.5) * 0.3;
+        p.vy = (Math.random() - 0.5) * 0.3;
+        p.opacity = p.baseOpacity;
       });
     };
     window.addEventListener("voice:think:start", onThinkStart);
@@ -6466,7 +6464,7 @@ function ParticleField() {
       ref={canvasRef}
       style={{
         position: "absolute", inset: 0, width: "100%", height: "100%",
-        pointerEvents: "none", display: "block", zIndex: 0,
+        pointerEvents: "none", display: "block", zIndex: -1,
       }}
     />
   );
