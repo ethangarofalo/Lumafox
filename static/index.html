@@ -1888,7 +1888,7 @@ function ProfileMenu({ onExport, onDelete }) {
           position: "absolute", right: 0, top: "calc(100% + 6px)",
           background: "var(--bg-elevated)", border: "1px solid var(--border)",
           borderRadius: 10, overflow: "hidden", minWidth: 180,
-          boxShadow: "0 8px 24px rgba(0,0,0,0.4)", zIndex: 100,
+          boxShadow: "0 8px 24px rgba(0,0,0,0.4)", zIndex: 1000,
         }}>
           <button onClick={() => { onExport(); setOpen(false); }}
             style={{
@@ -2744,7 +2744,7 @@ const PLACEHOLDER_EXAMPLES = [
   "Describe the feeling of finishing a book that changed you…",
 ];
 
-function VoiceView({ profileId, profileName, refinementCount, onRefinementSaved, onDiscover }) {
+function VoiceView({ profileId, profileName, refinementCount, onRefinementSaved, onDiscover, openHistorySignal }) {
   const isNew = refinementCount === 0;
   const [sessionId] = useState(() => new Date().toISOString().replace(/[:.]/g, "-"));
 
@@ -2762,6 +2762,10 @@ function VoiceView({ profileId, profileName, refinementCount, onRefinementSaved,
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
+  // Allow parent to trigger history open
+  useEffect(() => {
+    if (openHistorySignal) setShowHistory(true);
+  }, [openHistorySignal]);
   const [savingPicker, setSavingPicker] = useState(null);
   const [inlineCouncil, setInlineCouncil] = useState(null);
   const [correctingIdx, setCorrectingIdx] = useState(null);
@@ -3036,11 +3040,8 @@ function VoiceView({ profileId, profileName, refinementCount, onRefinementSaved,
 
   return (
     <div className="chat-container">
-      {/* ── Top bar — compact ── */}
-      <div className="chat-topbar">
-        <button className="chat-history-btn" onClick={() => setShowHistory(true)} title="Past conversations">
-          ↩
-        </button>
+      {/* ── Top bar — minimal, only + New ── */}
+      <div className="chat-topbar" style={{ justifyContent: "flex-end" }}>
         <button className="chat-new-btn" onClick={startNewConversation}>
           + New
         </button>
@@ -6958,6 +6959,7 @@ function App() {
   const [showOnboarding, setShowOnboarding] = useState(() => !localStorage.getItem("lumafox_onboarded"));
   const [pendingDesc, setPendingDesc] = useState("");
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [historySignal, setHistorySignal] = useState(0);
   const [loaded, setLoaded] = useState(false);
   const [showAvatarPicker, setShowAvatarPicker] = useState(false);
 
@@ -7264,6 +7266,23 @@ function App() {
                   })}
                 </div>
               )}
+              {/* Conversations shortcut */}
+              {activeProfile && (
+                <button
+                  onClick={() => { setHistorySignal(s => s + 1); setMode("voice"); setMobileSidebarOpen(false); }}
+                  style={{
+                    width: "calc(100% - 16px)", display: "flex", alignItems: "center", gap: 8,
+                    padding: "8px 12px", margin: "6px 8px 0", background: "none",
+                    border: "1px dashed var(--border)", borderRadius: 6, cursor: "pointer",
+                    color: "var(--text-faint)", fontFamily: "var(--font-sans)", fontSize: 12,
+                    textAlign: "left", transition: "all 0.15s",
+                  }}
+                  onMouseEnter={e => { e.currentTarget.style.borderColor = "var(--accent-dim)"; e.currentTarget.style.color = "var(--text-dim)"; }}
+                  onMouseLeave={e => { e.currentTarget.style.borderColor = "var(--border)"; e.currentTarget.style.color = "var(--text-faint)"; }}
+                >
+                  <span style={{ fontSize: 13 }}>◷</span> Conversations
+                </button>
+              )}
               <button className="new-profile-btn" style={{ margin: "8px 12px 0" }} onClick={() => { setShowCreate(true); setMobileSidebarOpen(false); }}>
                 + New Voice
               </button>
@@ -7321,8 +7340,9 @@ function App() {
             <CouncilView isGuest={isGuest} onNeedAuth={() => setShowAuth(true)} />
           ) : activeProfile ? (
             <>
-              <div className="profile-header" style={{ position: "relative", zIndex: 1 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              {/* ── Unified header: avatar + name + tabs + overflow ── */}
+              <div className="profile-header" style={{ position: "relative", zIndex: 10 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                   <button onClick={() => setShowAvatarPicker(true)} title="Change avatar" style={{
                     background: "none", border: "none", padding: 0, cursor: "pointer",
                     borderRadius: "50%", transition: "opacity 0.15s",
@@ -7330,21 +7350,20 @@ function App() {
                     onMouseEnter={e => e.currentTarget.style.opacity = "0.7"}
                     onMouseLeave={e => e.currentTarget.style.opacity = "1"}
                   >
-                    <ProfileAvatar avatar={activeProfile.avatar} size={36} style={{ "data-profile-id": activeProfile.profile_id }} />
+                    <ProfileAvatar avatar={activeProfile.avatar} size={30} style={{ "data-profile-id": activeProfile.profile_id }} />
                   </button>
                   <div>
-                    <div className="profile-header-name">{activeProfile.name}</div>
-                    <div className="profile-header-meta" style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    <div className="profile-header-name" style={{ fontSize: 15 }}>{activeProfile.name}</div>
+                    <div className="profile-header-meta" style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11 }}>
                       {(() => {
                         const { current, next, progress, milestoneIndex } = getVoiceMaturity(activeProfile.refinement_count);
                         const overall = (milestoneIndex + progress) / (VOICE_MILESTONES.length - 1);
                         return (
                           <>
-                            <span style={{ fontSize: 13 }}>{current.icon}</span>
                             <span>{current.label}</span>
                             <span style={{ color: "var(--accent)" }}>· {activeProfile.refinement_count}</span>
                             <div style={{
-                              width: 48, height: 4, borderRadius: 2,
+                              width: 36, height: 3, borderRadius: 2,
                               background: "rgba(200,164,110,0.1)", overflow: "hidden",
                               marginLeft: 2,
                             }}>
@@ -7360,6 +7379,30 @@ function App() {
                       })()}
                     </div>
                   </div>
+                  {/* Inline tabs */}
+                  {mode !== "discover" && (
+                    <div style={{ display: "flex", alignItems: "center", gap: 2, marginLeft: 16 }}>
+                      {[
+                        { key: "voice", label: "Voice" },
+                        { key: "analyze", label: "Analyze" },
+                      ].map(t => {
+                        const isActive = t.key === "voice"
+                          ? ["voice","teach","write","translate"].includes(mode)
+                          : mode === t.key;
+                        return (
+                          <button key={t.key} onClick={() => setMode(t.key)} style={{
+                            padding: "4px 10px",
+                            fontSize: 12, fontFamily: "var(--font-sans)",
+                            fontWeight: isActive ? 600 : 400,
+                            background: isActive ? "rgba(200,164,110,0.1)" : "none",
+                            border: "none", borderRadius: 6,
+                            color: isActive ? "var(--accent)" : "var(--text-dim)",
+                            cursor: "pointer", transition: "all 0.15s", whiteSpace: "nowrap",
+                          }}>{t.label}</button>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
                 <div className="profile-header-actions" style={{ position: "relative" }}>
                   <ProfileMenu
@@ -7368,36 +7411,6 @@ function App() {
                   />
                 </div>
               </div>
-
-              {/* ── Persistent tool nav ── */}
-              {mode !== "discover" && (
-                <div style={{
-                  display: "flex", alignItems: "center", gap: 2, padding: "6px 14px",
-                  borderBottom: "1px solid var(--border)", position: "relative", zIndex: 1,
-                  background: "var(--bg-surface, #111)", overflowX: "auto",
-                  scrollbarWidth: "none", WebkitOverflowScrolling: "touch",
-                }}>
-                  {[
-                    { key: "voice", label: "Voice" },
-                    { key: "analyze", label: "Analyze" },
-                  ].map(t => {
-                    const isActive = t.key === "voice"
-                      ? ["voice","teach","write","translate"].includes(mode)
-                      : mode === t.key;
-                    return (
-                      <button key={t.key} title={t.label} onClick={() => setMode(t.key)} style={{
-                        padding: "5px 12px",
-                        fontSize: 12, fontFamily: "var(--font-sans)",
-                        fontWeight: isActive ? 600 : 400,
-                        background: isActive ? "rgba(200,164,110,0.1)" : "none",
-                        border: "none", borderRadius: 6,
-                        color: isActive ? "var(--accent)" : "var(--text-dim)",
-                        cursor: "pointer", transition: "all 0.15s", whiteSpace: "nowrap",
-                      }}>{t.label}</button>
-                    );
-                  })}
-                </div>
-              )}
 
               {/* Keep all views mounted so state survives tab switches */}
               {mode === "discover" && (
@@ -7408,7 +7421,7 @@ function App() {
                 />
               )}
               <div style={{ display: (mode === "voice" || mode === "teach" || mode === "write" || mode === "translate") ? "contents" : "none", position: "relative", zIndex: 1 }}>
-                <VoiceView profileId={activeProfile.profile_id} profileName={activeProfile.name} refinementCount={activeProfile.refinement_count} onRefinementSaved={handleRefinementSaved} onDiscover={() => setMode("discover")} />
+                <VoiceView profileId={activeProfile.profile_id} profileName={activeProfile.name} refinementCount={activeProfile.refinement_count} onRefinementSaved={handleRefinementSaved} onDiscover={() => setMode("discover")} openHistorySignal={historySignal} />
               </div>
               <div style={{ display: mode === "analyze" ? "contents" : "none", position: "relative", zIndex: 1 }}>
                 <AnalyzeView profileId={activeProfile.profile_id} profileName={activeProfile.name} />
