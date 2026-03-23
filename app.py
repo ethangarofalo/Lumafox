@@ -872,14 +872,16 @@ def _get_intent_classifier():
 
 _INTENT_PROMPT = """Classify this user message into exactly one category.
 
-WRITE — The user wants you to generate/draft/compose text for them.
+WRITE — The user gives you an explicit instruction to generate/draft/compose NEW text for them. Must contain a clear directive like "write", "draft", "compose", or be phrased as a command to produce text.
   Examples: "Write an opening paragraph about grief", "Draft a tweet about...", "An essay on why...", "A short story about..."
 
 TRANSLATE — The user pasted text in another language or dense/archaic text and wants it rendered in plain language or their voice. Look for non-Latin scripts, explicit "translate"/"render" requests, or pasted passages that are clearly source material to be re-expressed.
   Examples: "τὸ γὰρ αὐτὸ νοεῖν ἐστίν τε καὶ εἶναι", "Translate this passage from Heidegger...", "Render this in my voice: [dense academic text]"
 
-CHAT — Everything else: conversation, feedback, corrections, teaching rules, asking questions, discussing preferences.
-  Examples: "I never use semicolons", "That last piece was too formal", "What do you know about my voice?", "Show me an example"
+CHAT — Everything else: conversation, feedback, corrections, teaching rules, asking questions, discussing preferences. IMPORTANTLY: if the user pastes their own writing as an example, a sample, or to teach you about their style, this is CHAT — they want you to learn from it, not rewrite it. Look for signals like "Example:", "Here's my writing:", "This is how I write:", "Here's a sample:", or simply a block of prose without any instruction to generate new text.
+  Examples: "I never use semicolons", "That last piece was too formal", "What do you know about my voice?", "Show me an example", "Example: The morning came without ceremony...", "Here's something I wrote: ...", [a paragraph of prose with no explicit write/draft instruction]
+
+CRITICAL: When in doubt between WRITE and CHAT, choose CHAT. Only classify as WRITE when there is an unambiguous instruction to generate new text.
 
 Respond with exactly one word: WRITE, TRANSLATE, or CHAT"""
 
@@ -899,16 +901,28 @@ async def converse_with_voice(
 
     # ── Classify intent ──
     intent = "chat"  # default fallback
-    classifier = _get_intent_classifier()
-    if classifier:
-        try:
-            classification = classifier([
-                {"role": "user", "content": f"{_INTENT_PROMPT}\n\nUser message:\n{req.message[:2000]}"},
-            ]).strip().upper()
-            if classification in ("WRITE", "TRANSLATE", "CHAT"):
-                intent = classification.lower()
-        except Exception:
-            pass  # fall back to chat
+    msg_stripped = req.message.strip()
+    msg_lower = msg_stripped.lower()
+
+    # Hard override: pasted writing examples are always CHAT, never WRITE
+    _example_signals = msg_lower.startswith(("example:", "here's my writing", "here is my writing",
+                                              "here's a sample", "here's something i wrote", "sample:"))
+    _long_prose_no_command = (len(msg_stripped) > 200 and
+        not any(w in msg_lower[:50] for w in ["write", "draft", "compose", "translate", "render", "rewrite"]))
+
+    if _example_signals or _long_prose_no_command:
+        intent = "chat"
+    else:
+        classifier = _get_intent_classifier()
+        if classifier:
+            try:
+                classification = classifier([
+                    {"role": "user", "content": f"{_INTENT_PROMPT}\n\nUser message:\n{req.message[:2000]}"},
+                ]).strip().upper()
+                if classification in ("WRITE", "TRANSLATE", "CHAT"):
+                    intent = classification.lower()
+            except Exception:
+                pass  # fall back to chat
 
     # ── Route based on intent ──
     if intent == "write":

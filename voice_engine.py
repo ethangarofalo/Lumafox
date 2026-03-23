@@ -650,7 +650,45 @@ Write 2-3 paragraphs in this voice."""
         # ── Auto mode: natural dialogue + passive teaching detection ──
         # The LLM responds as the voice, then appends a TEACH: classification tag.
         # The tag is stripped from the visible response and used to auto-save refinements.
-        prompt = f"""You are learning and embodying a voice called "{voice_name}".
+        # Detect if the user is sharing a writing example
+        _msg_stripped = message.strip()
+        _looks_like_example = (
+            _msg_stripped.lower().startswith("example:") or
+            _msg_stripped.lower().startswith("here's my writing") or
+            _msg_stripped.lower().startswith("here is my writing") or
+            _msg_stripped.lower().startswith("here's a sample") or
+            _msg_stripped.lower().startswith("here's something i wrote") or
+            _msg_stripped.lower().startswith("sample:") or
+            # Long prose without an explicit command word is likely an example
+            (len(_msg_stripped) > 200 and not any(w in _msg_stripped.lower()[:40] for w in
+                ["write", "draft", "compose", "translate", "render", "rewrite"]))
+        )
+
+        if _looks_like_example:
+            prompt = f"""You are learning a voice called "{voice_name}".
+
+{voice_text}
+
+{history_text}
+
+The teacher just shared a sample of their writing. Your job is to STUDY it, not rewrite it or
+generate new text. You are a student learning how this person writes.
+
+Respond with EXACTLY this structure:
+1. Two to three specific observations about their writing style in this sample — name concrete
+   grammatical choices, sentence structures, rhetorical patterns, or rhythmic qualities you notice.
+   Be precise (e.g. "long compound sentences joined by commas rather than periods" or "biblical
+   register with contemporary directness"). Do NOT write new prose in their voice.
+2. Then ask ONE follow-up question: either ask for another example of their writing, or offer
+   to write something yourself about a related theme so they can see how well you've learned.
+
+Keep it to 3-5 sentences total. Be a perceptive student, not a performer.
+
+After your response, on a new line write: TEACH:example
+
+TEACHER'S SAMPLE: {message}"""
+        else:
+            prompt = f"""You are learning and embodying a voice called "{voice_name}".
 
 {voice_text}
 
