@@ -679,8 +679,10 @@ Respond with EXACTLY this structure:
    grammatical choices, sentence structures, rhetorical patterns, or rhythmic qualities you notice.
    Be precise (e.g. "long compound sentences joined by commas rather than periods" or "biblical
    register with contemporary directness"). Do NOT write new prose in their voice.
-2. Then ask ONE follow-up question: either ask for another example of their writing, or offer
-   to write something yourself about a related theme so they can see how well you've learned.
+2. Then offer to write something yourself about a SPECIFIC related theme drawn from their sample.
+   Identify a concrete thematic thread in their writing and propose it by name — e.g. "Would you
+   like me to try writing in your voice about [specific theme you noticed]?" The theme should feel
+   like a natural sibling to what they wrote about, not a restatement of it.
 
 Keep it to 3-5 sentences total. Be a perceptive student, not a performer.
 

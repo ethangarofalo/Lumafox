@@ -354,7 +354,7 @@
     .past-conv-item-meta {
       font-size: 11px; color: var(--text-faint); font-family: var(--font-sans);
     }
-    .chat-messages { flex: 1; overflow-y: auto; padding: 24px 32px; position: relative; }
+    .chat-messages { flex: 1; overflow-y: auto; padding: 24px 32px; position: relative; z-index: 1; }
 
     .msg { margin-bottom: 28px; max-width: 720px; }
     .msg.user .msg-content { color: var(--text); }
@@ -381,7 +381,7 @@
 
     .chat-input-area {
       border-top: 1px solid var(--border); padding: 16px 32px;
-      background: var(--bg-surface);
+      background: var(--bg-surface); position: relative; z-index: 1;
     }
     .chat-commands {
       display: flex; gap: 6px; margin-bottom: 10px; flex-wrap: wrap;
@@ -6282,7 +6282,21 @@ function ParticleField() {
     let travelers = [];
 
     const onThinkStart = () => { targetIntensity = 1; spawnTravelers(); };
-    const onThinkEnd = () => { targetIntensity = 0; };
+    const onThinkEnd = () => {
+      targetIntensity = 0;
+      thinkingIntensity = 0;  // Snap to zero immediately — no lingering glow
+      travelers = [];          // Clear all pulse travelers instantly
+      // Push particles back outward from center
+      const cx = W / 2, cy = H / 2;
+      particles.forEach(p => {
+        const dx = p.x - cx, dy = p.y - cy;
+        const d = Math.sqrt(dx * dx + dy * dy);
+        if (d < 150 && d > 0) {
+          p.vx += (dx / d) * 0.5;
+          p.vy += (dy / d) * 0.5;
+        }
+      });
+    };
     window.addEventListener("voice:think:start", onThinkStart);
     window.addEventListener("voice:think:end", onThinkEnd);
 
