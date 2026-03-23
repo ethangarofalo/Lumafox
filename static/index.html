@@ -4824,7 +4824,7 @@ function CouncilView({ isGuest, onNeedAuth }) {
           <div className="write-label" style={{ marginBottom: 14 }}>Individual Positions</div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 12, marginBottom: 28 }}>
             {result.thinkers.map(t => (
-              <ThinkerCard key={t.name} thinker={t} />
+              <ThinkerCard key={t.name} thinker={t} deliberationResult={result} />
             ))}
           </div>
 
@@ -5196,8 +5196,35 @@ function SwarmTraditionCard({ card }) {
   );
 }
 
-function ThinkerCard({ thinker }) {
+function ThinkerCard({ thinker, deliberationResult }) {
   const [expanded, setExpanded] = useState(false);
+  const [askOpen, setAskOpen] = useState(false);
+  const [askInput, setAskInput] = useState("");
+  const [askLoading, setAskLoading] = useState(false);
+  const [conversation, setConversation] = useState([]); // [{role, content}]
+
+  const interrogate = async () => {
+    if (!askInput.trim() || askLoading) return;
+    const q = askInput.trim();
+    setAskInput("");
+    setConversation(prev => [...prev, { role: "user", content: q }]);
+    setAskLoading(true);
+    try {
+      const result = await api("/council/interrogate", {
+        method: "POST",
+        body: JSON.stringify({
+          thinker: thinker.name,
+          question: q,
+          deliberation_context: deliberationResult || {},
+        }),
+      });
+      setConversation(prev => [...prev, { role: "thinker", content: result.response }]);
+    } catch (e) {
+      setConversation(prev => [...prev, { role: "thinker", content: `Error: ${e.message}` }]);
+    }
+    setAskLoading(false);
+  };
+
   return (
     <div style={{
       background: "var(--bg-elevated)", border: "1px solid var(--border)",
@@ -5212,8 +5239,8 @@ function ThinkerCard({ thinker }) {
       <p style={{ fontFamily: "var(--font-sans)", fontSize: 13, color: "var(--text-dim)", lineHeight: 1.65, marginBottom: 10 }}>
         {thinker.final_position || thinker.ideal_position}
       </p>
-      {thinker.key_argument && (
-        <>
+      <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
+        {thinker.key_argument && (
           <button onClick={() => setExpanded(e => !e)} style={{
             background: "none", border: "none", cursor: "pointer",
             fontFamily: "var(--font-sans)", fontSize: 11, color: "var(--text-faint)",
@@ -5221,17 +5248,78 @@ function ThinkerCard({ thinker }) {
           }}>
             {expanded ? "▲ Less" : "▼ Full argument"}
           </button>
-          {expanded && (
-            <p style={{ fontFamily: "var(--font-sans)", fontSize: 13, color: "var(--text-dim)", lineHeight: 1.7, marginTop: 10 }}>
-              {thinker.key_argument}
-            </p>
-          )}
-        </>
+        )}
+        {deliberationResult && (
+          <button onClick={() => setAskOpen(o => !o)} style={{
+            background: askOpen ? "rgba(200,164,110,0.1)" : "none",
+            border: "1px solid rgba(200,164,110,0.2)", borderRadius: 6,
+            cursor: "pointer", fontFamily: "var(--font-sans)", fontSize: 11,
+            color: "var(--accent)", padding: "3px 10px", letterSpacing: "0.03em",
+          }}>
+            {askOpen ? "✕ Close" : `Ask ${thinker.name}`}
+          </button>
+        )}
+      </div>
+      {expanded && thinker.key_argument && (
+        <p style={{ fontFamily: "var(--font-sans)", fontSize: 13, color: "var(--text-dim)", lineHeight: 1.7, marginTop: 10 }}>
+          {thinker.key_argument}
+        </p>
       )}
       {thinker.private_thought && expanded && (
         <p style={{ fontFamily: "var(--font-sans)", fontSize: 12, color: "var(--text-faint)", fontStyle: "italic", marginTop: 8, borderTop: "1px solid var(--border)", paddingTop: 8 }}>
           Private thought: "{thinker.private_thought}"
         </p>
+      )}
+
+      {/* ── Interrogation panel ── */}
+      {askOpen && (
+        <div style={{ marginTop: 14, borderTop: "1px solid var(--border)", paddingTop: 12 }}>
+          {conversation.length > 0 && (
+            <div style={{ maxHeight: 300, overflowY: "auto", marginBottom: 10 }}>
+              {conversation.map((m, i) => (
+                <div key={i} style={{ marginBottom: 10 }}>
+                  <div style={{
+                    fontSize: 10, textTransform: "uppercase", letterSpacing: "0.15em",
+                    color: m.role === "user" ? "var(--text-faint)" : "var(--accent)",
+                    fontFamily: "var(--font-sans)", marginBottom: 3,
+                  }}>
+                    {m.role === "user" ? "You" : thinker.name}
+                  </div>
+                  <div style={{
+                    fontSize: 13, color: "var(--text-dim)", lineHeight: 1.65,
+                    fontFamily: m.role === "user" ? "var(--font-sans)" : "var(--font)",
+                    whiteSpace: "pre-wrap",
+                  }}>
+                    {m.content}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+          <div style={{ display: "flex", gap: 8 }}>
+            <input
+              type="text"
+              placeholder={`Ask ${thinker.name} a follow-up…`}
+              value={askInput}
+              onChange={e => setAskInput(e.target.value)}
+              onKeyDown={e => { if (e.key === "Enter") interrogate(); }}
+              style={{
+                flex: 1, padding: "8px 12px", fontSize: 13,
+                fontFamily: "var(--font-sans)", background: "var(--bg-surface, #111)",
+                border: "1px solid var(--border)", borderRadius: 6,
+                color: "var(--text)", outline: "none",
+              }}
+            />
+            <button onClick={interrogate} disabled={askLoading || !askInput.trim()} style={{
+              padding: "8px 14px", fontSize: 12, fontFamily: "var(--font-sans)",
+              background: "var(--accent)", color: "#111", border: "none",
+              borderRadius: 6, cursor: "pointer", fontWeight: 600,
+              opacity: (askLoading || !askInput.trim()) ? 0.4 : 1,
+            }}>
+              {askLoading ? "…" : "Ask"}
+            </button>
+          </div>
+        </div>
       )}
     </div>
   );

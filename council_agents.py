@@ -308,12 +308,35 @@ You MUST call finalize_position to submit your stance for this round."""
     # Build user message
     others_text = ""
     if other_positions:
-        others_text = "\n\nWHAT OTHERS HAVE SAID THIS ROUND:\n"
-        for p in other_positions:
-            others_text += f"\n{p['name']}:\n"
-            others_text += f"  Position: {p.get('position', '')}\n"
-            if p.get("argument"):
-                others_text += f"  Argument: {p['argument'][:350]}\n"
+        if round_num == 1:
+            # Round 1 with others: just awareness (e.g., mid-round exposure)
+            others_text = "\n\nWHAT OTHERS HAVE SAID:\n"
+            for p in other_positions:
+                others_text += f"\n{p['name']}:\n"
+                others_text += f"  Position: {p.get('position', '')}\n"
+                if p.get("argument"):
+                    others_text += f"  Argument: {p['argument'][:350]}\n"
+        else:
+            # Round 2+: ACTIVE DEBATE — thinkers must engage with each other
+            others_text = "\n\nTHE OTHER THINKERS HAVE SPOKEN. HERE ARE THEIR POSITIONS:\n"
+            for p in other_positions:
+                others_text += f"\n{p['name']}:\n"
+                others_text += f"  Position: {p.get('position', '')}\n"
+                if p.get("argument"):
+                    others_text += f"  Argument: {p['argument'][:500]}\n"
+            others_text += (
+                "\n\nYou have now heard the others. This is your chance to respond directly. "
+                "You MUST engage with what was said — not repeat your first-round position unchanged. "
+                "Specifically:\n"
+                "- Name which thinker(s) you find most compelling and why.\n"
+                "- Name which thinker(s) you think are wrong and explain what they are missing.\n"
+                "- If someone changed your mind (even partially), say so — and say what moved you.\n"
+                "- If no one moved you, explain why their arguments failed to land.\n"
+                "- You may sharpen, soften, or completely reverse your position. Intellectual honesty "
+                "is more important than consistency.\n\n"
+                "The goal is not agreement. The goal is that the person reading this debate "
+                "understands the real fault lines."
+            )
 
     user_msg = (
         f"SCENARIO: {scenario}\n\n"
@@ -528,10 +551,10 @@ async def run_council_agents(
     if mode not in VALID_MODES:
         raise ValueError(f"mode must be one of {VALID_MODES}")
 
-    # Lite mode: 3 fixed thinkers, 1 round, faster + cheaper
+    # Lite mode: 3 fixed thinkers, 2 rounds (debate matters even at lite scale)
     if lite:
         thinker_names = _LITE_THINKERS
-        rounds = 1
+        rounds = 2
 
     if not (2 <= len(thinker_names) <= 6):
         raise ValueError("Select between 2 and 6 thinkers")

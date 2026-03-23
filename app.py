@@ -1522,6 +1522,101 @@ async def get_council_credits_info(user_id: str = Depends(get_current_user)):
     }
 
 
+class InterrogateRequest(BaseModel):
+    thinker: str = Field(..., description="Name of the thinker to interrogate")
+    question: str = Field(..., description="Follow-up question for this thinker", max_length=2000)
+    deliberation_context: dict = Field(
+        ...,
+        description="The full council result from the original deliberation",
+    )
+
+
+class InterrogateResponse(BaseModel):
+    thinker: str
+    response: str
+
+
+@app.post("/council/interrogate", response_model=InterrogateResponse)
+async def interrogate_thinker(
+    req: InterrogateRequest,
+    user_id: str = Depends(get_current_user),
+):
+    """Ask a follow-up question to a specific thinker after deliberation.
+
+    The thinker responds in character, with full awareness of the deliberation
+    that just occurred — what others said, where they agreed and disagreed.
+    This turns the council from a one-shot output into a conversation.
+    """
+    from council_agents import _PROFILES, _load_tradition, _load_memory, _search_memory
+
+    if req.thinker not in _PROFILES:
+        raise HTTPException(400, f"Unknown thinker: {req.thinker}. Valid: {COUNCIL_NAMES}")
+
+    profile = _PROFILES[req.thinker]
+    tradition_prompt = _load_tradition(profile["tradition"])
+
+    # Build context from the deliberation
+    delib = req.deliberation_context
+    original_question = delib.get("question", "")
+    thinkers = delib.get("thinkers", [])
+
+    # This thinker's own position
+    own = next((t for t in thinkers if t["name"] == req.thinker), None)
+    own_position = own["final_position"] if own else "You did not participate."
+    own_argument = own.get("key_argument", "") if own else ""
+
+    # Other thinkers' positions
+    others_summary = "\n".join(
+        f"- {t['name']}: {t['final_position']}"
+        for t in thinkers if t["name"] != req.thinker
+    )
+
+    synthesis = delib.get("synthesis", "")
+
+    system_prompt = f"""You are {req.thinker}.
+
+{profile['backstory']}
+
+YOUR TRADITION:
+{tradition_prompt[:2000]}
+
+YOUR PSYCHOLOGY:
+{profile['psychology']}
+
+You have just participated in a council deliberation on this question:
+"{original_question}"
+
+YOUR POSITION was: {own_position}
+
+YOUR ARGUMENT was: {own_argument[:600]}
+
+THE OTHER THINKERS said:
+{others_summary}
+
+THE SYNTHESIS concluded:
+{synthesis[:600]}
+
+Now the person who asked the original question wants to ask you something directly.
+Respond in character — with the weight of the full deliberation behind you. You know what
+the others said. You can reference their arguments, agree or disagree with specific points,
+and speak from the position you arrived at.
+
+Keep your response focused and conversational — 2-4 paragraphs. This is a follow-up
+dialogue, not a speech. If the question challenges your position, engage honestly.
+If it asks you to go deeper, go deeper."""
+
+    client = _anthropic.Anthropic()
+    response = client.messages.create(
+        model="claude-sonnet-4-20250514",
+        max_tokens=1200,
+        temperature=0.7,
+        system=system_prompt,
+        messages=[{"role": "user", "content": req.question}],
+    )
+
+    return InterrogateResponse(thinker=req.thinker, response=response.content[0].text)
+
+
 @app.get("/council/thinkers")
 async def list_thinkers():
     """Return available council members. No auth required."""
