@@ -7266,22 +7266,25 @@ function App() {
                   })}
                 </div>
               )}
-              {/* Conversations shortcut */}
+              {/* Conversations shortcut — same style as Voice/Analyze nav */}
               {activeProfile && (
-                <button
-                  onClick={() => { setHistorySignal(s => s + 1); setMode("voice"); setMobileSidebarOpen(false); }}
-                  style={{
-                    width: "calc(100% - 16px)", display: "flex", alignItems: "center", gap: 8,
-                    padding: "8px 12px", margin: "6px 8px 0", background: "none",
-                    border: "1px dashed var(--border)", borderRadius: 6, cursor: "pointer",
-                    color: "var(--text-faint)", fontFamily: "var(--font-sans)", fontSize: 12,
-                    textAlign: "left", transition: "all 0.15s",
-                  }}
-                  onMouseEnter={e => { e.currentTarget.style.borderColor = "var(--accent-dim)"; e.currentTarget.style.color = "var(--text-dim)"; }}
-                  onMouseLeave={e => { e.currentTarget.style.borderColor = "var(--border)"; e.currentTarget.style.color = "var(--text-faint)"; }}
-                >
-                  <span style={{ fontSize: 13 }}>◷</span> Conversations
-                </button>
+                <div style={{ padding: "2px 8px 0" }}>
+                  <button
+                    onClick={() => { setHistorySignal(s => s + 1); setMode("voice"); setMobileSidebarOpen(false); }}
+                    style={{
+                      width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between",
+                      padding: "9px 12px", background: "none",
+                      border: "none", borderRadius: 6, cursor: "pointer",
+                      color: "var(--text-dim)",
+                      fontFamily: "var(--font-sans)", fontSize: 13, textAlign: "left", transition: "all 0.15s",
+                    }}
+                    onMouseEnter={e => { e.currentTarget.style.background = "var(--accent-glow)"; e.currentTarget.style.color = "var(--accent)"; }}
+                    onMouseLeave={e => { e.currentTarget.style.background = "none"; e.currentTarget.style.color = "var(--text-dim)"; }}
+                  >
+                    <span>Conversations</span>
+                    <span style={{ fontSize: 10, opacity: 0.5 }}>Past sessions</span>
+                  </button>
+                </div>
               )}
               <button className="new-profile-btn" style={{ margin: "8px 12px 0" }} onClick={() => { setShowCreate(true); setMobileSidebarOpen(false); }}>
                 + New Voice
