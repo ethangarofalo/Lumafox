@@ -659,7 +659,59 @@
     .user-badge {
       font-size: 12px; color: var(--text-dim); font-family: var(--font-sans);
       display: flex; align-items: center; gap: 12px;
+      position: relative;
     }
+    .user-menu-trigger {
+      display: flex; align-items: center; gap: 8px;
+      background: none; border: 1px solid transparent; border-radius: 8px;
+      color: var(--text-dim); cursor: pointer; padding: 6px 12px;
+      font-family: var(--font-sans); font-size: 13px;
+      transition: all 0.15s;
+    }
+    .user-menu-trigger:hover {
+      border-color: var(--border); color: var(--text);
+      background: rgba(200,164,110,0.04);
+    }
+    .user-menu-trigger .user-avatar-sm {
+      width: 24px; height: 24px; border-radius: 50%;
+      background: var(--accent-glow); border: 1px solid var(--accent-dim);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 12px; flex-shrink: 0;
+    }
+    .user-menu-trigger .user-avatar-sm img {
+      width: 100%; height: 100%; object-fit: contain;
+    }
+    .user-menu-trigger .chevron {
+      font-size: 10px; opacity: 0.5; transition: transform 0.2s;
+    }
+    .user-menu-trigger.open .chevron { transform: rotate(180deg); }
+    .user-dropdown {
+      position: absolute; right: 0; top: calc(100% + 6px);
+      background: var(--bg-elevated); border: 1px solid var(--border);
+      border-radius: 10px; overflow: hidden; min-width: 200px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.4); z-index: 200;
+    }
+    .user-dropdown-header {
+      padding: 14px 16px 10px; border-bottom: 1px solid var(--border);
+    }
+    .user-dropdown-header .name {
+      font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 2px;
+    }
+    .user-dropdown-header .email {
+      font-size: 12px; color: var(--text-faint);
+    }
+    .user-dropdown-item {
+      display: flex; align-items: center; gap: 10px; width: 100%;
+      background: none; border: none; color: var(--text);
+      padding: 10px 16px; cursor: pointer; font-size: 13px;
+      font-family: var(--font-sans); text-align: left;
+      transition: background 0.1s;
+    }
+    .user-dropdown-item:hover { background: rgba(200,164,110,0.06); }
+    .user-dropdown-item .item-icon { font-size: 14px; opacity: 0.6; width: 18px; text-align: center; }
+    .user-dropdown-divider { height: 1px; background: var(--border); margin: 4px 12px; }
+    .user-dropdown-item.danger { color: #c55; }
+    .user-dropdown-item.danger:hover { background: rgba(220,80,80,0.06); }
     .logout-btn {
       background: none; border: none; color: var(--text-faint); cursor: pointer;
       font-family: var(--font-sans); font-size: 12px; padding: 0;
@@ -1755,6 +1807,57 @@ function SaveRefinementPicker({ agentMsg, userMsg, profileId, onSaved, onClose }
 
 // ── Past Conversations panel ──
 // ── Profile overflow menu (⋯) ──
+// ── User account dropdown menu ──
+function UserMenu({ user, showCouncil, onNavigateVoice, onNavigateCouncil, onLogout }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const close = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener("mousedown", close);
+    return () => document.removeEventListener("mousedown", close);
+  }, [open]);
+
+  const firstName = (user.name || user.email || "").split(/[\s@]/)[0];
+
+  return (
+    <div ref={ref} className="user-badge">
+      <button className={`user-menu-trigger ${open ? "open" : ""}`} onClick={() => setOpen(!open)}>
+        <div className="user-avatar-sm">
+          <img src="/static/lumafox-icon.png" alt="" />
+        </div>
+        <span>{firstName}</span>
+        <span className="chevron">▾</span>
+      </button>
+      {open && (
+        <div className="user-dropdown">
+          <div className="user-dropdown-header">
+            <div className="name">{user.name || firstName}</div>
+            {user.email && <div className="email">{user.email}</div>}
+          </div>
+          <div style={{ padding: "4px 0" }}>
+            <button className="user-dropdown-item" onClick={() => { onNavigateVoice(); setOpen(false); }}>
+              <span className="item-icon">◈</span> Voice
+              {!showCouncil && <span style={{ marginLeft: "auto", fontSize: 10, color: "var(--text-faint)" }}>active</span>}
+            </button>
+            <button className="user-dropdown-item" onClick={() => { onNavigateCouncil(); setOpen(false); }}>
+              <span className="item-icon">△</span> Council
+              {showCouncil && <span style={{ marginLeft: "auto", fontSize: 10, color: "var(--text-faint)" }}>active</span>}
+            </button>
+          </div>
+          <div className="user-dropdown-divider" />
+          <div style={{ padding: "4px 0" }}>
+            <button className="user-dropdown-item danger" onClick={() => { onLogout(); setOpen(false); }}>
+              <span className="item-icon">↗</span> Sign out
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function ProfileMenu({ onExport, onDelete }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
@@ -7066,19 +7169,13 @@ function App() {
               </button>
             </div>
           ) : (
-            <div className="user-badge">
-              <span style={{ fontSize: 12, color: "var(--text-dim)" }}>{user.name || user.email}</span>
-              <select
-                title="Set your home screen"
-                value={localStorage.getItem("lumafox_home") || "voice"}
-                onChange={e => localStorage.setItem("lumafox_home", e.target.value)}
-                style={{ background: "none", border: "none", color: "var(--text-dim)", fontSize: 11, fontFamily: "var(--font-sans)", cursor: "pointer", outline: "none" }}
-              >
-                <option value="voice">↩ Home: Voice</option>
-                <option value="council">↩ Home: Council</option>
-              </select>
-              <button className="logout-btn" onClick={handleLogout}>Sign out</button>
-            </div>
+            <UserMenu
+              user={user}
+              showCouncil={showCouncil}
+              onNavigateVoice={() => { setShowCouncil(false); setMobileSidebarOpen(false); }}
+              onNavigateCouncil={() => { setShowCouncil(true); setMobileSidebarOpen(false); }}
+              onLogout={handleLogout}
+            />
           )}
         </div>
       </div>
