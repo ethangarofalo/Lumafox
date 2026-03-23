@@ -403,10 +403,11 @@
       background: var(--accent); border: none; color: var(--bg);
       padding: 12px 20px; border-radius: var(--radius); cursor: pointer;
       font-family: var(--font-sans); font-size: 14px; font-weight: 600;
-      white-space: nowrap; transition: opacity 0.15s;
+      white-space: nowrap; transition: all 0.2s ease;
     }
-    .send-btn:hover { opacity: 0.85; }
-    .send-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .send-btn:hover { opacity: 0.9; transform: translateY(-1px); box-shadow: 0 3px 12px rgba(217,168,60,0.25); }
+    .send-btn:active { transform: translateY(0); box-shadow: none; }
+    .send-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; box-shadow: none; }
 
     /* ── Write Mode ── */
     .write-container { flex: 1; display: flex; flex-direction: column; padding: 32px; overflow-y: auto; }
@@ -435,14 +436,37 @@
       margin-top: 16px; padding: 10px 24px; background: var(--accent);
       border: none; color: var(--bg); border-radius: var(--radius);
       cursor: pointer; font-family: var(--font-sans); font-size: 14px;
-      font-weight: 600; transition: opacity 0.15s;
+      font-weight: 600; transition: all 0.2s ease;
+      position: relative; overflow: hidden;
     }
-    .action-btn:hover { opacity: 0.85; }
-    .action-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .action-btn:hover {
+      opacity: 0.9; transform: translateY(-1px);
+      box-shadow: 0 4px 16px rgba(217,168,60,0.25);
+    }
+    .action-btn:active { transform: translateY(0); box-shadow: none; }
+    .action-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; box-shadow: none; }
     .action-btn.secondary {
       background: none; border: 1px solid var(--border); color: var(--text-dim);
     }
-    .action-btn.secondary:hover { border-color: var(--accent-dim); color: var(--text); }
+    .action-btn.secondary:hover {
+      border-color: var(--accent-dim); color: var(--text);
+      box-shadow: 0 2px 8px rgba(217,168,60,0.08); transform: translateY(-1px);
+    }
+
+    /* ── CTA attention pulse — draws eye after inactivity ── */
+    @keyframes ctaPulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(217,168,60,0); }
+      50% { box-shadow: 0 0 0 8px rgba(217,168,60,0.12); }
+    }
+    .cta-pulse { animation: ctaPulse 2.5s ease-in-out infinite; }
+    .cta-pulse:hover { animation: none; }
+
+    /* ── Checkmark pop for onboarding steps ── */
+    @keyframes checkPop {
+      0% { transform: scale(0) rotate(-20deg); opacity: 0; }
+      60% { transform: scale(1.3) rotate(5deg); opacity: 1; }
+      100% { transform: scale(1) rotate(0deg); opacity: 1; }
+    }
 
     /* ── Empty States ── */
     .empty-state {
@@ -631,12 +655,23 @@
       font-family: var(--font-sans); font-size: 13px;
       background: var(--bg-elevated); border: 1px solid var(--border);
       color: var(--text); pointer-events: auto;
-      animation: toastIn 0.2s ease; max-width: 360px; line-height: 1.4;
+      animation: toastIn 0.3s cubic-bezier(0.2, 0.8, 0.3, 1); max-width: 360px; line-height: 1.4;
+      transition: padding 0.4s ease, font-weight 0.3s ease;
     }
-    .toast.success { border-color: var(--green); }
+    .toast.success {
+      border-color: var(--green);
+      /* Literary emphasis — brief padding expansion creates a "pause of satisfaction" */
+      animation: toastIn 0.3s cubic-bezier(0.2, 0.8, 0.3, 1), toastBreathe 0.8s ease 0.1s;
+      font-weight: 500;
+    }
     .toast.error { border-color: var(--red); color: var(--red); }
     .toast.info { border-color: var(--accent-dim); }
-    @keyframes toastIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes toastIn { from { opacity: 0; transform: translateY(8px) scale(0.97); } to { opacity: 1; transform: translateY(0) scale(1); } }
+    @keyframes toastBreathe {
+      0% { padding: 12px 18px; }
+      40% { padding: 16px 24px; }
+      100% { padding: 12px 18px; }
+    }
 
     /* ── Landing-page entry animation ── */
     @keyframes slideInFromBelow {
@@ -2239,6 +2274,93 @@ const PROMPT_STARTERS = [
 ];
 
 // Rotating placeholder examples
+// ── Onboarding Progress Steps ──
+// Shows "3 steps to start" for new profiles with animated checkmarks
+function OnboardingSteps({ refinementCount, hasUploads, hasSentMessage }) {
+  const steps = [
+    {
+      label: "Say something to your voice",
+      desc: "A rule, a preference, or ask it to write",
+      done: hasSentMessage,
+    },
+    {
+      label: "Attach a writing sample",
+      desc: "Drop in something you're proud of",
+      done: hasUploads,
+    },
+    {
+      label: "Reach your first refinement",
+      desc: "The voice learns from each interaction",
+      done: refinementCount >= 1,
+    },
+  ];
+
+  const completed = steps.filter(s => s.done).length;
+
+  return (
+    <div style={{ margin: "16px 0 8px", maxWidth: 400 }}>
+      {/* Progress line */}
+      <div style={{
+        height: 3, borderRadius: 2, background: "rgba(200,164,110,0.08)",
+        marginBottom: 16, overflow: "hidden",
+      }}>
+        <div style={{
+          height: "100%", borderRadius: 2,
+          background: "linear-gradient(90deg, var(--accent), #e8c87a)",
+          width: `${(completed / 3) * 100}%`,
+          transition: "width 0.6s cubic-bezier(0.4, 0, 0.2, 1)",
+          boxShadow: completed > 0 ? "0 0 8px rgba(217,168,60,0.3)" : "none",
+        }} />
+      </div>
+
+      <div style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: "0.15em", color: "var(--text-faint)", fontFamily: "var(--font-sans)", marginBottom: 10 }}>
+        {completed}/3 steps to start
+      </div>
+
+      {steps.map((s, i) => (
+        <div key={i} style={{
+          display: "flex", alignItems: "flex-start", gap: 10,
+          marginBottom: 10, opacity: s.done ? 0.5 : 1,
+          transition: "opacity 0.4s ease",
+        }}>
+          {/* Checkmark circle */}
+          <div style={{
+            width: 20, height: 20, borderRadius: "50%", flexShrink: 0,
+            border: s.done ? "none" : "1.5px solid rgba(200,164,110,0.25)",
+            background: s.done ? "var(--accent)" : "none",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            transition: "all 0.4s cubic-bezier(0.2, 0.8, 0.3, 1)",
+            marginTop: 1,
+          }}>
+            {s.done && (
+              <svg width="11" height="11" viewBox="0 0 14 14" fill="none"
+                style={{ animation: "checkPop 0.35s cubic-bezier(0.2, 0.8, 0.3, 1)" }}>
+                <path d="M3 7l3 3 5-6" stroke="#111" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            )}
+          </div>
+          <div>
+            <div style={{
+              fontSize: 13, color: s.done ? "var(--text-faint)" : "var(--text-dim)",
+              fontFamily: "var(--font-sans)", fontWeight: s.done ? 400 : 500,
+              textDecoration: s.done ? "line-through" : "none",
+              transition: "all 0.3s ease",
+            }}>
+              {s.label}
+            </div>
+            {!s.done && (
+              <div style={{ fontSize: 11, color: "var(--text-faint)", fontFamily: "var(--font-sans)", marginTop: 2 }}>
+                {s.desc}
+              </div>
+            )}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+
 const PLACEHOLDER_EXAMPLES = [
   "Paste a paragraph that sounds like you at your best…",
   "\"Every dawn, he returns to the water with mended nets…\"",
@@ -2273,11 +2395,23 @@ function VoiceView({ profileId, profileName, refinementCount, onRefinementSaved,
   const [correctionText, setCorrectionText] = useState("");
   const [correctionLoading, setCorrectionLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [sendPulse, setSendPulse] = useState(false);
   const messagesEnd = useRef(null);
   const textareaRef = useRef(null);
   const fileInputRef = useRef(null);
+  const idleTimer = useRef(null);
 
   const userTurns = messages.filter(m => m.role === "user").length;
+
+  // ── Inactivity pulse — draw attention to Send after idle with text ──
+  useEffect(() => {
+    if (idleTimer.current) clearTimeout(idleTimer.current);
+    setSendPulse(false);
+    if (input.trim().length > 10 && !loading) {
+      idleTimer.current = setTimeout(() => setSendPulse(true), 5000);
+    }
+    return () => { if (idleTimer.current) clearTimeout(idleTimer.current); };
+  }, [input, loading]);
 
   // ── Scroll to bottom ──
   useEffect(() => { messagesEnd.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
@@ -2629,6 +2763,15 @@ function VoiceView({ profileId, profileName, refinementCount, onRefinementSaved,
                 </div>
               )}
 
+              {/* Onboarding steps — shown after greeting for new profiles */}
+              {m.isGreeting && isNew && (
+                <OnboardingSteps
+                  refinementCount={refinementCount}
+                  hasUploads={false}
+                  hasSentMessage={userTurns > 0}
+                />
+              )}
+
               {/* Refinement badge */}
               {m.refinement && (
                 <span className="msg-badge">
@@ -2720,7 +2863,7 @@ function VoiceView({ profileId, profileName, refinementCount, onRefinementSaved,
       )}
 
       {/* ── Input area ── */}
-      <div className="chat-input-area" style={{ padding: "12px 24px 16px" }}>
+      <div className="chat-input-area" style={{ padding: "10px 20px 12px" }}>
         {showCouncilOrb && (
           <button className="council-orb" style={{ marginBottom: 6 }}
             onClick={() => { setInlineCouncil({ question: input }); setInput(""); }}>
@@ -2743,12 +2886,12 @@ function VoiceView({ profileId, profileName, refinementCount, onRefinementSaved,
         />
         <textarea
           ref={textareaRef}
-          className="chat-textarea" rows={4}
+          className="chat-textarea" rows={3}
           placeholder={PLACEHOLDER_EXAMPLES[placeholderIdx]}
           value={input} onChange={handleInput} onKeyDown={handleKeyDown}
           style={{
-            width: "100%", resize: "none", minHeight: 100,
-            padding: "14px 16px", fontSize: 15, lineHeight: 1.6,
+            width: "100%", resize: "none", minHeight: 72,
+            padding: "12px 14px", fontSize: 15, lineHeight: 1.6,
             borderRadius: 10, border: "1px solid var(--border)",
             background: "var(--bg-elevated, #141414)",
             color: "var(--text)", fontFamily: "var(--font)",
@@ -2767,7 +2910,7 @@ function VoiceView({ profileId, profileName, refinementCount, onRefinementSaved,
               transition: "color 0.15s",
             }}
           >{uploading ? "…" : "📎 Attach writing"}</button>
-          <button className="send-btn" onClick={() => send()} disabled={loading || !input.trim()}
+          <button className={`send-btn${sendPulse ? " cta-pulse" : ""}`} onClick={() => { send(); setSendPulse(false); }} disabled={loading || !input.trim()}
             style={{ padding: "8px 20px", fontSize: 14, borderRadius: 8 }}>
             Send
           </button>
