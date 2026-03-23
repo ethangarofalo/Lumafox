@@ -2109,7 +2109,7 @@ const CAPABILITY_HINTS = [
   { icon: "◎", text: "Show me what my voice sounds like right now — write anything" },
 ];
 
-function VoiceView({ profileId, profileName, refinementCount, onRefinementSaved }) {
+function VoiceView({ profileId, profileName, refinementCount, onRefinementSaved, onDiscover }) {
   const isNew = refinementCount === 0;
   const [sessionId] = useState(() => new Date().toISOString().replace(/[:.]/g, "-"));
 
@@ -2396,6 +2396,32 @@ function VoiceView({ profileId, profileName, refinementCount, onRefinementSaved 
               ))}
             </div>
           </div>
+        )}
+
+        {/* ── Discovery banner for new profiles ── */}
+        {isNew && onDiscover && (
+          <button onClick={onDiscover} style={{
+            display: "flex", alignItems: "center", gap: 12,
+            width: "100%", padding: "14px 18px", marginBottom: 8,
+            background: "linear-gradient(135deg, rgba(200,164,110,0.06), rgba(200,164,110,0.02))",
+            border: "1px solid rgba(200,164,110,0.15)", borderRadius: 10,
+            color: "var(--text)", cursor: "pointer", textAlign: "left",
+            transition: "border-color 0.15s",
+          }}
+            onMouseEnter={e => e.currentTarget.style.borderColor = "rgba(200,164,110,0.35)"}
+            onMouseLeave={e => e.currentTarget.style.borderColor = "rgba(200,164,110,0.15)"}
+          >
+            <span style={{ fontSize: 20, flexShrink: 0 }}>◇</span>
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 600, fontFamily: "var(--font-sans)", color: "var(--accent)", marginBottom: 2 }}>
+                Discover your style
+              </div>
+              <div style={{ fontSize: 12, color: "var(--text-dim)", fontFamily: "var(--font-sans)" }}>
+                Pick between sentence pairs — maps your voice in 2 minutes
+              </div>
+            </div>
+            <span style={{ marginLeft: "auto", color: "var(--text-dim)", fontSize: 16 }}>→</span>
+          </button>
         )}
 
         {/* ── Messages ── */}
@@ -6031,7 +6057,7 @@ function App() {
   const [user, setUserState] = useState(getUser);
   const [profiles, setProfiles] = useState([]);
   const [activeProfile, setActiveProfile] = useState(null);
-  const [mode, setMode] = useState("home");
+  const [mode, setMode] = useState("voice");
   const [showCouncil, setShowCouncil] = useState(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
@@ -6151,7 +6177,7 @@ function App() {
     setProfiles(prev => [profile, ...prev]);
     setActiveProfile(profile);
     setShowCreate(false);
-    setMode("home");
+    setMode("voice");
   };
 
   const handleRefinementSaved = (count) => {
@@ -6316,7 +6342,7 @@ function App() {
                     key={p.profile_id}
                     p={p}
                     active={activeProfile?.profile_id === p.profile_id}
-                    onSelect={() => { setActiveProfile(p); setMode("home"); setMobileSidebarOpen(false); }}
+                    onSelect={() => { setActiveProfile(p); setMode("voice"); setMobileSidebarOpen(false); }}
                     onRenamed={(newName) => {
                       setProfiles(prev => prev.map(x => x.profile_id === p.profile_id ? {...x, name: newName} : x));
                       if (activeProfile?.profile_id === p.profile_id) setActiveProfile(prev => ({...prev, name: newName}));
@@ -6424,7 +6450,31 @@ function App() {
                   </button>
                   <div>
                     <div className="profile-header-name">{activeProfile.name}</div>
-                    <div className="profile-header-meta">{activeProfile.refinement_count} refinements</div>
+                    <div className="profile-header-meta" style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                      {(() => {
+                        const { current, next, progress, milestoneIndex } = getVoiceMaturity(activeProfile.refinement_count);
+                        const overall = (milestoneIndex + progress) / (VOICE_MILESTONES.length - 1);
+                        return (
+                          <>
+                            <span style={{ fontSize: 13 }}>{current.icon}</span>
+                            <span>{current.label}</span>
+                            <span style={{ color: "var(--accent)" }}>· {activeProfile.refinement_count}</span>
+                            <div style={{
+                              width: 48, height: 4, borderRadius: 2,
+                              background: "rgba(200,164,110,0.1)", overflow: "hidden",
+                              marginLeft: 2,
+                            }}>
+                              <div style={{
+                                height: "100%", borderRadius: 2,
+                                background: "var(--accent)",
+                                width: `${Math.max(overall * 100, 4)}%`,
+                                transition: "width 0.4s ease",
+                              }} />
+                            </div>
+                          </>
+                        );
+                      })()}
+                    </div>
                   </div>
                 </div>
                 <div className="profile-header-actions">
@@ -6433,7 +6483,7 @@ function App() {
               </div>
 
               {/* ── Persistent tool nav ── */}
-              {mode !== "home" && mode !== "discover" && (
+              {mode !== "discover" && (
                 <div style={{
                   display: "flex", alignItems: "center", gap: 2, padding: "6px 14px",
                   borderBottom: "1px solid var(--border)", position: "relative", zIndex: 1,
@@ -6441,38 +6491,38 @@ function App() {
                   scrollbarWidth: "none", WebkitOverflowScrolling: "touch",
                 }}>
                   {[
-                    { key: "home", label: "◈", title: "Home" },
                     { key: "voice", label: "Voice" },
                     { key: "analyze", label: "Analyze" },
                     { key: "export", label: "Export" },
-                  ].map(t => (
-                    <button key={t.key} title={t.title || t.label} onClick={() => setMode(t.key)} style={{
-                      padding: t.key === "home" ? "5px 8px" : "5px 12px",
-                      fontSize: 12, fontFamily: "var(--font-sans)",
-                      fontWeight: (t.key === "voice" ? ["voice","teach","write","translate"].includes(mode) : mode === t.key) ? 600 : 400,
-                      background: (t.key === "voice" ? ["voice","teach","write","translate"].includes(mode) : mode === t.key) ? "rgba(200,164,110,0.1)" : "none",
-                      border: "none", borderRadius: 6,
-                      color: (t.key === "voice" ? ["voice","teach","write","translate"].includes(mode) : mode === t.key) ? "var(--accent)" : "var(--text-dim)",
-                      cursor: "pointer", transition: "all 0.15s", whiteSpace: "nowrap",
-                    }}>{t.label}</button>
-                  ))}
+                  ].map(t => {
+                    const isActive = t.key === "voice"
+                      ? ["voice","teach","write","translate"].includes(mode)
+                      : mode === t.key;
+                    return (
+                      <button key={t.key} title={t.label} onClick={() => setMode(t.key)} style={{
+                        padding: "5px 12px",
+                        fontSize: 12, fontFamily: "var(--font-sans)",
+                        fontWeight: isActive ? 600 : 400,
+                        background: isActive ? "rgba(200,164,110,0.1)" : "none",
+                        border: "none", borderRadius: 6,
+                        color: isActive ? "var(--accent)" : "var(--text-dim)",
+                        cursor: "pointer", transition: "all 0.15s", whiteSpace: "nowrap",
+                      }}>{t.label}</button>
+                    );
+                  })}
                 </div>
               )}
 
-              {/* Keep all views mounted so state (write output, analyze results) survives tab switches */}
-              {/* position:relative + zIndex:1 ensures views float above the particle canvas */}
-              {mode === "home" && (
-                <HomeView profile={activeProfile} onMode={setMode} />
-              )}
+              {/* Keep all views mounted so state survives tab switches */}
               {mode === "discover" && (
                 <VoiceDiscoveryQuiz
                   profileId={activeProfile.profile_id}
                   profileName={activeProfile.name}
-                  onComplete={() => { handleRefinementSaved(1); setMode("home"); toastSuccess("Voice style mapped! Now teach it details."); }}
+                  onComplete={() => { handleRefinementSaved(1); setMode("voice"); toastSuccess("Voice style mapped! Now teach it details."); }}
                 />
               )}
               <div style={{ display: (mode === "voice" || mode === "teach" || mode === "write" || mode === "translate") ? "contents" : "none", position: "relative", zIndex: 1 }}>
-                <VoiceView profileId={activeProfile.profile_id} profileName={activeProfile.name} refinementCount={activeProfile.refinement_count} onRefinementSaved={handleRefinementSaved} />
+                <VoiceView profileId={activeProfile.profile_id} profileName={activeProfile.name} refinementCount={activeProfile.refinement_count} onRefinementSaved={handleRefinementSaved} onDiscover={() => setMode("discover")} />
               </div>
               <div style={{ display: mode === "analyze" ? "contents" : "none", position: "relative", zIndex: 1 }}>
                 <AnalyzeView profileId={activeProfile.profile_id} profileName={activeProfile.name} />
