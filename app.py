@@ -955,6 +955,66 @@ async def converse_with_voice(
         )
 
 
+# ── Voice Dimensions Endpoint ──
+
+class DimensionsResponse(BaseModel):
+    dimensions: dict  # {"precision": 8, "lyricism": 6, ...}
+    summary: str
+
+
+_DIMENSIONS_PROMPT = """Analyze this voice profile and score it on exactly these 6 dimensions.
+Each score is 1–10 (integer only).
+
+Dimensions:
+- precision: Economy of language — how tight and deliberate is every word?
+- lyricism: Musicality and rhythm — does the prose have cadence, flow, beauty of sound?
+- complexity: Sentence architecture — how layered and structurally varied are the sentences?
+- imagery: Sensory and figurative language — how vivid, metaphorical, image-rich?
+- formality: Register and diction — how elevated, academic, formal vs conversational?
+- irony: Distance and indirection — how much does the voice use irony, understatement, misdirection?
+
+After the scores, write a 1–2 sentence summary of this voice's character.
+
+Respond in EXACTLY this JSON format, nothing else:
+{"precision": N, "lyricism": N, "complexity": N, "imagery": N, "formality": N, "irony": N, "summary": "..."}
+
+Voice profile to analyze:
+"""
+
+
+@app.post("/profiles/{profile_id}/dimensions", response_model=DimensionsResponse)
+async def get_voice_dimensions(
+    profile_id: str,
+    user_id: str = Depends(get_current_user),
+):
+    """Score a voice profile on 6 dimensions and return a summary."""
+    profile = load_profile(profile_id)
+    if not profile:
+        raise HTTPException(status_code=404, detail="Profile not found")
+    if profile.owner_id != user_id:
+        raise HTTPException(status_code=403, detail="Not your profile")
+
+    voice_text = get_full_voice_text(profile_id)
+    if not voice_text or len(voice_text.strip()) < 20:
+        raise HTTPException(status_code=400, detail="Not enough voice data yet")
+
+    import json as _json
+    raw = LLM_CALL([
+        {"role": "user", "content": _DIMENSIONS_PROMPT + voice_text[:4000]},
+    ])
+
+    try:
+        parsed = _json.loads(raw.strip())
+        dims = {k: max(1, min(10, int(parsed.get(k, 5)))) for k in
+                ["precision", "lyricism", "complexity", "imagery", "formality", "irony"]}
+        summary = parsed.get("summary", "")
+    except Exception:
+        dims = {"precision": 5, "lyricism": 5, "complexity": 5, "imagery": 5, "formality": 5, "irony": 5}
+        summary = raw.strip()[:200]
+
+    return DimensionsResponse(dimensions=dims, summary=summary)
+
+
 # ── Analyze Endpoint ──
 
 @app.post("/profiles/{profile_id}/analyze", response_model=AnalyzeResponse)
