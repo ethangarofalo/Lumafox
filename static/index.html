@@ -2335,6 +2335,7 @@ function VoiceView({ profileId, profileName, refinementCount, onRefinementSaved,
     const nextMessages = [...messages, { role: "user", content: text }];
     setMessages(nextMessages);
     setLoading(true);
+    window.dispatchEvent(new Event("voice:think:start"));
 
     try {
       const history = messages
@@ -2373,6 +2374,7 @@ function VoiceView({ profileId, profileName, refinementCount, onRefinementSaved,
       toastError(e.message);
     }
     setLoading(false);
+    window.dispatchEvent(new Event("voice:think:end"));
     setTimeout(() => textareaRef.current?.focus(), 50);
   };
 
@@ -5980,8 +5982,38 @@ function ParticleField() {
     resizeObs.observe(canvas);
 
     const COUNT = 88;
-    const CONNECT_DIST = 110;
+    const BASE_CONNECT_DIST = 110;
     const MOUSE_DIST = 90;
+
+    // ── Reactive state — responds to voice thinking ──
+    let thinkingIntensity = 0;     // 0 = idle, 1 = fully thinking
+    let targetIntensity = 0;
+    // Pulse travelers — lines that move toward center during thinking
+    let travelers = [];
+
+    const onThinkStart = () => { targetIntensity = 1; spawnTravelers(); };
+    const onThinkEnd = () => { targetIntensity = 0; };
+    window.addEventListener("voice:think:start", onThinkStart);
+    window.addEventListener("voice:think:end", onThinkEnd);
+
+    const spawnTravelers = () => {
+      if (!W || !H) return;
+      const cx = W / 2, cy = H / 2;
+      for (let i = 0; i < 5; i++) {
+        // Start from random edges
+        const angle = Math.random() * Math.PI * 2;
+        const edgeDist = Math.max(W, H) * 0.6;
+        travelers.push({
+          x: cx + Math.cos(angle) * edgeDist,
+          y: cy + Math.sin(angle) * edgeDist,
+          tx: cx + (Math.random() - 0.5) * 60,
+          ty: cy + (Math.random() - 0.5) * 60,
+          progress: 0,
+          speed: 0.004 + Math.random() * 0.006,
+          opacity: 0.15 + Math.random() * 0.25,
+        });
+      }
+    };
 
     const particles = Array.from({ length: COUNT }, () => ({
       x: Math.random() * (W || 800),
@@ -5989,8 +6021,8 @@ function ParticleField() {
       vx: (Math.random() - 0.5) * 0.22,
       vy: (Math.random() - 0.5) * 0.22,
       r: 1.2 + Math.random() * 1.6,
+      baseOpacity: 0.28 + Math.random() * 0.48,
       opacity: 0.28 + Math.random() * 0.48,
-      // Some particles drift faster for depth
       speed: 0.6 + Math.random() * 0.8,
     }));
 
@@ -5999,7 +6031,6 @@ function ParticleField() {
       mouseRef.current = { x: e.clientX - rect.left, y: e.clientY - rect.top };
     };
     const onMouseLeave = () => { mouseRef.current = { x: -9999, y: -9999 }; };
-    // Listen on the parent container so mouse still works with pointer-events:none on canvas
     const parent = canvas.parentElement;
     parent.addEventListener("mousemove", onMouseMove);
     parent.addEventListener("mouseleave", onMouseLeave);
@@ -6009,9 +6040,19 @@ function ParticleField() {
       ctx.clearRect(0, 0, W, H);
       const mx = mouseRef.current.x, my = mouseRef.current.y;
 
+      // ── Ease thinking intensity ──
+      thinkingIntensity += (targetIntensity - thinkingIntensity) * 0.03;
+      const ti = thinkingIntensity;
+      const cx = W / 2, cy = H / 2;
+
+      // Dynamic values based on thinking state
+      const connectDist = BASE_CONNECT_DIST + ti * 50;     // more connections when thinking
+      const opacityBoost = ti * 0.25;                       // brighter when thinking
+      const gravityStrength = ti * 0.0008;                   // gentle pull toward center
+
       // Update positions
       particles.forEach(p => {
-        // Gentle mouse repulsion
+        // Mouse repulsion
         const dx = p.x - mx, dy = p.y - my;
         const d = Math.sqrt(dx * dx + dy * dy);
         if (d < MOUSE_DIST && d > 0) {
@@ -6020,11 +6061,18 @@ function ParticleField() {
           p.vy += (dy / d) * force;
         }
 
-        // Velocity damping
+        // ── Thinking gravity — gentle pull toward center ──
+        if (ti > 0.01) {
+          const gcx = p.x - cx, gcy = p.y - cy;
+          const gd = Math.sqrt(gcx * gcx + gcy * gcy);
+          if (gd > 30) {
+            p.vx -= (gcx / gd) * gravityStrength * gd;
+            p.vy -= (gcy / gd) * gravityStrength * gd;
+          }
+        }
+
         p.vx *= 0.985;
         p.vy *= 0.985;
-
-        // Drift
         p.x += p.vx * p.speed;
         p.y += p.vy * p.speed;
 
@@ -6041,28 +6089,56 @@ function ParticleField() {
           const a = particles[i], b = particles[j];
           const dx = b.x - a.x, dy = b.y - a.y;
           const d = Math.sqrt(dx * dx + dy * dy);
-          if (d < CONNECT_DIST) {
-            const alpha = (1 - d / CONNECT_DIST) * 0.22;
+          if (d < connectDist) {
+            const alpha = (1 - d / connectDist) * (0.22 + opacityBoost * 0.15);
             ctx.beginPath();
             ctx.moveTo(a.x, a.y);
             ctx.lineTo(b.x, b.y);
             ctx.strokeStyle = `rgba(217,168,60,${alpha})`;
-            ctx.lineWidth = 0.8;
+            ctx.lineWidth = 0.8 + ti * 0.3;
             ctx.stroke();
           }
         }
       }
 
+      // ── Draw pulse travelers (lines moving toward center) ──
+      travelers = travelers.filter(t => t.progress < 1);
+      travelers.forEach(t => {
+        t.progress += t.speed;
+        const p = t.progress;
+        const x = t.x + (t.tx - t.x) * p;
+        const y = t.y + (t.ty - t.y) * p;
+        const tailP = Math.max(0, p - 0.15);
+        const tailX = t.x + (t.tx - t.x) * tailP;
+        const tailY = t.y + (t.ty - t.y) * tailP;
+        const fadeAlpha = t.opacity * (p < 0.2 ? p / 0.2 : p > 0.8 ? (1 - p) / 0.2 : 1);
+        ctx.beginPath();
+        ctx.moveTo(tailX, tailY);
+        ctx.lineTo(x, y);
+        ctx.strokeStyle = `rgba(217,168,60,${fadeAlpha})`;
+        ctx.lineWidth = 1.2;
+        ctx.stroke();
+        // Leading dot
+        ctx.beginPath();
+        ctx.arc(x, y, 1.5, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(217,168,60,${fadeAlpha * 1.5})`;
+        ctx.fill();
+      });
+
+      // Spawn new travelers periodically while thinking
+      if (ti > 0.3 && Math.random() < 0.02 * ti) {
+        spawnTravelers();
+      }
+
       // Draw particles
       particles.forEach(p => {
-        // Mouse proximity brightens particle
         const dx = p.x - mx, dy = p.y - my;
         const d = Math.sqrt(dx * dx + dy * dy);
-        const boost = d < MOUSE_DIST ? (1 - d / MOUSE_DIST) * 0.55 : 0;
-        const alpha = Math.min(1, p.opacity + boost);
+        const mouseBoost = d < MOUSE_DIST ? (1 - d / MOUSE_DIST) * 0.55 : 0;
+        const alpha = Math.min(1, p.baseOpacity + mouseBoost + opacityBoost);
 
         ctx.beginPath();
-        ctx.arc(p.x, p.y, p.r + boost * 1.8, 0, Math.PI * 2);
+        ctx.arc(p.x, p.y, p.r + mouseBoost * 1.8 + ti * 0.4, 0, Math.PI * 2);
         ctx.fillStyle = `rgba(217,168,60,${alpha})`;
         ctx.fill();
       });
@@ -6076,6 +6152,8 @@ function ParticleField() {
       resizeObs.disconnect();
       parent.removeEventListener("mousemove", onMouseMove);
       parent.removeEventListener("mouseleave", onMouseLeave);
+      window.removeEventListener("voice:think:start", onThinkStart);
+      window.removeEventListener("voice:think:end", onThinkEnd);
     };
   }, []);
 
