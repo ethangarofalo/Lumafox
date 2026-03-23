@@ -356,20 +356,34 @@
     }
     .chat-messages { flex: 1; overflow-y: auto; padding: 24px 32px; position: relative; z-index: 1; }
 
-    .msg { margin-bottom: 28px; max-width: 720px; }
-    .msg.user .msg-content { color: var(--text); }
+    .msg { margin-bottom: 40px; max-width: 720px; }
+    .msg.user .msg-content { color: #F5F0E8; font-weight: 400; }
     .msg.agent .msg-content {
-      color: var(--text);
+      color: #D8DCE2; font-weight: 300;
       padding: 16px 20px; border-radius: 10px;
       background: rgba(200,164,110,0.02);
       border-left: 2px solid rgba(200,164,110,0.12);
     }
     .msg-label {
-      font-size: 10px; text-transform: uppercase; letter-spacing: 0.12em;
-      margin-bottom: 8px; font-family: var(--font-sans);
+      font-size: 11px; text-transform: uppercase; letter-spacing: 0.14em;
+      margin-bottom: 8px; font-family: var(--font-sans); font-weight: 600;
+      display: flex; align-items: center; gap: 8px;
     }
     .msg.user .msg-label { color: var(--accent); }
-    .msg.agent .msg-label { color: var(--text-faint); }
+    .msg.agent .msg-label { color: var(--text-dim); }
+    .msg-avatar {
+      width: 22px; height: 22px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 10px; font-weight: 700; flex-shrink: 0;
+    }
+    .msg.user .msg-avatar {
+      background: var(--accent-glow); color: var(--accent); border: 1px solid var(--accent-dim);
+    }
+    .msg.agent .msg-avatar {
+      background: rgba(200,164,110,0.08); border: 1px solid rgba(200,164,110,0.15);
+      padding: 3px;
+    }
+    .msg-avatar img { width: 100%; height: 100%; object-fit: contain; }
     .msg-content {
       font-size: 16px; line-height: 1.8; white-space: pre-wrap;
     }
@@ -2763,12 +2777,20 @@ function VoiceView({ profileId, profileName, refinementCount, onRefinementSaved,
           return (
             <div key={i} className={`msg ${m.role}`} style={m.isGreeting ? { marginBottom: 12 } : {}}>
               <div className="msg-label">
-                {m.role === "user"
-                  ? "you"
-                  : (m.isGreeting ? profileName
-                    : isWrite ? `${profileName} · wrote`
-                    : isTranslate ? `${profileName} · rendered`
-                    : "voice")}
+                {m.role === "user" ? (
+                  <>
+                    <span className="msg-avatar">Y</span>
+                    you
+                  </>
+                ) : (
+                  <>
+                    <span className="msg-avatar"><img src="/static/lumafox-icon.png" alt="" /></span>
+                    {m.isGreeting ? profileName
+                      : isWrite ? `${profileName} · wrote`
+                      : isTranslate ? `${profileName} · rendered`
+                      : "voice"}
+                  </>
+                )}
               </div>
 
               {/* Generated text gets special presentation */}
@@ -2880,7 +2902,10 @@ function VoiceView({ profileId, profileName, refinementCount, onRefinementSaved,
 
         {loading && messages[messages.length - 1]?.role !== "agent" && (
           <div className="msg agent">
-            <div className="msg-label">voice</div>
+            <div className="msg-label">
+              <span className="msg-avatar"><img src="/static/lumafox-icon.png" alt="" /></span>
+              voice
+            </div>
             <div className="msg-content"><VoiceThinking profileName={profileName} /></div>
           </div>
         )}
