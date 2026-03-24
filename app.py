@@ -574,7 +574,8 @@ async def update_profile_description(
     profile.base_description = description
     update_profile_metadata(profile)
     # Also update the base.md file that the voice engine reads
-    base_path = Path("data/profiles") / profile_id / "base.md"
+    from voice_engine import PROFILES_DIR
+    base_path = PROFILES_DIR / profile_id / "base.md"
     base_path.write_text(description)
     return {"description": description}
 
