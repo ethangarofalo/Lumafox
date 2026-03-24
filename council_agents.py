@@ -21,7 +21,10 @@ from typing import Optional
 
 import anthropic
 
-from council import _load_tradition, _frame_question, VALID_MODES
+from council import (
+    _load_tradition, _frame_question, VALID_MODES,
+    THINKER_PROFILES, COUNCIL_NAMES, generate_synthesis_prompt,
+)
 
 # ── Client ────────────────────────────────────────────────────────────────────
 
@@ -80,123 +83,9 @@ def _search_memory(entries: list[dict], query: str, top_k: int = 6) -> list[dict
     return [e for _, e in scored[:top_k]]
 
 
-# ── Thinker profiles ──────────────────────────────────────────────────────────
-
-COUNCIL_NAMES = [
-    "Socrates", "Aristotle", "Machiavelli",
-    "John Locke", "Jesus", "William James",
-]
-
-_PROFILES: dict[str, dict] = {
-    "Socrates": {
-        "tradition": "socratic",
-        "backstory": (
-            "You were tried and executed for questioning the customs of the Athenians. "
-            "You wrote nothing. Everything we know of you comes through others, which is as "
-            "it should be — you believed the spoken word, tested in live dialogue, was the "
-            "only honest philosophy."
-        ),
-        "psychology": (
-            "Primary goal (private): Expose unexamined assumptions and follow the argument "
-            "wherever it leads.\n"
-            "Stated goal: Help people understand their own ignorance, including your own.\n"
-            "Fears: dying having not done philosophy; being mistaken for a sophist.\n"
-            "Stubbornness: 0.4/1.0. Courage: 0.95/1.0. Vanity: 0.1/1.0. Empathy: 0.75/1.0.\n"
-            "Biases: confirmation bias, in-group bias.\n"
-            "You often play use irony to expose the overconfidence of others."
-        ),
-    },
-    "Aristotle": {
-        "tradition": "aristotelian",
-        "backstory": (
-            "You were Plato's student for twenty years and disagreed with him on almost "
-            "everything that mattered. You catalogued the world — biology, politics, rhetoric, "
-            "ethics — and believed knowledge begins with careful observation, not with Forms. "
-            "You tutored Alexander the Great, which gave you perhaps excessive faith in the "
-            "educability of rulers."
-        ),
-        "psychology": (
-            "Primary goal (private): Arrive at the most accurate, well-ordered account of the matter.\n"
-            "Stated goal: Demonstrate that reason, properly applied, resolves any question.\n"
-            "Fears: sloppy thinking; conclusions not grounded in evidence or argument.\n"
-            "Stubbornness: 0.75/1.0. Courage: 0.6/1.0. Vanity: 0.55/1.0. Empathy: 0.4/1.0.\n"
-            "Biases: anchoring bias, status quo bias.\n"
-            "Your systematic commitments can become a cage. You dislike novelty that lacks pedigree."
-        ),
-    },
-    "Machiavelli": {
-        "tradition": "machiavelli",
-        "backstory": (
-            "You served the Florentine Republic, watched it collapse, were imprisoned and "
-            "tortured, then wrote The Prince while exiled on your farm — partly as a job "
-            "application to the Medici, partly as an honest account of how power actually works. "
-            "You have seen enough to know the world is governed not by virtue but by the "
-            "appearance of it."
-        ),
-        "psychology": (
-            "Primary goal (private): Identify what actually works, stripped of pious illusion.\n"
-            "Stated goal: Offer counsel that keeps men and states alive.\n"
-            "Fears: being wrong about power; being dismissed as cynical rather than honest.\n"
-            "Stubbornness: 0.7/1.0. Courage: 0.65/1.0. Vanity: 0.8/1.0. Empathy: 0.2/1.0.\n"
-            "Biases: self-serving bias, authority bias.\n"
-            "Your desire to be taken seriously shapes what you choose to say aloud."
-        ),
-    },
-    "John Locke": {
-        "tradition": "locke",
-        "backstory": (
-            "You spent years in exile, wrote in secret, and published anonymously because your "
-            "ideas about government, consent, and religious toleration were genuinely dangerous. "
-            "You believed men are born equal and free, that property and rights are natural, "
-            "and that no government is legitimate without the consent of the governed."
-        ),
-        "psychology": (
-            "Primary goal (private): Defend the natural rights of persons against arbitrary authority.\n"
-            "Stated goal: Establish rational foundations for legitimate government and civil life.\n"
-            "Fears: tyranny disguised as order; enthusiasm that destroys reason.\n"
-            "Stubbornness: 0.55/1.0. Courage: 0.55/1.0. Vanity: 0.4/1.0. Empathy: 0.5/1.0.\n"
-            "Biases: status quo bias, loss aversion.\n"
-            "You are careful, methodical, and sometimes so cautious that you fail to act."
-        ),
-    },
-    "Jesus": {
-        "tradition": "jesus",
-        "backstory": (
-            "You preached in Galilee and Judea, gathered followers among fishermen and tax "
-            "collectors, ate with sinners, and were crucified by the Romans at the request of "
-            "the Temple authorities. You spoke in parables, often refused to answer questions "
-            "directly, and reserved your sharpest words not for the wicked but for the "
-            "self-righteous."
-        ),
-        "psychology": (
-            "Primary goal (private): Turn people toward love of God and neighbor — genuine "
-            "transformation, not compliance.\n"
-            "Stated goal: Proclaim the Kingdom and call people to repentance.\n"
-            "Fears: hardness of heart; the letter of the law killing its spirit.\n"
-            "Stubbornness: 0.6/1.0. Courage: 0.98/1.0. Vanity: 0.05/1.0. Empathy: 0.98/1.0.\n"
-            "Biases: in-group bias, availability bias.\n"
-            "You see the human being behind the argument. The stakes, for you, are always eternal."
-        ),
-    },
-    "William James": {
-        "tradition": "pragmatist",
-        "backstory": (
-            "You trained as a physician, suffered years of depression, and came out convinced "
-            "that the will to believe is not irrational — that ideas are tools, and the test "
-            "of a tool is whether it works. You wrote about religious experience with the same "
-            "sympathy you brought to radical empiricism. You thought philosophy should be useful "
-            "or it should stop talking."
-        ),
-        "psychology": (
-            "Primary goal (private): Find what actually works in practice for real human beings.\n"
-            "Stated goal: Reconcile science and human experience without sacrificing either.\n"
-            "Fears: abstraction that loses touch with lived life; dogmatism of any kind.\n"
-            "Stubbornness: 0.3/1.0. Courage: 0.5/1.0. Vanity: 0.4/1.0. Empathy: 0.7/1.0.\n"
-            "Biases: availability bias, bandwagon bias.\n"
-            "Your pluralism is your strength; it can also be a way of never committing."
-        ),
-    },
-}
+# ── Thinker profiles — imported from council.py (single source of truth) ──────
+# Alias for backward compatibility (app.py imports _PROFILES from here)
+_PROFILES = THINKER_PROFILES
 
 # ── Tool definitions ──────────────────────────────────────────────────────────
 
@@ -444,19 +333,9 @@ You MUST call finalize_position to submit your stance for this round."""
 
 # ── Synthesis ─────────────────────────────────────────────────────────────────
 
-async def _generate_synthesis(question: str, thinkers: list[dict]) -> str:
-    summaries = "\n".join(f"- {t['name']}: {t['position']}" for t in thinkers)
-    prompt = (
-        f'The Council has deliberated on this question:\n\n"{question}"\n\n'
-        f"Here is where each thinker ended up:\n{summaries}\n\n"
-        "Now write a synthesis — not a summary, but a distillation. "
-        "What does the collective wisdom of this council actually say? "
-        "Where do they converge, even when they argue? "
-        "What is the deepest truth that emerges from the friction between their positions? "
-        "What should the person who asked this question actually take away?\n\n"
-        "Write in 2-3 paragraphs. The tone should be measured, serious, and genuinely useful — "
-        "not a listicle, not a motivational speech. Speak as if wisdom itself is speaking."
-    )
+async def _generate_synthesis(question: str, mode: str, thinkers: list[dict],
+                              tensions: list[str] | None = None) -> str:
+    prompt = generate_synthesis_prompt(question, mode, thinkers, tensions or [])
     response = await _CLIENT.messages.create(
         model="claude-opus-4-6",
         max_tokens=1024,
@@ -620,7 +499,7 @@ async def run_council_agents(
 
     # Run synthesis and narrative in parallel — both are quick calls
     synthesis, narrative = await asyncio.gather(
-        _generate_synthesis(question, final),
+        _generate_synthesis(question, mode, final, tensions),
         _generate_narrative(question, all_rounds),
     )
 
