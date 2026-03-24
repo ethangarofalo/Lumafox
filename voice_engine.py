@@ -269,6 +269,19 @@ def build_refinement_context(refinements: list[dict]) -> str:
     lines.append("taught by the voice's owner. These take PRECEDENCE over the")
     lines.append("base description above.\n")
 
+    lines.append("### VOICE INTEGRITY — Anti-Slop Rules (always active)")
+    lines.append("When writing or speaking as this voice, NEVER use these AI patterns:")
+    lines.append("- \"There's something [almost/deeply] [adjective] about...\"")
+    lines.append("- \"Perhaps more accurately...\" / \"What strikes me most...\"")
+    lines.append("- \"The question becomes...\" / \"The real question is...\"")
+    lines.append("- \"What makes it so [insidious/interesting/compelling] is...\"")
+    lines.append("- \"It's worth noting...\" / \"Here's what troubles me...\"")
+    lines.append("- Parallel antithesis: \"Where X, he Y; where A, he B\"")
+    lines.append("- Simile chains: \"guards his X like others guard Y\"")
+    lines.append("- Rhetorical questions you immediately answer yourself")
+    lines.append("- Starting paragraphs with \"But\" + qualification")
+    lines.append("These are generic AI writing. This voice has its OWN patterns — use those.\n")
+
     if sections["principle"]:
         lines.append("### Core Principles")
         for p in sections["principle"]:
@@ -674,11 +687,20 @@ Answer carefully."""
 
 {history_text}
 
-The teacher wants you to demonstrate this voice on the following topic.
-Write AS this voice — not about it, but from within it. Use its characteristic
-rhythm, its natural mode of expression, its particular way of seeing.
+Write AS this voice on the topic below. Not about the voice — FROM WITHIN it.
 
-Write AS this voice — not about it, but from within it.
+CRITICAL — these patterns are BANNED (they are generic AI, not this voice):
+- "There's something [almost/deeply] [adjective] about..."
+- "Perhaps more accurately..." / "What strikes me most..."
+- "The question becomes..." / "The real question is..."
+- Parallel antithesis: "Where X sees Y, he sees Z; where A demands B, he accepts C"
+- Simile factories: "guards his X like other men guard their Y"
+- Rhetorical questions you immediately answer yourself
+- Any sentence that could appear in any AI chatbot's philosophical response
+
+Every sentence must sound like it could ONLY come from this specific person.
+Use their vocabulary, their sentence length, their way of building an argument.
+Read the examples above carefully — match that register, not a literary AI register.
 
 TOPIC: {message}
 
@@ -759,22 +781,26 @@ Write 2-3 paragraphs in this voice."""
 
 {history_text}
 
-The teacher has given you a line, quote, or idea and wants you to RESTATE it in this voice.
-Do NOT analyze the quote. Do NOT write an essay about it. Do NOT explain what it means.
-REWRITE it — same idea, this voice's rhythm and language.
+The teacher wants you to RESTATE this in their voice. This is a REWRITE, not analysis.
 
-Rules:
-- Match the length and form of the original. An aphorism gets an aphorism back. A sentence gets a sentence.
-- If it's a one-line quote, give back 1-3 lines maximum.
-- Do not add qualifications, caveats, or "but here's the problem with this formulation."
-- Do not use: "perhaps more accurately," "there's something about," "what strikes me," "the question becomes"
-- Write the restatement directly. No preamble, no "Here's how I'd put it:"
+ABSOLUTE RULES:
+1. Count the sentences in the original. Your response must have the SAME number of sentences,
+   plus or minus one. A 3-sentence aphorism gets 2-4 sentences back. NEVER a full paragraph
+   for a short quote.
+2. Write the restatement DIRECTLY. No preamble. No "Here's how I'd put it." No commentary after.
+3. Do NOT explain, analyze, qualify, or add "but here's the tension."
+4. Do NOT use ANY of these — they are AI slop that destroys voice:
+   "There's something about" / "perhaps more accurately" / "what strikes me" /
+   "the question becomes" / "in other words" / "what makes this" /
+   "guards his X like others guard their Y" / parallel antithesis ("where X, he Y; where A, he B") /
+   simile chains / any sentence that sounds like a philosophy chatbot
+5. Use SHORT, declarative sentences. Concrete nouns. Physical verbs. The teacher's actual
+   vocabulary and cadence from the examples above — not literary AI register.
+6. If the original is an aphorism, give back an aphorism. Aphorisms are SHARP, not padded.
 
 ORIGINAL: {message}
 
-Restate it in this voice.
-
-After your response, on a new line write: TEACH:none"""
+After your restatement (and NOTHING else), on a new line write: TEACH:none"""
 
         elif _looks_like_example:
             prompt = f"""You are learning a voice called "{voice_name}".
