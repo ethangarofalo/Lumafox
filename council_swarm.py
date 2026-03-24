@@ -115,6 +115,163 @@ def _search_tradition_memory(entries: list[dict], query: str, top_k: int = 4) ->
     return [e for _, e in scored[:top_k]]
 
 
+# ── Current events briefing ──────────────────────────────────────────────────
+
+async def _needs_current_briefing(question: str) -> bool:
+    """
+    Use Haiku to classify whether the question references current/recent events
+    that require up-to-date factual knowledge. Fast and cheap.
+    """
+    try:
+        response = await _CLIENT.messages.create(
+            model="claude-haiku-4-5",
+            max_tokens=10,
+            system=(
+                "You classify questions as requiring current events knowledge or not. "
+                "Answer ONLY 'yes' or 'no'.\n\n"
+                "Answer 'yes' if the question:\n"
+                "- References specific current political figures by name in active roles\n"
+                "- Asks about recent or ongoing events, conflicts, elections, or crises\n"
+                "- Asks 'what will happen' or 'what is happening' about real-world situations\n"
+                "- References specific policies, legislation, or political developments\n"
+                "- Mentions specific companies, organizations in the context of recent actions\n\n"
+                "Answer 'no' if the question:\n"
+                "- Is purely philosophical, ethical, or hypothetical\n"
+                "- Asks about timeless concepts (justice, morality, beauty, etc.)\n"
+                "- References only historical figures or events (before 2020)\n"
+                "- Is a thought experiment or abstract scenario"
+            ),
+            messages=[{"role": "user", "content": question}],
+        )
+        text = response.content[0].text.strip().lower()
+        return text.startswith("yes")
+    except Exception:
+        return False
+
+
+async def _build_current_briefing(question: str) -> str:
+    """
+    Search the web for relevant current events and produce a factual briefing.
+
+    Strategy:
+    1. Use Claude with the built-in web search tool (server-side connector)
+    2. Summarize results into a 200-300 word neutral factual briefing
+    """
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+
+    # Step 1: Use Claude with web_search tool to gather current information
+    try:
+        search_response = await _CLIENT.messages.create(
+            model="claude-sonnet-4-20250514",
+            max_tokens=1500,
+            system=(
+                "You are a neutral news researcher. Your job is to find and report "
+                "FACTS about the topic in the user's question. Use the web search tool "
+                "to find recent, relevant information. Search multiple angles if needed. "
+                "After searching, compile the key facts you found."
+            ),
+            tools=[{"type": "web_search_20250305", "name": "web_search", "max_uses": 3}],
+            messages=[
+                {
+                    "role": "user",
+                    "content": (
+                        f"Search for recent news and current information relevant to "
+                        f"this question: {question}\n\n"
+                        f"Find the most important recent facts, developments, and "
+                        f"context that someone deliberating this question would need to know."
+                    ),
+                }
+            ],
+        )
+
+        # Extract all text from the response (may include tool use rounds)
+        raw_facts = []
+        for block in search_response.content:
+            if hasattr(block, "text"):
+                raw_facts.append(block.text)
+        raw_text = "\n".join(raw_facts)
+
+        if not raw_text.strip():
+            return _fallback_briefing(today)
+
+    except Exception:
+        # If web search tool isn't available or fails, fall back
+        return await _fallback_briefing_from_model(question, today)
+
+    # Step 2: Summarize into a concise, neutral briefing using Haiku
+    try:
+        summary_response = await _CLIENT.messages.create(
+            model="claude-haiku-4-5",
+            max_tokens=500,
+            system=(
+                "You produce concise, neutral factual briefings. No opinions, no analysis, "
+                "no recommendations. Only established facts with dates and sources where possible. "
+                "Write 200-300 words. Use bullet points for clarity."
+            ),
+            messages=[
+                {
+                    "role": "user",
+                    "content": (
+                        f"Based on these research findings, produce a factual briefing "
+                        f"relevant to the question: '{question}'\n\n"
+                        f"Date: {today}\n\n"
+                        f"Research findings:\n{raw_text[:3000]}\n\n"
+                        f"Briefing format:\n"
+                        f"- Date-stamped header\n"
+                        f"- Key facts as bullet points\n"
+                        f"- No opinions or analysis\n"
+                        f"- 200-300 words maximum"
+                    ),
+                }
+            ],
+        )
+        return summary_response.content[0].text.strip()
+    except Exception:
+        return _fallback_briefing(today)
+
+
+def _fallback_briefing(today: str) -> str:
+    """Minimal fallback when no search is available."""
+    return (
+        f"CURRENT EVENTS BRIEFING — {today}\n\n"
+        f"Note: Live web search was unavailable. The agents in this deliberation "
+        f"are reasoning from their training data, which has a knowledge cutoff. "
+        f"Factual claims about very recent events should be verified independently."
+    )
+
+
+async def _fallback_briefing_from_model(question: str, today: str) -> str:
+    """Use Claude's training data as a fallback when web search is unavailable."""
+    try:
+        response = await _CLIENT.messages.create(
+            model="claude-haiku-4-5",
+            max_tokens=500,
+            system=(
+                f"Today is {today}. You are producing a factual briefing about current events "
+                f"relevant to a question. State ONLY facts you are confident about. "
+                f"Clearly note your training data cutoff and flag any uncertainty. "
+                f"No opinions. 200-300 words. Bullet points."
+            ),
+            messages=[
+                {
+                    "role": "user",
+                    "content": (
+                        f"Produce a factual briefing on the current state of affairs "
+                        f"relevant to this question: {question}"
+                    ),
+                }
+            ],
+        )
+        briefing = response.content[0].text.strip()
+        return (
+            f"CURRENT EVENTS BRIEFING — {today}\n"
+            f"(Based on training data — live search unavailable. Verify recent claims.)\n\n"
+            f"{briefing}"
+        )
+    except Exception:
+        return _fallback_briefing(today)
+
+
 # ── Traditions — the "ought" ───────────────────────────────────────────────────
 #
 # Each tradition defines:
@@ -1090,11 +1247,22 @@ def generate_agent(agent_id: int, weights: Optional[dict[str, float]] = None) ->
     }
 
 
-def _build_agent_system_prompt(agent: dict) -> str:
+def _briefing_section(briefing: str) -> str:
+    """Format the current events briefing as a system prompt section."""
+    return (
+        "\n\n"
+        "CURRENT SITUATION (factual briefing — these are established facts, not positions):\n"
+        f"{briefing}\n\n"
+        "You must reason from these facts. Do not invent additional facts."
+    )
+
+
+def _build_agent_system_prompt(agent: dict, briefing: str = "") -> str:
     """
     Build the system prompt for a single agent.
     The 'ought' comes from the tradition; the 'is' comes from drift.
     Friction agents get a specialized prompt.
+    If a current-events briefing is provided, it is appended to the prompt.
     """
     t = TRADITIONS[agent["primary_tradition"]]
     primary_key = agent["primary_tradition"]
@@ -1121,7 +1289,7 @@ IMPORTANT INSTRUCTIONS:
 - If everyone seems to agree, find the crack. If the majority leans one way, articulate what they're suppressing.
 - Be direct, sharp, and specific. Name the weakness you see.
 - One paragraph. No hedging. Take a position that makes the room uncomfortable.
-- You are {agent['persona']}. Sound like it."""
+- You are {agent['persona']}. Sound like it.""" + (_briefing_section(briefing) if briefing else "")
 
     drift = agent["drift"]
     secondary = agent["secondary_tradition"]
@@ -1184,7 +1352,7 @@ IMPORTANT INSTRUCTIONS:
   democracy contemptible or dangerous, say so. If it sees equality
   as a useful fiction, say that. Do not soften your position to be polite.
 - If something in the question genuinely troubles you, say so plainly.
-- You are {agent['persona']}. Sound like it."""
+- You are {agent['persona']}. Sound like it.""" + (_briefing_section(briefing) if briefing else "")
 
 
 # ── Tools for agent deliberation ──────────────────────────────────────────────
@@ -1230,12 +1398,13 @@ async def _run_agent(
     mode: str,
     population_summary: Optional[str],
     round_num: int,
+    briefing: str = "",
 ) -> dict:
     """
     Run a single agent through one round of deliberation.
     Returns their finalized position or a fallback if the tool isn't called.
     """
-    system = _build_agent_system_prompt(agent)
+    system = _build_agent_system_prompt(agent, briefing=briefing)
 
     if round_num == 2 and population_summary:
         openness = agent.get("openness", 0.5)
@@ -1624,6 +1793,13 @@ async def run_council_swarm(
     """
     random.seed()  # Ensure different population each run
 
+    # ── Pre-deliberation current events briefing ─────────────────────────────
+    # If the question involves current events, gather facts before agents
+    # begin deliberating so they reason from real-world information.
+    briefing = ""
+    if await _needs_current_briefing(question):
+        briefing = await _build_current_briefing(question)
+
     # Dynamic weights based on question domain
     weights = _get_weights(question)
     detected_domains = _detect_domains(question)
@@ -1638,7 +1814,8 @@ async def run_council_swarm(
 
     async def _throttled_run(agent, q, m, summary, rnd):
         async with _semaphore:
-            return await _run_agent(agent, q, m, summary, round_num=rnd)
+            return await _run_agent(agent, q, m, summary, round_num=rnd,
+                                    briefing=briefing)
 
     # ── Round 1: Independent deliberation ────────────────────────────────────
     round1_results = await asyncio.gather(*[
@@ -1714,4 +1891,5 @@ async def run_council_swarm(
         "round1_summary": population_summary,
         "detected_domains": detected_domains,
         "agent_details": round2_results,  # full individual results available
+        "current_events_briefing": briefing or None,
     }
