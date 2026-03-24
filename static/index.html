@@ -5193,10 +5193,7 @@ function CouncilDeliberating({ thinkers, swarm = false }) {
 }
 
 function CouncilView({ isGuest, onNeedAuth }) {
-  const [mode, setMode] = useState("advice");
   const [question, setQuestion] = useState("");
-  const [prose, setProse] = useState("");
-  const [writingInputMode, setWritingInputMode] = useState("question"); // "question" | "prose"
   const [thinkers, setThinkers] = useState(new Set(ALL_THINKERS));
   const [swarmMode, setSwarmMode] = useState(false);
   const [councilTier, setCouncilTier] = useState("full"); // "lite" | "full" | "swarm"
@@ -5254,21 +5251,19 @@ function CouncilView({ isGuest, onNeedAuth }) {
   // Run the actual deliberation (called after intake or directly)
   const runDeliberation = async (contextStr = "") => {
     const q = question.trim();
-    const p = prose.trim();
     setError("");
     setDeliberating(true);
     setResult(null);
     setIntakeQuestions(null);
     try {
       const body = {
-        question: q || "Please read and respond to this passage.",
-        mode,
+        question: q,
+        mode: "auto",
         thinkers: [...thinkers],
         council_tier: councilTier,
         swarm: councilTier === "swarm",
       };
       if (contextStr) body.context = contextStr;
-      if (mode === "writing" && p) body.prose = p;
       const r = await api("/council", { method: "POST", body: JSON.stringify(body) });
 
       // Swarm returns a job_id — poll until done
@@ -5301,14 +5296,7 @@ function CouncilView({ isGuest, onNeedAuth }) {
 
   const handleSubmit = async () => {
     const q = question.trim();
-    const p = prose.trim();
-    if (mode === "writing" && writingInputMode === "prose" && !p) {
-      setError("Paste the text you'd like the council to read."); return;
-    }
-    if (mode !== "writing" && !q) { setError("Ask the council something."); return; }
-    if (mode === "writing" && writingInputMode === "question" && !q) {
-      setError("Ask a question about your writing."); return;
-    }
+    if (!q) { setError("Ask the council something."); return; }
 
     // Guest teaser flow — show 2 mock responses, then prompt signup
     if (isGuest) {
@@ -5318,8 +5306,8 @@ function CouncilView({ isGuest, onNeedAuth }) {
       await new Promise(r => setTimeout(r, 3000 + Math.random() * 2000));
       setDeliberating(false);
       setGuestTeaserData({
-        question: q, mode,
-        responses: GUEST_TEASER_RESPONSES[mode] || GUEST_TEASER_RESPONSES.advice,
+        question: q,
+        responses: GUEST_TEASER_RESPONSES.advice,
       });
       setShowGuestTeaser(true);
       return;
@@ -5331,7 +5319,7 @@ function CouncilView({ isGuest, onNeedAuth }) {
     try {
       const clarify = await api("/council/clarify", {
         method: "POST",
-        body: JSON.stringify({ question: q, mode }),
+        body: JSON.stringify({ question: q, mode: "auto" }),
       });
       if (clarify.needs_clarification && clarify.questions?.length > 0) {
         // Show intake questions
@@ -5363,7 +5351,7 @@ function CouncilView({ isGuest, onNeedAuth }) {
     await runDeliberation();
   };
 
-  const handleReset = () => { setResult(null); setQuestion(""); setProse(""); setIntakeQuestions(null); setEnrichedContext(""); };
+  const handleReset = () => { setResult(null); setQuestion(""); setIntakeQuestions(null); setEnrichedContext(""); };
 
   if (limitData) {
     return (
@@ -5613,7 +5601,7 @@ function CouncilView({ isGuest, onNeedAuth }) {
                     `# Council Deliberation`,
                     ``,
                     `**Question:** ${result.question}`,
-                    `**Mode:** ${result.mode}`,
+                    `**Mode:** ${result.classified_mode || result.mode}`,
                     `**Date:** ${new Date().toLocaleDateString("en-US", { year:"numeric", month:"long", day:"numeric" })}`,
                     ``,
                     `---`,
@@ -5746,71 +5734,29 @@ function CouncilView({ isGuest, onNeedAuth }) {
           }
         </p>
 
-        {/* ── Main input — THE HERO ── */}
-        {(mode !== "writing" || writingInputMode === "question") && (
-          <textarea
-            value={question}
-            onChange={e => setQuestion(e.target.value)}
-            placeholder={
-              mode === "advice" ? "What question do you bring?" :
-              mode === "predict" ? "What do you want them to reason about?" :
-              "What do you want to understand about your writing?"
-            }
-            style={{
-              width: "100%", minHeight: 100, padding: "16px 18px",
-              background: "var(--bg-elevated)", border: "1px solid var(--accent-dim)",
-              borderRadius: "var(--radius-lg, 12px)", color: "var(--text)",
-              fontFamily: "var(--font)", fontSize: "1.1rem", lineHeight: 1.7,
-              resize: "vertical", marginBottom: 12,
-            }}
-          />
-        )}
-        {mode === "writing" && writingInputMode === "prose" && (
-          <>
-            <textarea
-              value={prose}
-              onChange={e => setProse(e.target.value)}
-              placeholder="Paste the text you'd like critiqued..."
-              style={{
-                width: "100%", minHeight: 160, padding: "16px 18px",
-                background: "var(--bg-elevated)", border: "1px solid var(--accent-dim)",
-                borderRadius: "var(--radius-lg, 12px)", color: "var(--text)",
-                fontFamily: "var(--font)", fontSize: "1.1rem", lineHeight: 1.7,
-                resize: "vertical", marginBottom: 8,
-              }}
-            />
-            <textarea
-              value={question}
-              onChange={e => setQuestion(e.target.value)}
-              placeholder="Anything specific to address? (optional)"
-              style={{
-                width: "100%", minHeight: 50, padding: "10px 14px",
-                background: "var(--bg-elevated)", border: "1px solid var(--border)",
-                borderRadius: "var(--radius)", color: "var(--text)",
-                fontFamily: "var(--font-sans)", fontSize: 14, lineHeight: 1.6,
-                resize: "vertical", marginBottom: 12,
-              }}
-            />
-          </>
-        )}
+        {/* ── Main input ── */}
+        <textarea
+          value={question}
+          onChange={e => setQuestion(e.target.value)}
+          placeholder="What question do you bring to the council?"
+          style={{
+            width: "100%", minHeight: 100, padding: "16px 18px",
+            background: "var(--bg-elevated)", border: "1px solid var(--accent-dim)",
+            borderRadius: "var(--radius-lg, 12px)", color: "var(--text)",
+            fontFamily: "var(--font)", fontSize: "1.1rem", lineHeight: 1.7,
+            resize: "vertical", marginBottom: 12,
+          }}
+        />
 
         {/* ── Example questions — clickable suggestions ── */}
-        {!question && (mode !== "writing" || writingInputMode === "question") && (
+        {!question && (
           <div style={{ display: "flex", gap: 6, marginBottom: 14, flexWrap: "wrap", alignItems: "center" }}>
             <span style={{ fontFamily: "var(--font-sans)", fontSize: 10, color: "var(--text-faint)", letterSpacing: "0.1em", textTransform: "uppercase", marginRight: 2 }}>Try</span>
-            {(mode === "advice" ? [
+            {[
               "Should I be honest even when it hurts?",
-              "How do I find meaning in my work?",
-              "Is it right to forgive someone who isn't sorry?",
-            ] : mode === "predict" ? [
-              "What happens when AI replaces most jobs?",
               "Will democracy survive the internet?",
-              "What comes after the culture wars?",
-            ] : [
               "How do I write about grief without sentimentality?",
-              "What makes dialogue feel alive?",
-              "How do I find my voice as a writer?",
-            ]).map(q => (
+            ].map(q => (
               <button key={q} onClick={() => setQuestion(q)} style={{
                 padding: "3px 10px", borderRadius: 16,
                 border: "1px solid var(--border)", background: "none",
@@ -5825,33 +5771,8 @@ function CouncilView({ isGuest, onNeedAuth }) {
           </div>
         )}
 
-        {/* ── Mode pills — secondary, below input ── */}
-        <div style={{ display: "flex", gap: 6, marginBottom: 20, flexWrap: "wrap", alignItems: "center" }}>
-          <span style={{ fontFamily: "var(--font-sans)", fontSize: 10, color: "var(--text-faint)", letterSpacing: "0.15em", textTransform: "uppercase", marginRight: 4 }}>Mode</span>
-          {[["advice", "Advice"], ["predict", "Prediction"], ["writing", "Writing"]].map(([val, label]) => (
-            <button key={val} onClick={() => setMode(val)} style={{
-              padding: "4px 14px", borderRadius: 20,
-              border: `1px solid ${mode === val ? "var(--accent)" : "var(--border)"}`,
-              background: mode === val ? "rgba(200,164,110,0.12)" : "none",
-              color: mode === val ? "var(--accent)" : "var(--text-faint)",
-              fontFamily: "var(--font-sans)", fontSize: 12, cursor: "pointer", transition: "all 0.15s",
-            }}>{label}</button>
-          ))}
-          {mode === "writing" && (
-            <>
-              <span style={{ opacity: 0.3, margin: "0 2px" }}>|</span>
-              {[["question", "Ask about craft"], ["prose", "Critique text"]].map(([val, label]) => (
-                <button key={val} onClick={() => setWritingInputMode(val)} style={{
-                  padding: "4px 12px", borderRadius: 20,
-                  border: `1px solid ${writingInputMode === val ? "var(--accent-dim)" : "var(--border)"}`,
-                  background: "none",
-                  color: writingInputMode === val ? "var(--text)" : "var(--text-faint)",
-                  fontFamily: "var(--font-sans)", fontSize: 11, cursor: "pointer", transition: "all 0.15s",
-                }}>{label}</button>
-              ))}
-            </>
-          )}
-        </div>
+        {/* spacer between examples and tier selector */}
+        <div style={{ marginBottom: 8 }} />
 
         {/* ── Tier selector — card-based, above submit ── */}
         <div className="council-tier-grid" style={{

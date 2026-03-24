@@ -1406,7 +1406,7 @@ async def get_voice_text(
 
 class ClarifyRequest(BaseModel):
     question: str = Field(..., min_length=4, max_length=2000)
-    mode: str = Field("advice")
+    mode: str = Field("auto")
 
 
 _CLARIFY_CALLER = None
@@ -1418,6 +1418,38 @@ def _get_clarify_caller():
             model="claude-haiku-4-20250414", max_tokens=600, temperature=0.3,
         )
     return _CLARIFY_CALLER
+
+
+async def _classify_mode(question: str) -> str:
+    """Use Haiku to auto-classify a question as advice, predict, or writing."""
+    import asyncio as _asyncio
+    import json as _json
+
+    caller = _get_clarify_caller()
+    if not caller:
+        return "advice"  # safe fallback
+
+    prompt = f"""Classify this question into exactly one mode for a philosophical council deliberation.
+
+Question: "{question}"
+
+Modes:
+- "advice" — the person is asking what they should DO, how to live, ethical dilemmas, personal decisions, meaning, values, relationships
+- "predict" — the person is asking what WILL HAPPEN, forecasting, consequences, trends, geopolitics, future scenarios
+- "writing" — the person is asking about the CRAFT of writing, prose style, how to write about something, literary analysis, critique of text
+
+Most questions are "advice". Only use "predict" when the question explicitly asks about future outcomes or consequences. Only use "writing" when the question is specifically about the craft or technique of writing.
+
+Respond with ONLY one word: advice, predict, or writing"""
+
+    try:
+        text = await _asyncio.to_thread(caller, prompt)
+        mode = text.strip().lower().replace('"', '').replace("'", "")
+        if mode in ("advice", "predict", "writing"):
+            return mode
+    except Exception:
+        pass
+    return "advice"
 
 
 @app.post("/council/clarify")
@@ -1437,12 +1469,17 @@ async def clarify_question(
     if not caller:
         return {"needs_clarification": False, "questions": []}
 
+    # Auto-classify mode if needed
+    mode = req.mode
+    if mode == "auto":
+        mode = await _classify_mode(req.question)
+
     try:
         prompt = f"""Analyze this question that someone wants to ask a council of philosophers:
 
 "{req.question}"
 
-Mode: {req.mode}
+Mode: {mode}
 
 Determine: does this question describe a PERSONAL SITUATION or SPECIFIC DECISION that requires understanding the person's circumstances to give good advice? Or is it an ABSTRACT/PHILOSOPHICAL question that can be answered without personal context?
 
@@ -1488,7 +1525,7 @@ Respond with ONLY the JSON object, no other text."""
 
 class CouncilRequest(BaseModel):
     question: str = Field(..., min_length=4, max_length=2000)
-    mode: str = Field("advice")
+    mode: str = Field("auto")
     thinkers: list[str] = Field(default_factory=lambda: list(COUNCIL_NAMES))
     prose: str = Field(default="", max_length=4000)
     # Clarifying context gathered from intake questions
@@ -1551,6 +1588,10 @@ async def convene_council(
                     "cost": cost, "is_guest": is_guest},
         )
 
+    # Auto-classify mode if not explicitly set
+    if req.mode == "auto":
+        req.mode = await _classify_mode(req.question)
+
     if req.mode not in VALID_MODES:
         raise HTTPException(400, f"mode must be one of {sorted(VALID_MODES)}")
 
@@ -1596,6 +1637,7 @@ async def convene_council(
                     remaining_after = get_credits_remaining(user_id, sub["plan"])
                     r["credits_remaining"] = remaining_after
                     r["credits_cost"] = cost
+                    r["classified_mode"] = req.mode
                     _swarm_jobs[job_id] = {"status": "done", "result": r, "error": None}
                 except Exception as e:
                     _swarm_jobs[job_id] = {"status": "error", "result": None, "error": str(e)}
@@ -1629,6 +1671,7 @@ async def convene_council(
     remaining_after = get_credits_remaining(user_id, sub["plan"])
     result["credits_remaining"] = remaining_after
     result["credits_cost"] = cost
+    result["classified_mode"] = req.mode
 
     if tier != "swarm":
         cache_store_response(question, req.mode, result)
