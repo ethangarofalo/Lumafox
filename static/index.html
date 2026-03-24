@@ -167,6 +167,69 @@
     .council-node-tooltip-quote { font-size: 11px; color: var(--text); line-height: 1.55; font-style: italic; opacity: 0.85; }
 
     /* ── Swarm legend ── */
+    /* ── Council Briefing Layout ── */
+    .council-briefing { max-width: 960px; width: 100%; margin: 0 auto; }
+    .council-briefing-grid {
+      display: grid; grid-template-columns: 1fr 320px; gap: 24px; align-items: start;
+    }
+    .council-briefing-header {
+      padding: 24px 28px; margin-bottom: 24px;
+      background: var(--bg-elevated); border: 1px solid var(--border);
+      border-radius: var(--radius); position: relative;
+    }
+    .council-briefing-header::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+      background: linear-gradient(90deg, var(--accent), transparent);
+      border-radius: var(--radius) var(--radius) 0 0;
+    }
+    .council-synthesis-box {
+      padding: 28px 28px; margin-bottom: 24px;
+      background: linear-gradient(180deg, rgba(200,164,110,0.05) 0%, var(--bg-elevated) 100%);
+      border: 1px solid var(--border); border-top: 2px solid var(--accent);
+      border-radius: var(--radius);
+    }
+    .council-metric-cell {
+      display: flex; flex-direction: column; align-items: center;
+      padding: 0 16px; border-right: 1px solid var(--border);
+    }
+    .council-metric-cell:last-child { border-right: none; }
+    .council-metric-value {
+      font-size: 18px; font-weight: 600; color: var(--text);
+      font-family: var(--font-sans); line-height: 1;
+    }
+    .council-metric-label {
+      font-size: 9px; text-transform: uppercase; letter-spacing: 0.15em;
+      color: var(--text-faint); font-family: var(--font-sans); margin-top: 3px;
+    }
+    .council-timeline-item { position: relative; padding-left: 24px; padding-bottom: 16px; }
+    .council-timeline-item::before {
+      content: ''; position: absolute; left: 4px; top: 20px; bottom: 0;
+      width: 1px; background: var(--border);
+    }
+    .council-timeline-item:last-child::before { display: none; }
+    .council-timeline-dot {
+      position: absolute; left: 0; top: 6px;
+      width: 9px; height: 9px; border-radius: 50%;
+    }
+    .tradition-badge {
+      display: inline-block; padding: 2px 8px; border-radius: 4px;
+      font-size: 9px; letter-spacing: 0.12em; text-transform: uppercase;
+      font-family: var(--font-sans); font-weight: 600;
+    }
+    .council-step { display: flex; flex-direction: column; align-items: center; flex: 1; position: relative; }
+    .council-step-dot {
+      width: 26px; height: 26px; border-radius: 50%; display: flex;
+      align-items: center; justify-content: center;
+      font-size: 10px; font-weight: 600; font-family: var(--font-sans);
+      transition: all 0.4s ease;
+    }
+    .council-step-line {
+      position: absolute; top: 13px; left: calc(50% + 13px); right: calc(-50% + 13px);
+      height: 1px; background: var(--border);
+    }
+    .council-step:last-child .council-step-line { display: none; }
+    @keyframes pulse-step { 0%,100%{opacity:1} 50%{opacity:0.5} }
+
     .swarm-legend {
       display: flex; flex-wrap: wrap; gap: 8px 16px; justify-content: center;
       margin: 12px auto 0; max-width: 420px;
@@ -931,6 +994,9 @@
       }
 
       /* ── Council view mobile ── */
+      .council-briefing-grid { grid-template-columns: 1fr !important; }
+      .council-briefing { max-width: 100% !important; }
+      .council-metric-cell { padding: 0 10px; }
       /* Tier cards: stack to 1 column on very small screens */
       .council-tier-grid { grid-template-columns: 1fr !important; gap: 8px !important; }
 
@@ -5118,14 +5184,41 @@ const TRADITION_FAMILY = {
   "Socratic Gadfly": "friction", "Populist Cynic": "friction",
 };
 
-function CouncilDeliberating({ thinkers, swarm = false }) {
+function CouncilDeliberating({ thinkers, swarm = false, tier = "full" }) {
   const [activeThinker, setActiveThinker] = React.useState(0);
   const [verb, setVerb] = React.useState(COUNCIL_VERBS[0]);
   const [fade, setFade] = React.useState(true);
-  const [round, setRound] = React.useState(1);
+  const [phase, setPhase] = React.useState(0);
+  const [elapsed, setElapsed] = React.useState(0);
+  const [logLines, setLogLines] = React.useState([]);
 
   const displayNames = swarm ? SWARM_TRADITIONS : thinkers;
 
+  const phases = swarm
+    ? ["Seeding agents", "Round 1 — individual reasoning", "Round 2 — convergence", "Fault analysis", "Synthesis"]
+    : tier === "lite"
+      ? ["Reading question", "Deliberation", "Synthesis"]
+      : ["Reading question", "Round 1", "Round 2", "Synthesis"];
+
+  // Phase transitions based on typical timing
+  const phaseTimings = swarm
+    ? [5000, 30000, 55000, 70000]
+    : tier === "lite" ? [2000, 12000] : [3000, 12000, 22000];
+
+  React.useEffect(() => {
+    const timers = phaseTimings.map((t, i) =>
+      setTimeout(() => setPhase(i + 1), t)
+    );
+    return () => timers.forEach(clearTimeout);
+  }, []);
+
+  // Elapsed timer
+  React.useEffect(() => {
+    const t = setInterval(() => setElapsed(e => e + 1), 1000);
+    return () => clearInterval(t);
+  }, []);
+
+  // Thinker cycling
   React.useEffect(() => {
     const cycle = setInterval(() => {
       setFade(false);
@@ -5138,31 +5231,39 @@ function CouncilDeliberating({ thinkers, swarm = false }) {
     return () => clearInterval(cycle);
   }, [displayNames.length, swarm]);
 
-  // Swarm: cycle round indicator between 1 and 2
+  // Swarm: simulated log feed
   React.useEffect(() => {
     if (!swarm) return;
-    const t = setTimeout(() => setRound(2), 18000); // ~18s into deliberation
-    return () => clearTimeout(t);
+    const interval = setInterval(() => {
+      const name = displayNames[Math.floor(Math.random() * displayNames.length)];
+      const actions = ["weighing implications", "challenging consensus", "defending position", "finding common ground", "questioning premises", "citing precedent"];
+      const action = actions[Math.floor(Math.random() * actions.length)];
+      const ts = new Date().toLocaleTimeString("en-US", { hour12: false, hour: "2-digit", minute: "2-digit", second: "2-digit" });
+      setLogLines(prev => [...prev.slice(-8), `[${ts}] ${name} — ${action}`]);
+    }, 2400);
+    return () => clearInterval(interval);
   }, [swarm]);
+
+  const formatTime = (s) => `${Math.floor(s/60)}:${String(s%60).padStart(2,"0")}`;
 
   return (
     <div style={{
       flex: 1, display: "flex", flexDirection: "column",
       alignItems: "center", justifyContent: "center",
-      minHeight: 420, gap: 0,
+      minHeight: 420, gap: 0, maxWidth: 640, margin: "0 auto", width: "100%",
     }}>
       {swarm
-        ? <SwarmNetworkCanvas size={440} active={true} />
-        : <NeuralCanvas thinkers={thinkers} size={380} active={true} />
+        ? <SwarmNetworkCanvas size={320} active={true} />
+        : <NeuralCanvas thinkers={thinkers} size={280} active={true} />
       }
 
-      {/* Thinker status line */}
+      {/* Active thinker label */}
       <div style={{
-        marginTop: 4, height: 36, display: "flex",
+        marginTop: 4, height: 32, display: "flex",
         alignItems: "center", justifyContent: "center", gap: 10,
       }}>
         <span style={{
-          fontFamily: "var(--font)", fontSize: "1.05rem",
+          fontFamily: "var(--font)", fontSize: "1rem",
           color: swarm ? (TRADITION_COLORS[displayNames[activeThinker]] || "var(--accent)") : "var(--accent)",
           opacity: fade ? 1 : 0,
           transition: "opacity 0.3s ease, color 0.3s ease",
@@ -5170,51 +5271,70 @@ function CouncilDeliberating({ thinkers, swarm = false }) {
           {displayNames[activeThinker]}
         </span>
         <span style={{
-          fontFamily: "var(--font-sans)", fontSize: "0.8rem",
-          color: "var(--text-faint)", letterSpacing: "0.12em",
-          opacity: fade ? 1 : 0,
-          transition: "opacity 0.3s ease",
+          fontFamily: "var(--font-sans)", fontSize: "0.75rem",
+          color: "var(--text-faint)", letterSpacing: "0.1em",
+          opacity: fade ? 1 : 0, transition: "opacity 0.3s ease",
         }}>
           {verb}
         </span>
       </div>
 
-      {/* Round indicator — tradition-colored dots for swarm, plain for council */}
-      {swarm ? (
-        <div style={{ display: "flex", gap: 4, marginTop: 16, flexWrap: "wrap", justifyContent: "center", maxWidth: 320 }}>
-          {displayNames.map((name, i) => (
-            <div key={i} style={{
-              width: 6, height: 6, borderRadius: "50%",
-              background: i === activeThinker
-                ? (TRADITION_COLORS[name] || "var(--accent)")
-                : `${TRADITION_COLORS[name] || "#555"}33`,
-              transition: "background 0.3s, transform 0.3s",
-              transform: i === activeThinker ? "scale(1.6)" : "scale(1)",
+      {/* ── Workflow steps ── */}
+      <div style={{
+        display: "flex", alignItems: "flex-start", width: "100%",
+        marginTop: 28, padding: "0 12px",
+      }}>
+        {phases.map((label, i) => {
+          const isDone = i < phase;
+          const isActive = i === phase;
+          return html`<div key=${i} className="council-step">
+            <div className="council-step-line" style=${{
+              background: isDone ? "var(--accent-dim)" : "var(--border)",
             }} />
-          ))}
-        </div>
-      ) : (
-        <div style={{ display: "flex", gap: 6, marginTop: 16 }}>
-          {displayNames.map((_, i) => (
-            <div key={i} style={{
-              width: 5, height: 5, borderRadius: "50%",
-              background: i === activeThinker ? "var(--accent)" : "var(--border)",
-              transition: "background 0.3s",
-            }} />
-          ))}
+            <div className="council-step-dot" style=${{
+              background: isDone ? "var(--accent)" : isActive ? "rgba(200,164,110,0.15)" : "var(--bg-elevated)",
+              border: isActive ? "2px solid var(--accent)" : isDone ? "2px solid var(--accent)" : "1px solid var(--border)",
+              color: isDone ? "var(--bg)" : isActive ? "var(--accent)" : "var(--text-faint)",
+              animation: isActive ? "pulse-step 2s ease-in-out infinite" : "none",
+            }}>
+              ${isDone ? "✓" : String(i + 1).padStart(2, "0")}
+            </div>
+            <div style=${{
+              marginTop: 6, fontSize: 9, textTransform: "uppercase",
+              letterSpacing: "0.1em", textAlign: "center", lineHeight: 1.3,
+              fontFamily: "var(--font-sans)", maxWidth: 90,
+              color: isActive ? "var(--accent)" : isDone ? "var(--text-dim)" : "var(--text-faint)",
+            }}>
+              ${label}
+            </div>
+          </div>`;
+        })}
+      </div>
+
+      {/* Elapsed + agent count */}
+      <div style={{
+        marginTop: 20, display: "flex", gap: 16, alignItems: "center",
+        fontFamily: "var(--font-sans)", fontSize: 11, color: "var(--text-faint)",
+        letterSpacing: "0.1em",
+      }}>
+        <span>{formatTime(elapsed)}</span>
+        <span style={{ opacity: 0.3 }}>·</span>
+        <span>{swarm ? "40 agents · 19 traditions" : `${thinkers.length} thinkers`}</span>
+      </div>
+
+      {/* Swarm: simulated agent log */}
+      {swarm && logLines.length > 0 && (
+        <div style={{
+          marginTop: 20, width: "100%", maxHeight: 120, overflowY: "auto",
+          padding: "10px 14px", background: "rgba(0,0,0,0.3)", borderRadius: 8,
+          fontFamily: "monospace", fontSize: 11, lineHeight: 1.6,
+          color: "var(--text-faint)", opacity: 0.7,
+        }}>
+          {logLines.map((line, i) => html`<div key=${i} style=${{
+            opacity: i === logLines.length - 1 ? 1 : 0.6,
+          }}>${line}</div>`)}
         </div>
       )}
-
-      <div style={{
-        marginTop: 20,
-        fontFamily: "var(--font-sans)", fontSize: 11,
-        color: "var(--text-faint)", letterSpacing: "0.2em",
-        textTransform: "uppercase",
-      }}>
-        {swarm
-          ? `Swarm intelligence · Round ${round} of 2 · 40 agents · 19 traditions`
-          : "The council convenes"}
-      </div>
     </div>
   );
 }
@@ -5508,233 +5628,370 @@ function CouncilView({ isGuest, onNeedAuth }) {
   }
 
   if (deliberating) {
-    return <CouncilDeliberating thinkers={[...thinkers]} swarm={swarmMode} />;
+    return <CouncilDeliberating thinkers={[...thinkers]} swarm={swarmMode} tier={councilTier} />;
   }
 
-  if (result) {
-    // ── Swarm result layout ──────────────────────────────────────────────────
-    if (result.swarm) {
-      return (
-        <div className="write-container">
-          <div className="write-section">
-
-            {/* Header bar */}
-            <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 28 }}>
-              <div className="write-label" style={{ color: "var(--accent)", fontSize: 10, letterSpacing: "0.3em" }}>
-                SWARM INTELLIGENCE
-              </div>
-              <div style={{
-                padding: "3px 12px", borderRadius: 20,
-                border: "1px solid var(--accent-dim)",
-                fontFamily: "var(--font-sans)", fontSize: 11, color: "var(--accent)",
-                letterSpacing: "0.06em",
-              }}>
-                {result.shift_percentage}% shifted between rounds
-              </div>
-              <div style={{
-                fontFamily: "var(--font-sans)", fontSize: 11, color: "var(--text-faint)",
-              }}>
-                {result.n_agents} agents · 2 rounds
-              </div>
-              {result.detected_domains?.length > 0 && (
-                <div style={{
-                  fontFamily: "var(--font-sans)", fontSize: 10, color: "var(--text-faint)",
-                  letterSpacing: "0.08em", textTransform: "uppercase",
-                }}>
-                  Domain: {result.detected_domains.join(" · ")}
-                </div>
-              )}
-            </div>
-
-            {/* Network graph visualization */}
-            <SwarmResultsGraph resultData={result} size={400} />
-
-            {/* Tradition family legend */}
-            <div className="swarm-legend">
-              {[
-                { label: "Ancients", color: "#818cf8" },
-                { label: "Abrahamic", color: "#60a5fa" },
-                { label: "Modernity", color: "#f59e0b" },
-                { label: "Contemporary", color: "#c8a46e" },
-                { label: "Alt", color: "#34d399" },
-                { label: "Friction", color: "#f43f5e" },
-              ].map(({ label, color }) => (
-                <div key={label} className="swarm-legend-item">
-                  <div className="swarm-legend-dot" style={{ background: color }} />
-                  {label}
-                </div>
-              ))}
-            </div>
-
-            {/* Synthesis */}
-            <div style={{ marginTop: 24, marginBottom: 28, padding: "24px 28px", background: "var(--bg-elevated)", borderRadius: "var(--radius)", border: "1px solid var(--border)" }}>
-              <div className="write-label" style={{ marginBottom: 12, fontSize: 10 }}>THE POPULATION SPEAKS</div>
-              <p style={{ fontFamily: "var(--font)", fontSize: "1.05rem", color: "var(--text)", lineHeight: 1.85 }}>
-                {result.synthesis}
-              </p>
-            </div>
-
-            {/* Fault lines + What shifted */}
-            {(result.fault_lines || result.what_shifted) && (
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 28 }}>
-                {result.fault_lines && (
-                  <div style={{ padding: "16px 18px", background: "var(--bg-elevated)", borderRadius: "var(--radius)", border: "1px solid var(--border)" }}>
-                    <div className="write-label" style={{ marginBottom: 10, fontSize: 10 }}>Fault Lines</div>
-                    <p style={{ fontFamily: "var(--font-sans)", fontSize: 13, color: "var(--text-dim)", lineHeight: 1.65 }}>
-                      {result.fault_lines}
-                    </p>
-                  </div>
-                )}
-                {result.what_shifted && (
-                  <div style={{ padding: "16px 18px", background: "var(--bg-elevated)", borderRadius: "var(--radius)", border: "1px solid var(--border)" }}>
-                    <div className="write-label" style={{ marginBottom: 10, fontSize: 10 }}>What Shifted</div>
-                    <p style={{ fontFamily: "var(--font-sans)", fontSize: 13, color: "var(--text-dim)", lineHeight: 1.65 }}>
-                      {result.what_shifted}
-                    </p>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Tradition breakdown grid */}
-            <div className="write-label" style={{ marginBottom: 14 }}>Tradition Breakdown</div>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 10, marginBottom: 32 }}>
-              {result.thinkers.map(t => (
-                <SwarmTraditionCard key={t.name} card={t} />
-              ))}
-            </div>
-
-            <button className="action-btn" onClick={handleReset}>
-              Ask another question
-            </button>
-          </div>
-        </div>
-      );
+  // ── Shared markdown export builder ──
+  const exportMarkdown = () => {
+    const lines = [
+      `# ${result.swarm ? "Swarm Deliberation" : "Council Deliberation"}`,
+      ``, `**Question:** ${result.question}`,
+      `**Mode:** ${result.classified_mode || result.mode}`,
+      `**Date:** ${new Date().toLocaleDateString("en-US", { year:"numeric", month:"long", day:"numeric" })}`,
+      ``, `---`, ``, `## Synthesis`, ``, result.synthesis, ``,
+    ];
+    if (result.thinkers?.length) {
+      lines.push(`---`, ``, `## Individual Positions`, ``);
+      result.thinkers.forEach(t => {
+        lines.push(`### ${t.name} *(${t.tradition || ""})*`);
+        lines.push(`**Position:** ${t.final_position || t.ideal_position || t.position || ""}`);
+        lines.push(``, t.key_argument || t.argument || "", ``);
+      });
     }
+    if (result.tensions?.length) { lines.push(`---`, ``, `## Tensions`, ``); result.tensions.forEach(t => lines.push(`- ${t}`)); lines.push(``); }
+    if (result.alliances?.length) { lines.push(`---`, ``, `## Convergences`, ``); result.alliances.forEach(a => lines.push(`- ${a}`)); lines.push(``); }
+    if (result.fault_lines) { lines.push(`---`, ``, `## Fault Lines`, ``, result.fault_lines, ``); }
+    lines.push(`---`, ``, `*Generated by Lumafox Council — lumafox.ai*`);
+    const blob = new Blob([lines.join("\n")], { type: "text/markdown" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a"); a.href = url;
+    a.download = `council-${result.question.slice(0,40).replace(/[^a-z0-9]+/gi,"-").toLowerCase()}.md`;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+    toast("Deliberation saved as markdown.");
+  };
 
-    // ── Original council result layout ───────────────────────────────────────
+  if (result) {
+    const isSwarm = !!result.swarm;
+    const classifiedMode = result.classified_mode || result.mode || "advice";
+    const modeLabels = { advice: "Ethical", predict: "Predictive", writing: "Literary" };
+    const thinkerList = result.thinkers || [];
+    const traditionCount = result.tradition_breakdown ? Object.keys(result.tradition_breakdown).length : 0;
+
     return (
       <div className="write-container">
-        <div className="write-section">
-          {/* Synthesis */}
-          <div style={{ marginBottom: 36, padding: "28px 32px", background: "var(--bg-elevated)", borderRadius: "var(--radius)", border: "1px solid var(--border)" }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
-              <div className="write-label" style={{ color: "var(--accent)", fontSize: 10, letterSpacing: "0.3em" }}>THE COUNCIL SPEAKS</div>
+        <div className="council-briefing">
+
+          {/* ══ BRIEFING HEADER ══ */}
+          <div className="council-briefing-header">
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14, flexWrap: "wrap", gap: 8 }}>
+              <div style={{
+                fontFamily: "var(--font-sans)", fontSize: 10, letterSpacing: "0.3em",
+                textTransform: "uppercase", color: "var(--accent)",
+              }}>
+                {isSwarm ? "SWARM INTELLIGENCE" : "COUNCIL DELIBERATION"}
+              </div>
               <div style={{ display: "flex", gap: 8 }}>
-              <button
-                onClick={() => {
-                  // Build markdown export
-                  const lines = [
-                    `# Council Deliberation`,
-                    ``,
-                    `**Question:** ${result.question}`,
-                    `**Mode:** ${result.classified_mode || result.mode}`,
-                    `**Date:** ${new Date().toLocaleDateString("en-US", { year:"numeric", month:"long", day:"numeric" })}`,
-                    ``,
-                    `---`,
-                    ``,
-                    `## Synthesis`,
-                    ``,
-                    result.synthesis,
-                    ``,
-                  ];
-                  if (result.thinkers?.length) {
-                    lines.push(`---`, ``, `## Individual Positions`, ``);
-                    result.thinkers.forEach(t => {
-                      lines.push(`### ${t.name} *(${t.tradition})*`);
-                      lines.push(`**Position:** ${t.final_position || t.ideal_position}`);
-                      lines.push(``, t.key_argument || "", ``);
-                    });
-                  }
-                  if (result.tensions?.length) {
-                    lines.push(`---`, ``, `## Tensions`, ``);
-                    result.tensions.forEach(t => lines.push(`- ${t}`));
-                    lines.push(``);
-                  }
-                  if (result.alliances?.length) {
-                    lines.push(`---`, ``, `## Convergences`, ``);
-                    result.alliances.forEach(a => lines.push(`- ${a}`));
-                    lines.push(``);
-                  }
-                  lines.push(`---`, ``, `*Generated by Lumafox Council — lumafox.ai*`);
-                  const blob = new Blob([lines.join("\n")], { type: "text/markdown" });
-                  const url = URL.createObjectURL(blob);
-                  const a = document.createElement("a");
-                  a.href = url;
-                  a.download = `council-${result.question.slice(0,40).replace(/[^a-z0-9]+/gi,"-").toLowerCase()}.md`;
-                  document.body.appendChild(a); a.click();
-                  document.body.removeChild(a); URL.revokeObjectURL(url);
-                  toast("Deliberation saved as markdown.");
-                }}
-                style={{ background: "none", border: "1px solid var(--border)", borderRadius: 6, padding: "4px 12px", color: "var(--text-dim)", fontSize: 11, cursor: "pointer", fontFamily: "var(--font-sans)", display: "flex", alignItems: "center", gap: 5 }}
-              >
-                ↓ Save deliberation
-              </button>
-              <button
-                onClick={() => {
-                  navigator.clipboard.writeText(result.synthesis).then(() => toast("Synthesis copied — paste into Voice to refine in your style."));
-                }}
-                style={{ background: "none", border: "1px solid var(--accent-dim)", borderRadius: 6, padding: "4px 12px", color: "var(--accent)", fontSize: 11, cursor: "pointer", fontFamily: "var(--font-sans)", letterSpacing: "0.04em", display: "flex", alignItems: "center", gap: 6 }}
-              >
-                <svg width="11" height="11" viewBox="0 0 14 14" fill="none">
-                  <rect x="0" y="5" width="2" height="4" rx="1" fill="currentColor" opacity="0.6"/>
-                  <rect x="3" y="2" width="2" height="10" rx="1" fill="currentColor"/>
-                  <rect x="6" y="4" width="2" height="6" rx="1" fill="currentColor" opacity="0.8"/>
-                  <rect x="9" y="1" width="2" height="12" rx="1" fill="currentColor"/>
-                  <rect x="12" y="4" width="2" height="6" rx="1" fill="currentColor" opacity="0.7"/>
-                </svg>
-                Refine in my Voice →
-              </button>
+                <button onClick={exportMarkdown}
+                  style={{ background: "none", border: "1px solid var(--border)", borderRadius: 6, padding: "4px 12px", color: "var(--text-dim)", fontSize: 11, cursor: "pointer", fontFamily: "var(--font-sans)", display: "flex", alignItems: "center", gap: 5 }}
+                >↓ Save</button>
+                <button onClick={() => { navigator.clipboard.writeText(result.synthesis).then(() => toast("Synthesis copied.")); }}
+                  style={{ background: "none", border: "1px solid var(--accent-dim)", borderRadius: 6, padding: "4px 12px", color: "var(--accent)", fontSize: 11, cursor: "pointer", fontFamily: "var(--font-sans)", display: "flex", alignItems: "center", gap: 5 }}
+                >
+                  <svg width="11" height="11" viewBox="0 0 14 14" fill="none"><rect x="0" y="5" width="2" height="4" rx="1" fill="currentColor" opacity="0.6"/><rect x="3" y="2" width="2" height="10" rx="1" fill="currentColor"/><rect x="6" y="4" width="2" height="6" rx="1" fill="currentColor" opacity="0.8"/><rect x="9" y="1" width="2" height="12" rx="1" fill="currentColor"/><rect x="12" y="4" width="2" height="6" rx="1" fill="currentColor" opacity="0.7"/></svg>
+                  Refine in Voice →
+                </button>
               </div>
             </div>
-            <p style={{ fontFamily: "var(--font)", fontSize: "1.05rem", color: "var(--text)", lineHeight: 1.85 }}>
-              {result.synthesis}
+
+            {/* Question as hero text */}
+            <p style={{
+              fontFamily: "var(--font)", fontSize: "1.25rem", fontStyle: "italic",
+              color: "var(--text)", lineHeight: 1.5, marginBottom: 16,
+            }}>
+              "{result.question}"
             </p>
-          </div>
 
-          {/* Thinker cards */}
-          <div className="write-label" style={{ marginBottom: 14 }}>Individual Positions</div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 12, marginBottom: 28 }}>
-            {result.thinkers.map(t => (
-              <ThinkerCard key={t.name} thinker={t} deliberationResult={result} />
-            ))}
-          </div>
-
-          {/* Tensions & Alliances */}
-          {(result.tensions?.length > 0 || result.alliances?.length > 0) && (
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 28 }}>
-              {result.tensions?.length > 0 && (
-                <div style={{ padding: "16px 18px", background: "var(--bg-elevated)", borderRadius: "var(--radius)", border: "1px solid var(--border)" }}>
-                  <div className="write-label" style={{ marginBottom: 10, fontSize: 10 }}>Tensions</div>
-                  {result.tensions.map((t, i) => (
-                    <p key={i} style={{ fontFamily: "var(--font-sans)", fontSize: 13, color: "var(--text-dim)", marginBottom: 6, lineHeight: 1.5 }}>{t}</p>
-                  ))}
+            {/* Metrics bar */}
+            <div style={{
+              display: "flex", alignItems: "center", gap: 0,
+              borderTop: "1px solid var(--border)", paddingTop: 14,
+            }}>
+              <div className="council-metric-cell">
+                <div className="council-metric-value">{isSwarm ? result.n_agents || 40 : thinkerList.length}</div>
+                <div className="council-metric-label">{isSwarm ? "Agents" : "Thinkers"}</div>
+              </div>
+              {isSwarm && (
+                <div className="council-metric-cell">
+                  <div className="council-metric-value">{traditionCount || 19}</div>
+                  <div className="council-metric-label">Traditions</div>
                 </div>
               )}
-              {result.alliances?.length > 0 && (
-                <div style={{ padding: "16px 18px", background: "var(--bg-elevated)", borderRadius: "var(--radius)", border: "1px solid var(--border)" }}>
-                  <div className="write-label" style={{ marginBottom: 10, fontSize: 10 }}>Convergences</div>
-                  {result.alliances.map((a, i) => (
-                    <p key={i} style={{ fontFamily: "var(--font-sans)", fontSize: 13, color: "var(--text-dim)", marginBottom: 6, lineHeight: 1.5 }}>{a}</p>
+              <div className="council-metric-cell">
+                <div className="council-metric-value">{isSwarm ? 2 : (councilTier === "lite" ? 1 : 2)}</div>
+                <div className="council-metric-label">Rounds</div>
+              </div>
+              {isSwarm && result.shift_percentage != null && (
+                <div className="council-metric-cell">
+                  <div className="council-metric-value" style={{ color: "var(--accent)" }}>{result.shift_percentage}%</div>
+                  <div className="council-metric-label">Shifted</div>
+                </div>
+              )}
+              <div className="council-metric-cell">
+                <div className="council-metric-value" style={{ fontSize: 13 }}>{modeLabels[classifiedMode] || classifiedMode}</div>
+                <div className="council-metric-label">Mode</div>
+              </div>
+              {(result.tensions?.length > 0 || result.alliances?.length > 0) && !isSwarm && (
+                <>
+                  <div className="council-metric-cell">
+                    <div className="council-metric-value">{result.tensions?.length || 0}</div>
+                    <div className="council-metric-label">Tensions</div>
+                  </div>
+                  <div className="council-metric-cell">
+                    <div className="council-metric-value">{result.alliances?.length || 0}</div>
+                    <div className="council-metric-label">Convergences</div>
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* Domain tags (swarm) */}
+            {isSwarm && result.detected_domains?.length > 0 && (
+              <div style={{ display: "flex", gap: 6, marginTop: 12, flexWrap: "wrap" }}>
+                {result.detected_domains.map(d => (
+                  <span key={d} style={{
+                    padding: "2px 10px", borderRadius: 4,
+                    background: "rgba(200,164,110,0.08)", border: "1px solid rgba(200,164,110,0.2)",
+                    fontFamily: "var(--font-sans)", fontSize: 10, color: "var(--accent)",
+                    letterSpacing: "0.08em", textTransform: "uppercase",
+                  }}>{d}</span>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* ══ TWO-PANEL LAYOUT ══ */}
+          <div className="council-briefing-grid">
+
+            {/* ── LEFT PANEL: Synthesis + Analysis ── */}
+            <div>
+              {/* Synthesis — the verdict */}
+              <div className="council-synthesis-box">
+                <div style={{
+                  fontFamily: "var(--font-sans)", fontSize: 10, letterSpacing: "0.3em",
+                  textTransform: "uppercase", color: "var(--accent)", marginBottom: 14,
+                }}>
+                  {isSwarm ? "THE POPULATION SPEAKS" : "THE COUNCIL SPEAKS"}
+                </div>
+                <p style={{
+                  fontFamily: "var(--font)", fontSize: "1.15rem",
+                  color: "var(--text)", lineHeight: 1.85, margin: 0,
+                }}>
+                  {result.synthesis}
+                </p>
+              </div>
+
+              {/* Swarm: network graph */}
+              {isSwarm && (
+                <div style={{ marginBottom: 24 }}>
+                  <SwarmResultsGraph resultData={result} size={340} />
+                  <div className="swarm-legend" style={{ marginTop: 8 }}>
+                    {[
+                      { label: "Ancients", color: "#818cf8" },
+                      { label: "Abrahamic", color: "#60a5fa" },
+                      { label: "Modernity", color: "#f59e0b" },
+                      { label: "Contemporary", color: "#c8a46e" },
+                      { label: "Alt", color: "#34d399" },
+                      { label: "Friction", color: "#f43f5e" },
+                    ].map(({ label, color }) => (
+                      <div key={label} className="swarm-legend-item">
+                        <div className="swarm-legend-dot" style={{ background: color }} />
+                        {label}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Tensions & Convergences — side by side */}
+              {(isSwarm ? (result.fault_lines || result.what_shifted) : (result.tensions?.length > 0 || result.alliances?.length > 0)) && (
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 24 }}>
+                  {/* Council: tensions/alliances */}
+                  {!isSwarm && result.tensions?.length > 0 && (
+                    <div style={{
+                      padding: "14px 16px", background: "var(--bg-elevated)",
+                      borderRadius: "var(--radius)", border: "1px solid var(--border)",
+                      borderLeft: "3px solid #cf7e7e",
+                    }}>
+                      <div className="write-label" style={{ marginBottom: 8, fontSize: 10 }}>Tensions</div>
+                      {result.tensions.map((t, i) => (
+                        <p key={i} style={{ fontFamily: "var(--font-sans)", fontSize: 12, color: "var(--text-dim)", marginBottom: 5, lineHeight: 1.5 }}>{t}</p>
+                      ))}
+                    </div>
+                  )}
+                  {!isSwarm && result.alliances?.length > 0 && (
+                    <div style={{
+                      padding: "14px 16px", background: "var(--bg-elevated)",
+                      borderRadius: "var(--radius)", border: "1px solid var(--border)",
+                      borderLeft: "3px solid #6ecf8e",
+                    }}>
+                      <div className="write-label" style={{ marginBottom: 8, fontSize: 10 }}>Convergences</div>
+                      {result.alliances.map((a, i) => (
+                        <p key={i} style={{ fontFamily: "var(--font-sans)", fontSize: 12, color: "var(--text-dim)", marginBottom: 5, lineHeight: 1.5 }}>{a}</p>
+                      ))}
+                    </div>
+                  )}
+                  {/* Swarm: fault lines / what shifted */}
+                  {isSwarm && result.fault_lines && (
+                    <div style={{
+                      padding: "14px 16px", background: "var(--bg-elevated)",
+                      borderRadius: "var(--radius)", border: "1px solid var(--border)",
+                      borderLeft: "3px solid #cf7e7e",
+                    }}>
+                      <div className="write-label" style={{ marginBottom: 8, fontSize: 10 }}>Fault Lines</div>
+                      <p style={{ fontFamily: "var(--font-sans)", fontSize: 12, color: "var(--text-dim)", lineHeight: 1.6 }}>{result.fault_lines}</p>
+                    </div>
+                  )}
+                  {isSwarm && result.what_shifted && (
+                    <div style={{
+                      padding: "14px 16px", background: "var(--bg-elevated)",
+                      borderRadius: "var(--radius)", border: "1px solid var(--border)",
+                      borderLeft: "3px solid #6ecf8e",
+                    }}>
+                      <div className="write-label" style={{ marginBottom: 8, fontSize: 10 }}>What Shifted</div>
+                      <p style={{ fontFamily: "var(--font-sans)", fontSize: 12, color: "var(--text-dim)", lineHeight: 1.6 }}>{result.what_shifted}</p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Narrative — collapsible */}
+              {!isSwarm && result.narrative && (
+                <details style={{ marginBottom: 24 }}>
+                  <summary style={{
+                    fontFamily: "var(--font-sans)", fontSize: 10, letterSpacing: "0.15em",
+                    textTransform: "uppercase", color: "var(--text-faint)", cursor: "pointer",
+                    marginBottom: 8, listStyle: "none",
+                  }}>
+                    ▸ How the deliberation unfolded
+                  </summary>
+                  <p style={{
+                    fontFamily: "var(--font-sans)", fontSize: 13, color: "var(--text-dim)",
+                    lineHeight: 1.75, padding: "12px 16px",
+                    background: "var(--bg-elevated)", borderRadius: "var(--radius)",
+                    border: "1px solid var(--border)",
+                  }}>
+                    {result.narrative}
+                  </p>
+                </details>
+              )}
+
+              <button className="action-btn" onClick={handleReset} style={{ marginBottom: 24 }}>
+                Ask another question
+              </button>
+            </div>
+
+            {/* ── RIGHT PANEL: Agent Feed / Timeline ── */}
+            <div>
+              <div style={{
+                fontFamily: "var(--font-sans)", fontSize: 10, letterSpacing: "0.2em",
+                textTransform: "uppercase", color: "var(--text-faint)", marginBottom: 14,
+              }}>
+                {isSwarm ? `Tradition Breakdown · ${thinkerList.length}` : "Individual Positions"}
+              </div>
+
+              {isSwarm ? (
+                /* Swarm: tradition cards with colored left border, sorted by agent count */
+                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                  {[...thinkerList].sort((a, b) => (b.agent_count || 0) - (a.agent_count || 0)).map(t => (
+                    <div key={t.name} style={{
+                      background: "var(--bg-elevated)", border: "1px solid var(--border)",
+                      borderLeft: `3px solid ${TRADITION_COLORS[t.name] || "var(--accent)"}`,
+                      borderRadius: "var(--radius)", padding: "12px 14px",
+                    }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                        <span style={{ fontFamily: "var(--font)", fontSize: "0.85rem", color: "var(--text)" }}>{t.name}</span>
+                        <span style={{
+                          fontFamily: "var(--font-sans)", fontSize: 10, color: "var(--text-faint)",
+                          background: "var(--bg)", border: "1px solid var(--border)",
+                          borderRadius: 20, padding: "1px 8px",
+                        }}>{t.agent_count} {t.agent_count === 1 ? "agent" : "agents"}</span>
+                      </div>
+                      <div style={{
+                        fontFamily: "var(--font-sans)", fontSize: 11,
+                        color: t.position?.startsWith("split") ? "var(--text-faint)" : "var(--accent)",
+                        letterSpacing: "0.03em", marginBottom: 6,
+                      }}>{t.position}</div>
+                      {t.argument && (
+                        <p style={{ fontFamily: "var(--font-sans)", fontSize: 11, color: "var(--text-dim)", lineHeight: 1.55, margin: 0 }}>
+                          "{t.argument.length > 150 ? t.argument.slice(0, 150) + "…" : t.argument}"
+                        </p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                /* Council: timeline feed with tradition-colored dots */
+                <div>
+                  {thinkerList.map((t, i) => (
+                    <div key={t.name} className="council-timeline-item">
+                      <div className="council-timeline-dot" style={{
+                        background: TRADITION_COLORS[t.name] || "var(--accent)",
+                      }} />
+                      <div style={{
+                        background: "var(--bg-elevated)", border: "1px solid var(--border)",
+                        borderRadius: "var(--radius)", padding: "12px 14px",
+                      }}>
+                        {/* Tradition badge + name */}
+                        <div style={{ marginBottom: 6 }}>
+                          <span className="tradition-badge" style={{
+                            background: `${TRADITION_COLORS[t.name] || "var(--accent)"}15`,
+                            border: `1px solid ${TRADITION_COLORS[t.name] || "var(--accent)"}40`,
+                            color: TRADITION_COLORS[t.name] || "var(--accent)",
+                          }}>
+                            {TRADITION_LABEL[t.name] || t.tradition}
+                          </span>
+                        </div>
+                        <div style={{ fontFamily: "var(--font)", fontSize: "0.9rem", color: "var(--text)", marginBottom: 6 }}>
+                          {t.name}
+                        </div>
+                        <p style={{ fontFamily: "var(--font-sans)", fontSize: 12, color: "var(--text-dim)", lineHeight: 1.6, margin: "0 0 8px" }}>
+                          {t.final_position || t.ideal_position}
+                        </p>
+                        <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+                          {t.key_argument && (
+                            <button onClick={() => {
+                              // Toggle inline — use a data attribute trick
+                              const el = document.getElementById(`thinker-arg-${i}`);
+                              if (el) el.style.display = el.style.display === "none" ? "block" : "none";
+                            }} style={{
+                              background: "none", border: "none", cursor: "pointer",
+                              fontFamily: "var(--font-sans)", fontSize: 10, color: "var(--text-faint)",
+                              padding: 0, letterSpacing: "0.05em",
+                            }}>▼ Full argument</button>
+                          )}
+                          <button onClick={() => {
+                            const el = document.getElementById(`thinker-ask-${i}`);
+                            if (el) el.style.display = el.style.display === "none" ? "block" : "none";
+                          }} style={{
+                            background: "none", border: "1px solid rgba(200,164,110,0.2)",
+                            borderRadius: 6, cursor: "pointer",
+                            fontFamily: "var(--font-sans)", fontSize: 10,
+                            color: "var(--accent)", padding: "2px 8px",
+                          }}>Ask {t.name.split(" ")[0]}</button>
+                        </div>
+                        {t.key_argument && (
+                          <div id={`thinker-arg-${i}`} style={{ display: "none", marginTop: 8 }}>
+                            <p style={{ fontFamily: "var(--font-sans)", fontSize: 11, color: "var(--text-dim)", lineHeight: 1.65, margin: 0 }}>
+                              {t.key_argument}
+                            </p>
+                            {t.private_thought && (
+                              <p style={{ fontFamily: "var(--font-sans)", fontSize: 11, color: "var(--text-faint)", fontStyle: "italic", marginTop: 6, borderTop: "1px solid var(--border)", paddingTop: 6 }}>
+                                Private thought: "{t.private_thought}"
+                              </p>
+                            )}
+                          </div>
+                        )}
+                        {/* Inline ask panel — minimal version */}
+                        <div id={`thinker-ask-${i}`} style={{ display: "none", marginTop: 10, borderTop: "1px solid var(--border)", paddingTop: 8 }}>
+                          <ThinkerAskInline thinker={t} deliberationResult={result} />
+                        </div>
+                      </div>
+                    </div>
                   ))}
                 </div>
               )}
             </div>
-          )}
-
-          {/* Narrative */}
-          {result.narrative && (
-            <div style={{ marginBottom: 28 }}>
-              <div className="write-label" style={{ marginBottom: 10 }}>How the Deliberation Unfolded</div>
-              <p style={{ fontFamily: "var(--font-sans)", fontSize: 14, color: "var(--text-dim)", lineHeight: 1.8 }}>
-                {result.narrative}
-              </p>
-            </div>
-          )}
-
-          <button className="action-btn" onClick={handleReset}>
-            Ask another question
-          </button>
+          </div>
         </div>
       </div>
     );
@@ -5954,6 +6211,61 @@ function CouncilView({ isGuest, onNeedAuth }) {
 }
 
 // Swarm result card — one per tradition cluster
+function ThinkerAskInline({ thinker, deliberationResult }) {
+  const [input, setInput] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [conversation, setConversation] = useState([]);
+
+  const ask = async () => {
+    if (!input.trim() || loading) return;
+    const q = input.trim();
+    setInput("");
+    setConversation(prev => [...prev, { role: "user", content: q }]);
+    setLoading(true);
+    try {
+      const r = await api("/council/interrogate", {
+        method: "POST",
+        body: JSON.stringify({
+          thinker: thinker.name,
+          question: q,
+          deliberation_context: deliberationResult || {},
+        }),
+      });
+      setConversation(prev => [...prev, { role: "thinker", content: r.response }]);
+    } catch (e) {
+      setConversation(prev => [...prev, { role: "thinker", content: `Error: ${e.message}` }]);
+    }
+    setLoading(false);
+  };
+
+  return html`<div>
+    ${conversation.length > 0 && html`<div style=${{ maxHeight: 200, overflowY: "auto", marginBottom: 8 }}>
+      ${conversation.map((msg, i) => html`<div key=${i} style=${{
+        padding: "6px 0", fontSize: 11, lineHeight: 1.55,
+        color: msg.role === "user" ? "var(--text-faint)" : "var(--text-dim)",
+        fontFamily: "var(--font-sans)",
+        fontStyle: msg.role === "user" ? "italic" : "normal",
+      }}>${msg.role === "user" ? "You: " : ""}${msg.content}</div>`)}
+    </div>`}
+    <div style=${{ display: "flex", gap: 6 }}>
+      <input value=${input} onChange=${e => setInput(e.target.value)}
+        onKeyDown=${e => e.key === "Enter" && ask()}
+        placeholder=${`Ask ${thinker.name.split(" ")[0]}...`}
+        style=${{
+          flex: 1, padding: "5px 8px", fontSize: 11, fontFamily: "var(--font-sans)",
+          background: "var(--bg)", border: "1px solid var(--border)",
+          borderRadius: 6, color: "var(--text)", outline: "none",
+        }}
+      />
+      <button onClick=${ask} disabled=${loading} style=${{
+        padding: "4px 10px", fontSize: 10, fontFamily: "var(--font-sans)",
+        background: "var(--accent)", color: "var(--bg)", border: "none",
+        borderRadius: 6, cursor: "pointer", opacity: loading ? 0.5 : 1,
+      }}>${loading ? "…" : "→"}</button>
+    </div>
+  </div>`;
+}
+
 function SwarmTraditionCard({ card }) {
   const [expanded, setExpanded] = useState(false);
   const isSplit = card.position && card.position.startsWith("split");
