@@ -48,6 +48,7 @@ PLAN_LIMITS = {
     "free":    {"profiles": 1,   "teaches_per_month": 50,     "write": True, "analyze": True, "export": True,  "council_credits_per_week": 3},
     "starter": {"profiles": 3,   "teaches_per_month": 500,    "write": True, "analyze": True, "export": True,  "council_credits_per_week": 25},
     "pro":     {"profiles": 999, "teaches_per_month": 999999, "write": True, "analyze": True, "export": True,  "council_credits_per_week": 100},
+    "admin":   {"profiles": 999, "teaches_per_month": 999999, "write": True, "analyze": True, "export": True,  "council_credits_per_week": 99999},
 }
 
 
@@ -96,6 +97,9 @@ def consume_credits(user_id: str, cost: int) -> int:
 
 def check_council_credits(user_id: str, plan: str, mode: str = "full") -> dict:
     """Returns allowed, credits_remaining, cost for the requested mode."""
+    # Demo mode: skip all credit enforcement
+    if os.environ.get("DEMO_MODE") == "1":
+        return {"allowed": True, "credits_remaining": 9999, "credits_per_week": 9999, "cost": 0}
     cost = COUNCIL_CREDIT_COSTS.get(mode, 3)
     remaining = get_credits_remaining(user_id, plan)
     return {
