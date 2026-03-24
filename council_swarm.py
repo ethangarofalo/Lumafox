@@ -1076,11 +1076,16 @@ def generate_agent(agent_id: int, weights: Optional[dict[str, float]] = None) ->
         persona_parts.append("(committed)")
     persona = " ".join(persona_parts)
 
+    # Openness: how likely is this person to shift when confronted with good arguments?
+    # Low-drift (committed) agents are less open; high-drift (nominal) agents more so.
+    openness = min(1.0, max(0.1, drift * 0.8 + random.gauss(0.4, 0.15)))
+
     return {
         "id": agent_id,
         "primary_tradition": primary,
         "secondary_tradition": secondary,
         "drift": drift,
+        "openness": round(openness, 2),
         "persona": persona,
     }
 
@@ -1233,12 +1238,28 @@ async def _run_agent(
     system = _build_agent_system_prompt(agent)
 
     if round_num == 2 and population_summary:
+        openness = agent.get("openness", 0.5)
+        openness_note = ""
+        if openness >= 0.7:
+            openness_note = (
+                "You tend to take other perspectives seriously and are genuinely "
+                "willing to change your mind when the argument is strong. "
+            )
+        elif openness <= 0.3:
+            openness_note = (
+                "You hold your convictions firmly and are not easily swayed. "
+                "It would take a very compelling argument to move you. "
+            )
         user_msg = (
             f"The question before you: {question}\n\n"
-            f"Here is where the broader population landed in the first round of deliberation:\n\n"
+            f"You've been scrolling through other people's responses to this question. "
+            f"Here's what came across your feed:\n\n"
             f"{population_summary}\n\n"
-            f"Having seen this: do you hold your position, shift it, or become a dissenter? "
-            f"Reason it through, then call finalize_position."
+            f"{openness_note}"
+            f"Having seen what others think: do you hold your position, shift it, "
+            f"or become a dissenter? If someone's reasoning genuinely moved you, "
+            f"name what moved you and why. If nothing moved you, explain what "
+            f"everyone else is missing. Then call finalize_position."
         )
     else:
         user_msg = (
@@ -1329,6 +1350,141 @@ def _summarize_round_1(results: list[dict]) -> str:
         # Add one representative reasoning
         rep = max(agents, key=lambda a: a.get("conviction", 0))
         lines.append(f"  Sample reasoning: \"{rep.get('reasoning', '')[:200]}\"")
+
+    return "\n".join(lines)
+
+
+# ── Tradition Affinity Matrix ─────────────────────────────────────────────────
+#
+# Intellectual proximity: which traditions are "near" each other?
+# 1.0 = self, 0.7+ = strong affinity, 0.3-0.6 = moderate, <0.3 = distant/opposed
+# This drives the "echo chamber" effect — agents in Round 2 see more content
+# from traditions they're intellectually proximate to.
+
+_TRADITION_FAMILIES = {
+    "ancients":    ["platonist", "aristotelian", "stoic"],
+    "abrahamic":   ["jewish", "christian", "islamic", "scholastic"],
+    "modernity":   ["modernity_1", "modernity_2", "modernity_3"],
+    "contemporary":["postmodern", "nihilist", "hedonist"],
+    "american":    ["american_urban_pragmatist", "american_rural_traditionalist",
+                    "american_digital_native", "american_spiritual_seeker"],
+}
+
+def _get_family(tradition_key: str) -> str:
+    for family, members in _TRADITION_FAMILIES.items():
+        if tradition_key in members:
+            return family
+    return "other"
+
+def _tradition_affinity(t1: str, t2: str) -> float:
+    """How intellectually proximate are two traditions? 0.0 to 1.0."""
+    if t1 == t2:
+        return 1.0
+    f1, f2 = _get_family(t1), _get_family(t2)
+    if f1 == f2:
+        return 0.7  # same family
+    # Cross-family affinities (selected pairs that genuinely talk to each other)
+    _CROSS_AFFINITIES = {
+        frozenset({"ancients", "abrahamic"}): 0.5,      # Scholastics bridge these
+        frozenset({"ancients", "modernity"}): 0.35,      # modernity reacts to ancients
+        frozenset({"modernity", "contemporary"}): 0.55,  # postmodern is child of modernity
+        frozenset({"abrahamic", "american"}): 0.45,      # rural traditionalists + Christians
+        frozenset({"modernity", "american"}): 0.5,       # pragmatists are children of modernity
+        frozenset({"contemporary", "american"}): 0.5,    # digital natives + postmodern
+    }
+    pair = frozenset({f1, f2})
+    return _CROSS_AFFINITIES.get(pair, 0.2)
+
+
+def _build_agent_feed(agent: dict, round1_results: list[dict], feed_size: int = 12) -> str:
+    """
+    Build a personalized Round 2 feed for an agent.
+
+    Instead of showing every agent the same summary, each agent sees a
+    curated view of Round 1 — weighted toward traditions they're
+    intellectually proximate to (echo chamber effect), but with some
+    cross-tradition exposure (the "algorithm" occasionally surfaces
+    dissenting views, like real social media).
+
+    High-conviction, articulate responses get amplified (social influence).
+    """
+    my_tradition = agent["primary_tradition"]
+    my_secondary = agent.get("secondary_tradition")
+    my_drift = agent.get("drift", 0.5)
+
+    # Score each Round 1 result for this agent's feed
+    scored = []
+    for r in round1_results:
+        if r.get("position") == "error" or not r.get("reasoning"):
+            continue
+        their_tradition = r["primary_tradition"]
+
+        # Base: tradition affinity (echo chamber)
+        affinity = _tradition_affinity(my_tradition, their_tradition)
+
+        # Boost if it's from their secondary tradition
+        if my_secondary and their_tradition == my_secondary:
+            affinity += 0.15
+
+        # High-drift agents have weaker echo chambers (more eclectic feeds)
+        if my_drift >= 0.6:
+            affinity = 0.3 + affinity * 0.7  # compress toward middle
+
+        # Social influence: high-conviction + long reasoning = more visible
+        conviction = r.get("conviction", 0.5)
+        reasoning_quality = min(len(r.get("reasoning", "")) / 250, 1.0)
+        influence = conviction * 0.6 + reasoning_quality * 0.4
+
+        # Final feed score
+        score = affinity * 0.6 + influence * 0.4 + random.uniform(0, 0.15)
+        scored.append((score, r))
+
+    scored.sort(key=lambda x: -x[0])
+
+    # Take top items but ensure at least 2 from distant traditions (cross-pollination)
+    feed = []
+    distant = []
+    for score, r in scored:
+        aff = _tradition_affinity(my_tradition, r["primary_tradition"])
+        if aff < 0.35:
+            distant.append(r)
+        else:
+            feed.append(r)
+
+    # Ensure cross-pollination: inject 2-3 distant voices
+    n_distant = min(3, len(distant))
+    distant_sample = random.sample(distant, n_distant) if n_distant > 0 else []
+    feed = feed[:feed_size - n_distant] + distant_sample
+    random.shuffle(feed)  # mix so they don't see "near" then "far" in order
+
+    # Format as a feed (like scrolling through responses)
+    lines = [f"You're seeing {len(feed)} responses from Round 1 "
+             f"(out of {len(round1_results)} total deliberators):\n"]
+
+    for i, r in enumerate(feed):
+        tname = TRADITIONS[r["primary_tradition"]]["name"]
+        conviction_label = (
+            "firmly" if r.get("conviction", 0.5) >= 0.8
+            else "tentatively" if r.get("conviction", 0.5) <= 0.3
+            else ""
+        )
+        position = r.get("position", "unclear")
+        reasoning = r.get("reasoning", "")[:250]
+        lines.append(
+            f"[{i+1}] Someone shaped by {tname} tradition {conviction_label} says \"{position}\":\n"
+            f"   \"{reasoning}\"\n"
+        )
+
+    # Add aggregate stats so the agent has a sense of the whole
+    position_counts: dict[str, int] = {}
+    for r in round1_results:
+        p = r.get("position", "unclear").lower().strip()
+        if p != "error":
+            position_counts[p] = position_counts.get(p, 0) + 1
+
+    lines.append("\nOverall population breakdown:")
+    for pos, count in sorted(position_counts.items(), key=lambda x: -x[1]):
+        lines.append(f"  • \"{pos}\": {count} people")
 
     return "\n".join(lines)
 
@@ -1490,13 +1646,16 @@ async def run_council_swarm(
         for agent in agents
     ])
 
-    # Condense Round 1 for Round 2 context
-    population_summary = _summarize_round_1(round1_results)
+    # ── Round 2: Personalized feeds — each agent sees a filtered view ──────
+    # Instead of one shared summary, each agent gets a curated feed
+    # weighted by tradition affinity (echo chamber) + social influence.
+    # This produces more realistic opinion dynamics.
+    population_summary = _summarize_round_1(round1_results)  # keep for synthesis
 
-    # ── Round 2: Reactive deliberation ───────────────────────────────────────
     round2_results = await asyncio.gather(*[
-        _throttled_run(agent, question, mode, population_summary, 2)
-        for agent in agents  # same agents, now reactive
+        _throttled_run(agent, question, mode,
+                       _build_agent_feed(agent, round1_results), 2)
+        for agent in agents
     ])
 
     # ── Synthesis ─────────────────────────────────────────────────────────────
