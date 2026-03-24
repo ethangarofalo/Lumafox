@@ -119,27 +119,74 @@ def _search_tradition_memory(entries: list[dict], query: str, top_k: int = 4) ->
 
 async def _needs_current_briefing(question: str) -> bool:
     """
-    Use Haiku to classify whether the question references current/recent events
-    that require up-to-date factual knowledge. Fast and cheap.
+    Detect whether a question involves current events that need a web briefing.
+
+    Uses a two-layer approach:
+    1. Fast rule-based heuristics (catches most cases instantly)
+    2. LLM fallback for edge cases
+
+    The LLM layer can't reliably detect events beyond its training cutoff,
+    so the heuristics do the heavy lifting.
     """
+    q = question.lower()
+
+    # ── Layer 1: Rule-based detection ──
+
+    # Temporal markers that suggest current/recent events
+    _TEMPORAL = [
+        "now that", "right now", "currently", "at this point",
+        "what will happen", "what is happening", "what's happening",
+        "just happened", "recently", "this week", "this month",
+        "this year", "today", "yesterday", "breaking",
+        "2024", "2025", "2026", "2027",
+    ]
+    if any(t in q for t in _TEMPORAL):
+        # Also needs a proper noun or specific reference (not just "what will happen to love?")
+        # Check for capitalized words that aren't sentence-starters
+        import re
+        proper_nouns = re.findall(r'(?<!^)(?<!\. )[A-Z][a-z]{2,}', question)
+        if proper_nouns:
+            return True
+
+    # Geopolitical references + action verbs
+    _GEO_SIGNALS = [
+        "government", "election", "president", "prime minister",
+        "congress", "parliament", "military", "invasion",
+        "sanctions", "treaty", "nato", "un ", "united nations",
+        "supreme court", "legislation", "bill passed",
+        "arrested", "custody", "indicted", "impeach",
+        "war in", "conflict in", "crisis in", "coup",
+        "ceasefire", "peace deal", "trade war",
+    ]
+    _has_geo = any(s in q for s in _GEO_SIGNALS)
+
+    # Specific country/leader mentions (non-historical context)
+    _COUNTRIES_LEADERS = [
+        "ukraine", "russia", "china", "taiwan", "israel", "gaza",
+        "palestine", "iran", "north korea", "venezuela", "syria",
+        "putin", "zelensky", "xi jinping", "netanyahu", "maduro",
+        "trump", "biden", "modi", "erdogan", "milei",
+    ]
+    _has_specific = any(s in q for s in _COUNTRIES_LEADERS)
+
+    if _has_geo and _has_specific:
+        return True
+    if _has_specific and len(q) > 40:
+        # Mentioning a current leader in a substantive question
+        return True
+
+    # ── Layer 2: LLM fallback for subtle cases ──
     try:
         response = await _CLIENT.messages.create(
             model="claude-haiku-4-5",
             max_tokens=10,
             system=(
-                "You classify questions as requiring current events knowledge or not. "
-                "Answer ONLY 'yes' or 'no'.\n\n"
-                "Answer 'yes' if the question:\n"
-                "- References specific current political figures by name in active roles\n"
-                "- Asks about recent or ongoing events, conflicts, elections, or crises\n"
-                "- Asks 'what will happen' or 'what is happening' about real-world situations\n"
-                "- References specific policies, legislation, or political developments\n"
-                "- Mentions specific companies, organizations in the context of recent actions\n\n"
-                "Answer 'no' if the question:\n"
-                "- Is purely philosophical, ethical, or hypothetical\n"
-                "- Asks about timeless concepts (justice, morality, beauty, etc.)\n"
-                "- References only historical figures or events (before 2020)\n"
-                "- Is a thought experiment or abstract scenario"
+                "Does this question ask about a specific real-world situation, event, "
+                "person in a political/leadership role, or ongoing crisis — as opposed to "
+                "a purely abstract, philosophical, or historical question? "
+                "If it mentions ANY specific person, country, or event in a way that "
+                "suggests the user wants current factual information, answer 'yes'. "
+                "Answer ONLY 'yes' or 'no'."
             ),
             messages=[{"role": "user", "content": question}],
         )
