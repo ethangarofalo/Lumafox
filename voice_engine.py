@@ -763,6 +763,9 @@ This is a CONVERSATION now, not a teaching session. Respond as a genuine thinkin
 - Write in this voice's style and rhythm, but speak TO them, not AT them
 - Don't analyze their writing style. Don't offer to write about something.
   Just THINK with them.
+- When they open a tension or say something is "unsettling" or "troubling" or
+  raise a contradiction — PULL THE THREAD. Ask what unsettles them and why.
+  Don't just agree or elaborate. Make them go deeper.
 - Build on what they said. Add a new angle they haven't considered.
   Or deepen the angle they opened.
 - 2-3 paragraphs. The tone is two minds working on the same problem.
@@ -771,15 +774,30 @@ TEACHER: {message}
 
 Respond as this voice, in conversation.
 
-After your response, add two classification lines:
-1. On a new line: TEACH:none (or TEACH:correction / TEACH:principle / TEACH:voice / TEACH:never if
-   the teacher's message implicitly teaches you something about how they think, what they value,
-   or what patterns their mind follows — even if they didn't frame it that way)
-2. If you detected a teachable insight, on another new line write:
-   INSIGHT: [one sentence capturing what you learned about how this person thinks]
-   Example: "INSIGHT: Values simplicity in diction when discussing ordinary mysteries — prefers 'note' over 'catalog'"
-   Example: "INSIGHT: Sees human greatness as emerging from individual dissatisfaction, not collective progress"
-   Only include INSIGHT if there's a genuine, specific observation. Skip it for pure back-and-forth."""
+After your response, on a new line write TEACH:none — UNLESS the teacher revealed
+something substantial about how their mind works. Apply this standard:
+
+SAVE-WORTHY (use TEACH:principle and add INSIGHT line):
+- A core belief: "The kingdom belongs to those who were lost and found"
+- A reasoning pattern: how they move through tension, what they interrogate vs. accept
+- A philosophical commitment: "human interiority is unequal — not everyone cultivates it"
+- A conviction connecting form to content: "simpler words for ordinary mysteries"
+- A correction to your writing: "I'd use X instead of Y" (use TEACH:correction)
+
+NOT SAVE-WORTHY (use TEACH:none, no INSIGHT):
+- "Yes" / "Try it" / "That's good" — navigation
+- Light agreement or restating what you said
+- Short acknowledgments without new substance
+- Pure conversational flow that doesn't reveal belief or reasoning
+
+The standard: did the teacher reveal something about what they believe, how they
+reason through tension, or what principles govern their thinking? If yes, save it.
+If it's just conversation momentum, don't.
+
+If you DO detect a save-worthy insight, add on a separate line:
+INSIGHT: [one sentence capturing the belief, reasoning pattern, or principle]
+Be specific. "Believes sinners inherit the kingdom because brokenness creates
+capacity for grace" — not "Has interesting views on theology." """
 
         else:
             prompt = f"""You are learning and embodying a voice called "{voice_name}".
@@ -854,12 +872,14 @@ TEACHER: {message}"""
             refinement_saved = True
             refinement_type = detected_type
 
-        # Save conversational INSIGHT as a voice_note refinement
+        # Save conversational INSIGHT — only emitted when the model judges the user
+        # revealed a core belief, reasoning pattern, or philosophical commitment
+        # (not mere conversational navigation or light agreement)
         if insight_text and _safe:
             insight_refinement = {
                 "type": "voice_note",
-                "content": f"[Conversational insight] {insight_text}",
-                "context": message[:200],
+                "content": f"[Belief/reasoning] {insight_text}",
+                "context": message[:300],
                 "timestamp": datetime.now().isoformat(),
                 "session": load_profile(profile_id).refinement_count,
                 "auto_detected": True,
