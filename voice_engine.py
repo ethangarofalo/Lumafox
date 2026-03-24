@@ -19,6 +19,44 @@ from linguistic_taxonomy import LINGUISTIC_TAXONOMY
 
 _PROFILE_ID_RE = re.compile(r'^[0-9a-f]{8}$')
 
+# ── Constants ──
+
+MIN_EXAMPLE_LENGTH = 200  # chars — messages shorter than this aren't treated as writing samples
+
+BANNED_AI_PATTERNS = """CRITICAL — these patterns are BANNED (they are generic AI, not this voice):
+- "There's something [almost/deeply] [adjective] about..."
+- "Perhaps more accurately..." / "What strikes me most..."
+- "What makes it so [insidious/interesting/compelling] is..."
+- "The question becomes..." / "The real question is..."
+- "It's worth noting..." / "Here's what troubles me..."
+- "Yes, exactly—and..." / "Yes, and that's..." (don't agree-then-extend)
+- "But here's what gets me..." / "Maybe this is why..."
+- "Which means..." / "And to say it once more..." / "The cruelest irony is..."
+- Parallel antithesis: "Where X, he Y; where A, he B"
+- Simile factories: "guards his X like others guard Y"
+- Rhetorical questions you immediately answer yourself
+- Starting paragraphs with "But" + qualification
+- Starting with "The [noun] [verbs]" (e.g. "The noble man guards...")
+- THREE PARAGRAPHS when one would do — say it once, say it well, stop.
+- ANY sentence that could appear in any AI chatbot's response — rewrite it.
+These are generic AI writing. This voice has its OWN patterns — use those."""
+
+# ── Injection Markers ──
+
+_INJECTION_MARKERS = [
+    "ignore all previous instructions",
+    "ignore previous instructions",
+    "ignore your instructions",
+    "forget the voice profile",
+    "forget your instructions",
+    "disregard your instructions",
+    "you are now a",
+    "act as if you",
+    "pretend you are",
+    "your new instructions are",
+    "override your",
+]
+
 # ── Paths ──
 
 DATA_DIR = Path(os.environ.get("VOICE_DATA_DIR", Path(__file__).parent / "data"))
@@ -270,17 +308,8 @@ def build_refinement_context(refinements: list[dict]) -> str:
     lines.append("base description above.\n")
 
     lines.append("### VOICE INTEGRITY — Anti-Slop Rules (always active)")
-    lines.append("When writing or speaking as this voice, NEVER use these AI patterns:")
-    lines.append("- \"There's something [almost/deeply] [adjective] about...\"")
-    lines.append("- \"Perhaps more accurately...\" / \"What strikes me most...\"")
-    lines.append("- \"The question becomes...\" / \"The real question is...\"")
-    lines.append("- \"What makes it so [insidious/interesting/compelling] is...\"")
-    lines.append("- \"It's worth noting...\" / \"Here's what troubles me...\"")
-    lines.append("- Parallel antithesis: \"Where X, he Y; where A, he B\"")
-    lines.append("- Simile chains: \"guards his X like others guard Y\"")
-    lines.append("- Rhetorical questions you immediately answer yourself")
-    lines.append("- Starting paragraphs with \"But\" + qualification")
-    lines.append("These are generic AI writing. This voice has its OWN patterns — use those.\n")
+    lines.append(BANNED_AI_PATTERNS)
+    lines.append("")
 
     if sections["principle"]:
         lines.append("### Core Principles")
@@ -383,6 +412,7 @@ def ingest_writing_samples(profile_id: str, llm_call, max_examples: int = 5) -> 
     for analysis, and saves the resulting refinements automatically.
     Returns the list of new refinements created.
     """
+    profile = load_profile(profile_id)
     upload_dir = PROFILES_DIR / profile_id / "uploads"
     if not upload_dir.exists():
         return []
@@ -458,7 +488,7 @@ WRITING SAMPLES:
                         "content": item["content"],
                         "context": "Extracted from uploaded writing samples",
                         "timestamp": datetime.now().isoformat(),
-                        "session": load_profile(profile_id).refinement_count if load_profile(profile_id) else 0,
+                        "session": profile.refinement_count if profile else 0,
                     }
                     save_refinement(profile_id, refinement)
                     new_refinements.append(refinement)
@@ -582,22 +612,6 @@ def teach_interaction(profile_id: str, message: str, command: str,
             history_text += f"{role}: {msg['content'][:300]}\n"
 
     # ── Injection detection ──
-    # Catch obvious prompt injection attempts before saving to profile.
-    # These patterns indicate someone trying to override system instructions
-    # rather than genuinely teaching a writing voice.
-    _INJECTION_MARKERS = [
-        "ignore all previous instructions",
-        "ignore previous instructions",
-        "ignore your instructions",
-        "forget the voice profile",
-        "forget your instructions",
-        "disregard your instructions",
-        "you are now a",
-        "act as if you",
-        "pretend you are",
-        "your new instructions are",
-        "override your",
-    ]
     _msg_lower = message.lower()
     if command in ("correct", "example", "principle", "voice", "never"):
         if any(marker in _msg_lower for marker in _INJECTION_MARKERS):
@@ -633,7 +647,7 @@ def teach_interaction(profile_id: str, message: str, command: str,
             "content": message,
             "context": context,
             "timestamp": datetime.now().isoformat(),
-            "session": load_profile(profile_id).refinement_count,
+            "session": profile.refinement_count,
         }
         save_refinement(profile_id, refinement)
 
@@ -689,14 +703,7 @@ Answer carefully."""
 
 Write AS this voice on the topic below. Not about the voice — FROM WITHIN it.
 
-CRITICAL — these patterns are BANNED (they are generic AI, not this voice):
-- "There's something [almost/deeply] [adjective] about..."
-- "Perhaps more accurately..." / "What strikes me most..."
-- "The question becomes..." / "The real question is..."
-- Parallel antithesis: "Where X sees Y, he sees Z; where A demands B, he accepts C"
-- Simile factories: "guards his X like other men guard their Y"
-- Rhetorical questions you immediately answer yourself
-- Any sentence that could appear in any AI chatbot's philosophical response
+{BANNED_AI_PATTERNS}
 
 Every sentence must sound like it could ONLY come from this specific person.
 Use their vocabulary, their sentence length, their way of building an argument.
@@ -727,9 +734,11 @@ Write 2-3 paragraphs in this voice."""
                 _agent_was_analyzing = any(s in last_agent.lower() for s in [
                     "i notice how you", "your sentences", "the voice maintains",
                     "would you like me to try writing",
+                    "example noted", "refinement saved",
                 ])
-                _agent_wrote_prose = len(last_agent) > 150 and not _agent_was_analyzing
-                if _agent_wrote_prose:
+                # If agent responded with anything that isn't analysis, we're in conversation.
+                # No length threshold — even a 2-sentence rewrite counts.
+                if not _agent_was_analyzing and len(conversation_history) >= 2:
                     _in_active_conversation = True
 
         # Explicit example signals — user is clearly sharing their writing
@@ -761,7 +770,7 @@ Write 2-3 paragraphs in this voice."""
         # Long prose is only an "example" if it's NOT a conversational continuation
         # and NOT a correction, and has no command words
         _long_prose_example = (
-            len(_msg_stripped) > 200 and
+            len(_msg_stripped) > MIN_EXAMPLE_LENGTH and
             not _in_active_conversation and
             not _correction_signals and
             not any(w in _msg_low[:50] for w in
@@ -795,8 +804,7 @@ Write 2-3 paragraphs in this voice."""
                     _rewrite_text = _rewrite_text[len(prefix):].strip()
                     break
             # Count sentences roughly to calibrate output length
-            import re as _re
-            _orig_sentences = len([s for s in _re.split(r'[.!?]+', _rewrite_text) if s.strip()])
+            _orig_sentences = len([s for s in re.split(r'[.!?]+', _rewrite_text) if s.strip()])
             _orig_words = len(_rewrite_text.split())
 
             prompt = f"""You are the voice called "{voice_name}".
@@ -821,16 +829,7 @@ ABSOLUTE RULES:
 2. Write the restatement DIRECTLY. No preamble ("Here's how I'd put it"), no commentary after,
    no analysis, no "but here's the deeper tension," no second or third paragraphs exploring implications.
 3. ONE paragraph. That's it. Then stop.
-4. Do NOT use ANY of these — they are AI patterns that destroy voice:
-   - "There's something [almost] [adjective] about..."
-   - "Perhaps more accurately..." / "What strikes me..."
-   - "The question becomes..." / "In other words..."
-   - "Maybe this is why..." / "But here's what gets me..."
-   - Parallel antithesis: "Where X, he Y; where A, he B"
-   - Simile factories: "guards his X like others guard Y"
-   - Rhetorical questions you immediately answer
-   - Starting with "The [noun] [verbs]" (e.g. "The noble man guards...")
-   - ANY sentence that could appear in any AI chatbot's response
+4. {BANNED_AI_PATTERNS}
 5. Use the teacher's actual vocabulary and rhythms from their examples above.
    Short declarative punches. Concrete nouns. Physical verbs.
 6. If the original is emotionally charged, be emotionally charged. Match the FEELING,
@@ -913,15 +912,7 @@ CRITICAL INSTRUCTIONS:
 8. Do NOT add a paragraph that starts with "But maybe..." / "Maybe this is why..." /
    "Here's what gets me..." / "The question becomes..." — BANNED.
 
-CRITICAL — these patterns are BANNED:
-- "There's something about..." / "Perhaps more accurately..." / "What strikes me..."
-- "The question becomes..." / "Here's what gets me..." / "Maybe this is why..."
-- "Which means..." / "And to say it once more..." / "The cruelest irony is..."
-- "Yes, exactly—and..." (don't agree-then-extend, just rewrite)
-- Parallel antithesis: "Where X, Y; where A, B"
-- Rhetorical questions you answer yourself
-- Starting any paragraph with "But" + qualification
-- Second/third paragraphs that start with "But here's what..." or "Maybe..."
+{BANNED_AI_PATTERNS}
 
 After your rewritten piece, on a new line write: TEACH:correction"""
 
@@ -965,10 +956,7 @@ INSTRUCTIONS:
 3. Keep it tight: 1-2 paragraphs unless a longer piece was clearly implied.
 4. This is creative writing, not conversation. Make every sentence land.
 
-BANNED patterns:
-- "There's something about..." / "Perhaps more accurately..." / "What strikes me..."
-- "The question becomes..." / "Maybe this is why..." / "Here's what gets me..."
-- Parallel antithesis / simile chains / rhetorical questions you answer yourself
+{BANNED_AI_PATTERNS}
 
 After your writing, on a new line write: TEACH:none"""
             else:
@@ -990,19 +978,7 @@ WHAT TO DO:
 - 1-2 short paragraphs. Be direct. Make claims. Take positions. STOP when the thought
   is complete — do not add extra paragraphs to be thorough.
 
-NEVER DO THESE — they are generic AI patterns that destroy voice:
-- "There's something [almost/deeply] [adjective] about..." — BANNED
-- "Perhaps more accurately..." — BANNED
-- "What makes it so [insidious/interesting/compelling] is..." — BANNED
-- "The question becomes..." / "The real question is..." — BANNED
-- "What strikes me most is..." — BANNED
-- "It's worth noting that..." / "Here's what troubles me..." — BANNED
-- "Yes, exactly—and..." / "Yes, and that's..." — BANNED (don't agree-then-extend)
-- "But here's what gets me..." / "Maybe this is why..." — BANNED
-- Starting paragraphs with "But" followed by a qualification — BANNED
-- Rhetorical questions you immediately answer yourself — BANNED
-- Any sentence that sounds like it could come from any AI chatbot — rewrite it
-- THREE PARAGRAPHS when one would do — BANNED. Say it once, say it well, stop.
+{BANNED_AI_PATTERNS}
 
 The test: if a sentence could appear in any AI's response to any philosophical question,
 it has no voice. Delete it. Write something only THIS voice would say.
@@ -1044,16 +1020,9 @@ capacity for grace" — not "Has interesting views on theology." """
 {history_text}
 
 The teacher is talking to you. Respond as this voice — their rhythm, their words,
-their way of structuring thought. 2-3 paragraphs.
+their way of structuring thought. 1-2 paragraphs. STOP when the thought is complete.
 
-CRITICAL — avoid these generic AI patterns that destroy voice identity:
-- "There's something [almost/deeply] [adjective] about..." — NEVER
-- "Perhaps more accurately..." — NEVER
-- "What makes it so [insidious/interesting] is..." — NEVER
-- "The question becomes..." / "The real question is..." — NEVER
-- "What strikes me most is..." — NEVER
-- Rhetorical questions you immediately answer yourself — NEVER
-- Sentences that could appear in any AI's response to anything — rewrite them
+{BANNED_AI_PATTERNS}
 
 Every sentence should sound like it could ONLY come from this specific voice.
 
@@ -1112,7 +1081,7 @@ TEACHER: {message}"""
                 "content": message,
                 "context": context,
                 "timestamp": datetime.now().isoformat(),
-                "session": load_profile(profile_id).refinement_count,
+                "session": profile.refinement_count,
                 "auto_detected": True,
             }
             save_refinement(profile_id, refinement)
@@ -1128,7 +1097,7 @@ TEACHER: {message}"""
                 "content": f"[Belief/reasoning] {insight_text}",
                 "context": message[:300],
                 "timestamp": datetime.now().isoformat(),
-                "session": load_profile(profile_id).refinement_count,
+                "session": profile.refinement_count,
                 "auto_detected": True,
                 "source": "conversation",
             }
