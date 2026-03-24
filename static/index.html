@@ -1291,7 +1291,19 @@ async function api(path, opts = {}) {
   const token = getToken();
   const headers = { "Content-Type": "application/json", ...opts.headers };
   if (token) headers["Authorization"] = `Bearer ${token}`;
-  const res = await fetch(`${API}${path}`, { headers, ...opts });
+  // Council/swarm calls can take 3-5 minutes — use a long timeout
+  const isLongRunning = path === "/council";
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), isLongRunning ? 300000 : 60000);
+  let res;
+  try {
+    res = await fetch(`${API}${path}`, { headers, signal: controller.signal, ...opts });
+  } catch (e) {
+    clearTimeout(timeoutId);
+    if (e.name === "AbortError") throw new Error("Request timed out — try again or reduce agent count.");
+    throw e;
+  }
+  clearTimeout(timeoutId);
   if (res.status === 401) {
     // Don't nuke the session on every 401 — only clear if this wasn't a
     // background/secondary call. The refresh flow handles real expiry.
@@ -5258,10 +5270,25 @@ function CouncilView({ isGuest, onNeedAuth }) {
       if (contextStr) body.context = contextStr;
       if (mode === "writing" && p) body.prose = p;
       const r = await api("/council", { method: "POST", body: JSON.stringify(body) });
-      if (r.credits_remaining !== undefined) {
-        setCredits(prev => prev ? { ...prev, remaining: r.credits_remaining } : null);
+
+      // Swarm returns a job_id — poll until done
+      if (r.job_id) {
+        let job = r;
+        while (job.status === "running") {
+          await new Promise(resolve => setTimeout(resolve, 3000));
+          job = await api(`/council/job/${r.job_id}`);
+        }
+        // job is now the full result
+        if (job.credits_remaining !== undefined) {
+          setCredits(prev => prev ? { ...prev, remaining: job.credits_remaining } : null);
+        }
+        setResult(job);
+      } else {
+        if (r.credits_remaining !== undefined) {
+          setCredits(prev => prev ? { ...prev, remaining: r.credits_remaining } : null);
+        }
+        setResult(r);
       }
-      setResult(r);
     } catch (e) {
       if (e.limitData) {
         setLimitData(e.limitData);

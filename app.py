@@ -5,6 +5,7 @@ The API layer over voice_engine.py. Stateless endpoints for
 teaching, writing, analyzing, and managing voice profiles.
 """
 
+import asyncio
 import os
 from datetime import datetime
 from typing import Optional
@@ -1499,6 +1500,27 @@ class CouncilRequest(BaseModel):
     n_agents: int = Field(default=40, ge=10, le=60)
 
 
+# ── Swarm job storage (in-memory — fine for single-instance deploy) ──
+_swarm_jobs: dict[str, dict] = {}
+
+
+@app.get("/council/job/{job_id}")
+async def poll_swarm_job(job_id: str, user_id: str = Depends(get_current_user)):
+    """Poll for swarm job status. Returns result when done."""
+    job = _swarm_jobs.get(job_id)
+    if not job:
+        raise HTTPException(404, "Job not found")
+    if job["status"] == "done":
+        result = job["result"]
+        del _swarm_jobs[job_id]  # cleanup after retrieval
+        return result
+    if job["status"] == "error":
+        error = job["error"]
+        del _swarm_jobs[job_id]
+        raise HTTPException(500, f"Swarm failed: {error}")
+    return {"status": "running", "job_id": job_id}
+
+
 @app.post("/council")
 async def convene_council(
     req: CouncilRequest,
@@ -1558,9 +1580,29 @@ async def convene_council(
 
     try:
         if tier == "swarm":
-            result = await run_council_swarm(
-                question=question, mode=req.mode, n_agents=req.n_agents,
-            )
+            # Swarm runs are long (2-5 min) — run as background job
+            # to avoid Render's 30s proxy timeout
+            import uuid as _uuid
+            job_id = str(_uuid.uuid4())[:12]
+            _swarm_jobs[job_id] = {"status": "running", "result": None, "error": None}
+
+            async def _run_swarm_job():
+                try:
+                    r = await run_council_swarm(
+                        question=question, mode=req.mode, n_agents=req.n_agents,
+                    )
+                    cost = COUNCIL_CREDIT_COSTS["swarm"]
+                    consume_credits(user_id, cost)
+                    remaining_after = get_credits_remaining(user_id, sub["plan"])
+                    r["credits_remaining"] = remaining_after
+                    r["credits_cost"] = cost
+                    _swarm_jobs[job_id] = {"status": "done", "result": r, "error": None}
+                except Exception as e:
+                    _swarm_jobs[job_id] = {"status": "error", "result": None, "error": str(e)}
+
+            asyncio.create_task(_run_swarm_job())
+            return {"job_id": job_id, "status": "running", "credits_remaining": credit_check["credits_remaining"]}
+
         elif tier == "lite":
             result = await run_council_agents(
                 question=question, mode=req.mode,
