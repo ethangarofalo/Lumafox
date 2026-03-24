@@ -560,12 +560,12 @@ async def rename_profile(
 async def update_profile_description(
     profile_id: str,
     user_id: str = Depends(get_current_user),
-    description: str = Body(..., embed=True),
+    description: str = Body("", embed=True),
 ):
     """Update a voice profile's base description."""
-    description = description.strip()
-    if len(description) > 2000:
-        raise HTTPException(400, "Description too long (max 2000 chars)")
+    description = (description or "").strip()
+    if len(description) > 4000:
+        raise HTTPException(400, "Description too long (max 4000 chars)")
     profile = load_profile(profile_id)
     if not profile:
         raise HTTPException(404, "Profile not found")

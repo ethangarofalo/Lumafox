@@ -6448,115 +6448,130 @@ function ThinkerCard({ thinker, deliberationResult }) {
 }
 
 
-// ── Profile Card with inline rename + description edit ──
-function ProfileCard({ p, active, onSelect, onRenamed }) {
-  const [editing, setEditing] = React.useState(false);
-  const [draft, setDraft] = React.useState(p.name);
-  const [descDraft, setDescDraft] = React.useState(p.base_description || "");
+// ── Profile Edit Modal — full-screen editor for name + description ──
+function ProfileEditModal({ p, onClose, onSaved }) {
+  const [name, setName] = React.useState(p.name);
+  const [desc, setDesc] = React.useState(p.base_description || "");
   const [saving, setSaving] = React.useState(false);
-  const inputRef = React.useRef(null);
+  const nameRef = React.useRef(null);
 
-  React.useEffect(() => {
-    if (editing) {
-      setDraft(p.name);
-      setDescDraft(p.base_description || "");
-      setTimeout(() => inputRef.current?.select(), 30);
-    }
-  }, [editing]);
+  React.useEffect(() => { nameRef.current?.select(); }, []);
 
-  async function commitEdit() {
-    const name = draft.trim();
-    if (!name) { setEditing(false); return; }
+  async function save() {
+    const n = name.trim();
+    if (!n) return;
     setSaving(true);
     try {
-      // Save name if changed
-      if (name !== p.name) {
+      let newName = p.name;
+      if (n !== p.name) {
         const res = await api(`/profiles/${p.profile_id}/name`, {
-          method: "PATCH",
-          body: JSON.stringify({ name }),
+          method: "PATCH", body: JSON.stringify({ name: n }),
         });
-        onRenamed(res.name);
+        newName = res.name;
       }
-      // Save description if changed
-      const desc = descDraft.trim();
-      if (desc !== (p.base_description || "")) {
+      const d = desc.trim();
+      if (d !== (p.base_description || "")) {
         await api(`/profiles/${p.profile_id}/description`, {
-          method: "PATCH",
-          body: JSON.stringify({ description: desc }),
+          method: "PATCH", body: JSON.stringify({ description: d }),
         });
-        p.base_description = desc;
-        if (desc) toastSuccess("Voice description updated");
       }
-    } catch(e) { toastError(e.message || "Save failed"); }
+      onSaved(newName, d);
+      toastSuccess("Voice profile updated");
+    } catch (e) { toastError(e.message || "Save failed"); }
     setSaving(false);
-    setEditing(false);
   }
 
   return (
-    <div
-      className={`profile-card ${active ? "active" : ""}`}
-      onClick={() => { if (!editing) onSelect(); }}
-      style={{ display: "flex", alignItems: "center", gap: 10, position: "relative" }}
-    >
-      <ProfileAvatar avatar={p.avatar} size={28} style={{ "data-profile-id": p.profile_id }} />
-      <div style={{ flex: 1, minWidth: 0 }}>
-        {editing ? (
-          <div onClick={e => e.stopPropagation()} style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-            <input
-              ref={inputRef}
-              value={draft}
-              onChange={e => setDraft(e.target.value)}
-              onKeyDown={e => { if (e.key === "Escape") setEditing(false); }}
-              maxLength={60}
-              placeholder="Voice name"
-              style={{
-                width: "100%", background: "var(--bg-hover)", border: "1px solid var(--accent)",
-                borderRadius: 4, padding: "3px 6px", color: "var(--text)",
-                fontFamily: "var(--font-serif)", fontSize: 14, outline: "none",
-              }}
-            />
-            <textarea
-              value={descDraft}
-              onChange={e => setDescDraft(e.target.value)}
-              onKeyDown={e => {
-                if (e.key === "Escape") setEditing(false);
-                if (e.key === "Enter" && e.metaKey) commitEdit();
-              }}
-              placeholder="Voice description — its ancestors, rhythms, what it sounds like at its best..."
-              style={{
-                width: "100%", minHeight: 54, background: "var(--bg-hover)",
-                border: "1px solid var(--border)", borderRadius: 4,
-                padding: "4px 6px", color: "var(--text)",
-                fontFamily: "var(--font-sans)", fontSize: 11, lineHeight: 1.5,
-                outline: "none", resize: "vertical",
-              }}
-            />
-            <div style={{ display: "flex", gap: 4, justifyContent: "flex-end" }}>
-              <button onClick={() => setEditing(false)} style={{
-                background: "none", border: "1px solid var(--border)", borderRadius: 4,
-                padding: "2px 8px", color: "var(--text-faint)", fontSize: 10,
-                fontFamily: "var(--font-sans)", cursor: "pointer",
-              }}>Cancel</button>
-              <button onClick={commitEdit} disabled={saving} style={{
-                background: "var(--accent)", border: "none", borderRadius: 4,
-                padding: "2px 10px", color: "var(--bg)", fontSize: 10, fontWeight: 600,
-                fontFamily: "var(--font-sans)", cursor: "pointer",
-                opacity: saving ? 0.6 : 1,
-              }}>{saving ? "..." : "Save"}</button>
-            </div>
-          </div>
-        ) : (
-          <>
-            <div className="profile-card-name" style={{ display: "flex", alignItems: "center", gap: 5 }}>
-              <span style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.name}</span>
-            </div>
-            <div className="profile-card-meta">{p.refinement_count} refinements</div>
-          </>
-        )}
+    <div className="modal-overlay" onClick={onClose} style={{ zIndex: 10000 }}>
+      <div className="modal" onClick={e => e.stopPropagation()} style={{
+        maxWidth: 560, width: "100%", padding: "28px 24px",
+      }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+          <div className="modal-title" style={{ margin: 0 }}>Edit Voice Profile</div>
+          <button onClick={onClose} style={{
+            background: "none", border: "none", color: "var(--text-faint)",
+            fontSize: 18, cursor: "pointer", padding: "2px 6px",
+          }}>✕</button>
+        </div>
+
+        <label style={{ fontFamily: "var(--font-sans)", fontSize: 10, letterSpacing: "0.15em",
+          textTransform: "uppercase", color: "var(--text-faint)", display: "block", marginBottom: 6 }}>
+          Name
+        </label>
+        <input
+          ref={nameRef} value={name} onChange={e => setName(e.target.value)}
+          onKeyDown={e => { if (e.key === "Escape") onClose(); }}
+          maxLength={60} placeholder="Voice name"
+          style={{
+            width: "100%", background: "var(--bg)", border: "1px solid var(--border)",
+            borderRadius: "var(--radius)", padding: "10px 14px", color: "var(--text)",
+            fontFamily: "var(--font)", fontSize: 16, outline: "none", marginBottom: 16,
+          }}
+        />
+
+        <label style={{ fontFamily: "var(--font-sans)", fontSize: 10, letterSpacing: "0.15em",
+          textTransform: "uppercase", color: "var(--text-faint)", display: "block", marginBottom: 6 }}>
+          Voice Description
+        </label>
+        <textarea
+          value={desc} onChange={e => setDesc(e.target.value)}
+          onKeyDown={e => {
+            if (e.key === "Escape") onClose();
+            if (e.key === "Enter" && e.metaKey) save();
+          }}
+          placeholder="Describe this voice — its ancestors, its rhythms, what it sounds like at its best. This is the foundation the AI reads before every interaction."
+          style={{
+            width: "100%", minHeight: 200, background: "var(--bg)",
+            border: "1px solid var(--border)", borderRadius: "var(--radius)",
+            padding: "12px 14px", color: "var(--text)",
+            fontFamily: "var(--font)", fontSize: 14, lineHeight: 1.7,
+            outline: "none", resize: "vertical", marginBottom: 6,
+          }}
+        />
+        <div style={{ fontFamily: "var(--font-sans)", fontSize: 10, color: "var(--text-faint)", marginBottom: 20 }}>
+          This description is the foundation of your voice. The AI reads it before every interaction.
+          Be specific — name writers you admire, describe sentence rhythms, state what this voice
+          would never do. ⌘+Enter to save.
+        </div>
+
+        <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+          <button onClick={onClose} style={{
+            background: "none", border: "1px solid var(--border)", borderRadius: "var(--radius)",
+            padding: "8px 18px", color: "var(--text-faint)", fontSize: 13,
+            fontFamily: "var(--font-sans)", cursor: "pointer",
+          }}>Cancel</button>
+          <button onClick={save} disabled={saving} style={{
+            background: "var(--accent)", border: "none", borderRadius: "var(--radius)",
+            padding: "8px 22px", color: "var(--bg)", fontSize: 13, fontWeight: 600,
+            fontFamily: "var(--font-sans)", cursor: "pointer",
+            opacity: saving ? 0.6 : 1,
+          }}>{saving ? "Saving..." : "Save"}</button>
+        </div>
       </div>
-      {!editing && (
+    </div>
+  );
+}
+
+// ── Profile Card with inline rename + description edit ──
+function ProfileCard({ p, active, onSelect, onRenamed }) {
+  const [showEditModal, setShowEditModal] = React.useState(false);
+
+  return (
+    <>
+      <div
+        className={`profile-card ${active ? "active" : ""}`}
+        onClick={onSelect}
+        style={{ display: "flex", alignItems: "center", gap: 10, position: "relative" }}
+      >
+        <ProfileAvatar avatar={p.avatar} size={28} style={{ "data-profile-id": p.profile_id }} />
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div className="profile-card-name" style={{ display: "flex", alignItems: "center", gap: 5 }}>
+            <span style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.name}</span>
+          </div>
+          <div className="profile-card-meta">{p.refinement_count} refinements</div>
+        </div>
         <button
-          onClick={e => { e.stopPropagation(); setEditing(true); }}
+          onClick={e => { e.stopPropagation(); setShowEditModal(true); }}
           title="Edit name & description"
           style={{
             background: "none", border: "none", cursor: "pointer",
@@ -6566,8 +6581,19 @@ function ProfileCard({ p, active, onSelect, onRenamed }) {
           }}
           className="rename-btn"
         >✎</button>
+      </div>
+      {showEditModal && (
+        <ProfileEditModal
+          p={p}
+          onClose={() => setShowEditModal(false)}
+          onSaved={(newName, newDesc) => {
+            p.base_description = newDesc;
+            onRenamed(newName);
+            setShowEditModal(false);
+          }}
+        />
       )}
-    </div>
+    </>
   );
 }
 

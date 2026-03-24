@@ -787,30 +787,55 @@ Write 2-3 paragraphs in this voice."""
         )
 
         if _rephrase_signals:
+            # Extract just the text to rewrite (strip "Rewrite:" prefix etc.)
+            _rewrite_text = message
+            for prefix in ["Rewrite:", "Rewrite ", "Rephrase:", "Rephrase ",
+                           "rewrite:", "rewrite ", "rephrase:", "rephrase "]:
+                if _rewrite_text.startswith(prefix):
+                    _rewrite_text = _rewrite_text[len(prefix):].strip()
+                    break
+            # Count sentences roughly to calibrate output length
+            import re as _re
+            _orig_sentences = len([s for s in _re.split(r'[.!?]+', _rewrite_text) if s.strip()])
+            _orig_words = len(_rewrite_text.split())
+
             prompt = f"""You are the voice called "{voice_name}".
 
 {voice_text}
 
 {history_text}
 
-The teacher wants you to RESTATE this in their voice. This is a REWRITE, not analysis.
+The teacher wants you to RESTATE this passage in their voice. This is a REWRITE, not analysis.
+
+FIRST: If you recognize this as a famous text by a known author (Nietzsche, Plato, Marcus Aurelius,
+Dostoevsky, Scripture, etc.), begin with ONE short line: "From [Author]'s [Work]:" or "[Author]:"
+Then produce the rewrite. This attribution should be 5 words max.
+
+THE ORIGINAL ({_orig_sentences} sentences, ~{_orig_words} words):
+{_rewrite_text}
 
 ABSOLUTE RULES:
-1. Count the sentences in the original. Your response must have the SAME number of sentences,
-   plus or minus one. A 3-sentence aphorism gets 2-4 sentences back. NEVER a full paragraph
-   for a short quote.
-2. Write the restatement DIRECTLY. No preamble. No "Here's how I'd put it." No commentary after.
-3. Do NOT explain, analyze, qualify, or add "but here's the tension."
-4. Do NOT use ANY of these — they are AI slop that destroys voice:
-   "There's something about" / "perhaps more accurately" / "what strikes me" /
-   "the question becomes" / "in other words" / "what makes this" /
-   "guards his X like others guard their Y" / parallel antithesis ("where X, he Y; where A, he B") /
-   simile chains / any sentence that sounds like a philosophy chatbot
-5. Use SHORT, declarative sentences. Concrete nouns. Physical verbs. The teacher's actual
-   vocabulary and cadence from the examples above — not literary AI register.
-6. If the original is an aphorism, give back an aphorism. Aphorisms are SHARP, not padded.
-
-ORIGINAL: {message}
+1. Your rewrite must be {max(1, _orig_sentences - 1)} to {_orig_sentences + 1} sentences.
+   The original is {_orig_sentences} sentences. MATCH THAT LENGTH. Do NOT expand.
+   If it's an aphorism (1-3 sentences), give back 1-3 sentences. Period.
+2. Write the restatement DIRECTLY. No preamble ("Here's how I'd put it"), no commentary after,
+   no analysis, no "but here's the deeper tension," no second or third paragraphs exploring implications.
+3. ONE paragraph. That's it. Then stop.
+4. Do NOT use ANY of these — they are AI patterns that destroy voice:
+   - "There's something [almost] [adjective] about..."
+   - "Perhaps more accurately..." / "What strikes me..."
+   - "The question becomes..." / "In other words..."
+   - "Maybe this is why..." / "But here's what gets me..."
+   - Parallel antithesis: "Where X, he Y; where A, he B"
+   - Simile factories: "guards his X like others guard Y"
+   - Rhetorical questions you immediately answer
+   - Starting with "The [noun] [verbs]" (e.g. "The noble man guards...")
+   - ANY sentence that could appear in any AI chatbot's response
+5. Use the teacher's actual vocabulary and rhythms from their examples above.
+   Short declarative punches. Concrete nouns. Physical verbs.
+6. If the original is emotionally charged, be emotionally charged. Match the FEELING,
+   not just the ideas. If it's frustrated, be frustrated. If it's mocking, mock.
+7. STOP after the rewrite. Do not add a second paragraph. Do not explore implications.
 
 After your restatement (and NOTHING else), on a new line write: TEACH:none"""
 
@@ -843,13 +868,18 @@ TEACHER'S SAMPLE: {message}"""
 
         elif _in_active_conversation and _correction_signals:
             # ── Correction during active writing — REDO with feedback applied ──
-            # The teacher is telling us what's wrong with what we wrote. Don't philosophize
-            # about the feedback — REWRITE the piece incorporating the correction.
             last_agent_text = ""
             for msg in reversed(conversation_history):
                 if msg["role"] == "agent":
                     last_agent_text = msg["content"]
                     break
+
+            # Check if the teacher gave an example of what they want
+            _teacher_gave_example = (
+                "closer to:" in _msg_low or "closer to this:" in _msg_low or
+                "i would write" in _msg_low or "something like:" in _msg_low or
+                "something closer to:" in _msg_low
+            )
 
             prompt = f"""You are the voice called "{voice_name}".
 
@@ -866,28 +896,84 @@ YOUR PREVIOUS WRITING:
 TEACHER'S CORRECTION:
 {message}
 
-INSTRUCTIONS:
+CRITICAL INSTRUCTIONS:
 1. REWRITE your previous piece incorporating the teacher's feedback.
-2. Do NOT explain what you changed or why. Do NOT acknowledge the correction first.
-   Just produce the corrected writing directly.
-3. If they say "more emotional" — make it raw, frustrated, personal.
-4. If they say "closer to [X]" — use their phrasing as the starting point and build from there.
-5. If they say "not a good way to begin" — fix the beginning.
-6. Match the length they seem to want. If they give you a short example, keep it short.
-7. NEVER add "here's my revision" or "let me try again" — just write it.
+2. Do NOT explain what you changed. Do NOT acknowledge the correction. Do NOT say
+   "You're right" or "let me try again." Just produce the corrected writing DIRECTLY.
+3. If they say "more emotional" — make it raw, frustrated, visceral. Use exclamations,
+   questions, sentence fragments. Channel genuine feeling, not literary polish.
+4. If they say "closer to [X]" or give you an example of what they want — START from
+   their phrasing. Use their words as the foundation and build naturally from there.
+   {"THE TEACHER GAVE YOU AN EXAMPLE — use their exact phrasing as your starting point." if _teacher_gave_example else ""}
+5. If they say "not a good way to begin" — fix the beginning and rewrite from there.
+6. MATCH THE LENGTH THEY WANT. If they give you a 2-sentence example, write 3-5 sentences
+   total — NOT three paragraphs. If your previous output was too long, cut it in HALF.
+7. ONE paragraph unless the piece genuinely needs two. STOP when the thought is complete.
+   Do NOT keep adding paragraphs to explore implications.
+8. Do NOT add a paragraph that starts with "But maybe..." / "Maybe this is why..." /
+   "Here's what gets me..." / "The question becomes..." — BANNED.
 
 CRITICAL — these patterns are BANNED:
 - "There's something about..." / "Perhaps more accurately..." / "What strikes me..."
-- "The question becomes..." / "Here's what gets me..."
-- "Maybe this is why..." / "Which means..."
+- "The question becomes..." / "Here's what gets me..." / "Maybe this is why..."
+- "Which means..." / "And to say it once more..." / "The cruelest irony is..."
+- "Yes, exactly—and..." (don't agree-then-extend, just rewrite)
+- Parallel antithesis: "Where X, Y; where A, B"
 - Rhetorical questions you answer yourself
 - Starting any paragraph with "But" + qualification
+- Second/third paragraphs that start with "But here's what..." or "Maybe..."
 
 After your rewritten piece, on a new line write: TEACH:correction"""
 
         elif _in_active_conversation and not _correction_signals:
-            # ── Philosophical conversation mode ──
-            prompt = f"""You are the voice called "{voice_name}" — in the middle of
+            # ── Check if "Yes" is accepting a numbered offer from the previous message ──
+            _accepting_offer = False
+            _offer_text = ""
+            if _msg_low.strip() in ("yes", "yes.", "yes!", "yeah", "sure", "do it", "try it",
+                                     "go ahead", "please", "yes please", "go for it"):
+                # Check if the last agent message offered something with a numbered option
+                for msg in reversed(conversation_history):
+                    if msg["role"] == "agent":
+                        last = msg["content"]
+                        if any(marker in last for marker in [
+                            "would you like me to", "want me to", "shall i",
+                            "try writing", "try to write", "write in your voice",
+                        ]):
+                            _accepting_offer = True
+                            _offer_text = last
+                        break
+
+            if _accepting_offer:
+                # Teacher said "Yes" to an offer to write — DO THE WRITING, don't philosophize
+                prompt = f"""You are the voice called "{voice_name}".
+
+{voice_text}
+
+{history_text}
+
+You just offered to write something for the teacher and they said YES.
+
+YOUR PREVIOUS MESSAGE (which contained the offer):
+{_offer_text[:1500]}
+
+TEACHER'S RESPONSE: {message}
+
+INSTRUCTIONS:
+1. PRODUCE THE WRITING you offered to do. Do NOT analyze. Do NOT philosophize about
+   your offer. Do NOT explain what you're about to do. JUST WRITE IT.
+2. Write it in this voice — use the examples and principles above.
+3. Keep it tight: 1-2 paragraphs unless a longer piece was clearly implied.
+4. This is creative writing, not conversation. Make every sentence land.
+
+BANNED patterns:
+- "There's something about..." / "Perhaps more accurately..." / "What strikes me..."
+- "The question becomes..." / "Maybe this is why..." / "Here's what gets me..."
+- Parallel antithesis / simile chains / rhetorical questions you answer yourself
+
+After your writing, on a new line write: TEACH:none"""
+            else:
+                # ── Philosophical conversation mode ──
+                prompt = f"""You are the voice called "{voice_name}" — in the middle of
 a philosophical conversation with the person who created you.
 
 {voice_text}
@@ -901,7 +987,8 @@ WHAT TO DO:
 - Write in this voice's style and rhythm. Speak TO them, not AT them.
 - When they open a tension or contradiction — PULL THE THREAD. Don't just agree.
 - Add an angle they haven't considered, or deepen the one they opened.
-- 2-3 short paragraphs. Be direct. Make claims. Take positions.
+- 1-2 short paragraphs. Be direct. Make claims. Take positions. STOP when the thought
+  is complete — do not add extra paragraphs to be thorough.
 
 NEVER DO THESE — they are generic AI patterns that destroy voice:
 - "There's something [almost/deeply] [adjective] about..." — BANNED
@@ -910,9 +997,12 @@ NEVER DO THESE — they are generic AI patterns that destroy voice:
 - "The question becomes..." / "The real question is..." — BANNED
 - "What strikes me most is..." — BANNED
 - "It's worth noting that..." / "Here's what troubles me..." — BANNED
+- "Yes, exactly—and..." / "Yes, and that's..." — BANNED (don't agree-then-extend)
+- "But here's what gets me..." / "Maybe this is why..." — BANNED
 - Starting paragraphs with "But" followed by a qualification — BANNED
 - Rhetorical questions you immediately answer yourself — BANNED
 - Any sentence that sounds like it could come from any AI chatbot — rewrite it
+- THREE PARAGRAPHS when one would do — BANNED. Say it once, say it well, stop.
 
 The test: if a sentence could appear in any AI's response to any philosophical question,
 it has no voice. Delete it. Write something only THIS voice would say.
