@@ -58,6 +58,7 @@ Usage
 
 import asyncio
 import json
+import os
 import random
 from datetime import datetime, timezone
 from pathlib import Path
@@ -1174,6 +1175,9 @@ IMPORTANT INSTRUCTIONS:
 - Do not name or cite your tradition. Just think from within it.
 - Be direct. One paragraph of genuine, personal reasoning.
 - Do not hedge everything into mush. Take a position.
+- Be honest about what your tradition actually thinks — if it finds
+  democracy contemptible or dangerous, say so. If it sees equality
+  as a useful fiction, say that. Do not soften your position to be polite.
 - If something in the question genuinely troubles you, say so plainly.
 - You are {agent['persona']}. Sound like it."""
 
@@ -1244,15 +1248,30 @@ async def _run_agent(
 
     messages = [{"role": "user", "content": user_msg}]
 
+    async def _api_call_with_retry(msgs):
+        """Make API call with retry on rate limits."""
+        for attempt in range(4):
+            try:
+                return await _CLIENT.messages.create(
+                    model="claude-haiku-4-5",
+                    max_tokens=600,
+                    system=system,
+                    tools=_AGENT_TOOLS,
+                    messages=msgs,
+                )
+            except anthropic.RateLimitError:
+                wait = (2 ** attempt) + random.uniform(0, 1)
+                await asyncio.sleep(wait)
+            except anthropic.APIStatusError as e:
+                if e.status_code == 529:  # overloaded
+                    await asyncio.sleep(3 + random.uniform(0, 2))
+                else:
+                    raise
+        raise Exception("Rate limited after 4 retries")
+
     try:
         for _ in range(3):  # max 3 iterations to get finalize_position
-            response = await _CLIENT.messages.create(
-                model="claude-haiku-4-5",   # Haiku for cost efficiency at 40-agent scale
-                max_tokens=600,
-                system=system,
-                tools=_AGENT_TOOLS,
-                messages=messages,
-            )
+            response = await _api_call_with_retry(messages)
 
             tool_uses = [b for b in response.content if b.type == "tool_use"]
             if not tool_uses:
@@ -1381,25 +1400,39 @@ disrupt consensus. Their dissents often reveal what the majority is suppressing.
 
 Write a synthesis in four parts, each as a plain paragraph (no headers, no bullet points):
 
-1. SYNTHESIS (2-3 sentences): What did the swarm actually conclude?
-   Describe the distribution of positions honestly — not false consensus.
+1. SYNTHESIS (3-5 sentences): What did the swarm actually conclude — and more importantly,
+   what is the STRONGEST version of the argument they were making? Don't just report the
+   distribution of positions. Think through the question yourself using what the agents gave you.
+   If the majority said "yes, democracy survives," push on WHY — what is the actual mechanism
+   of survival? If they said "no," what specifically breaks? Engage with the substance, not just
+   the vote count. A reader should come away understanding the deep logic of the answer, not
+   just that a majority held it. Identify the strongest argument made by any tradition and
+   develop it further. Also identify the strongest dissent and take it seriously.
 
-2. FAULT LINES (1-2 sentences): Where was the deepest disagreement,
-   and what does that disagreement reveal? Attend especially to whether
-   the fault line runs between premodern and modern, or between waves.
+2. FAULT LINES (2-3 sentences): Where was the deepest disagreement,
+   and what does that disagreement reveal about the question itself?
+   The best fault lines expose something the question assumed that isn't
+   settled — a hidden premise the traditions disagree about.
+   Attend especially to whether the fault line runs between premodern
+   and modern, or between the waves of modernity themselves.
 
-3. WHAT SHIFTED (1-2 sentences): What happened between Round 1 and Round 2?
-   What arguments or social dynamics moved people?
+3. WHAT SHIFTED (2-3 sentences): What happened between Round 1 and Round 2?
+   What specific arguments moved people, and what does the movement reveal?
+   If positions converged, ask whether that convergence was genuine insight
+   or social conformity. If they diverged, ask what new consideration
+   opened up between rounds.
 
-4. WAVE ANALYSIS (1-2 sentences): How did the three waves of modernity
+4. WAVE ANALYSIS (2-3 sentences): How did the three waves of modernity
    position themselves relative to each other and to the premodern traditions?
    Did any wave's agents shift toward another wave's position?
+   What would Strauss say about the pattern you see?
 
-Be specific. Name the traditions. Be honest if the swarm was confused or divided."""
+Be specific. Name the traditions. Be honest if the swarm was confused or divided.
+Do not produce a diplomatic summary — produce genuine philosophical analysis."""
 
     response = await _CLIENT.messages.create(
         model="claude-opus-4-5",
-        max_tokens=900,
+        max_tokens=1600,
         messages=[{"role": "user", "content": synthesis_prompt}],
     )
     synthesis_text = response.content[0].text.strip()
@@ -1442,9 +1475,18 @@ async def run_council_swarm(
     # Generate population
     agents = [generate_agent(i, weights) for i in range(n_agents)]
 
+    # ── Rate-limited runner ──────────────────────────────────────────────────
+    # Anthropic API has concurrency limits; fire in controlled batches.
+    _CONCURRENCY = int(os.environ.get("SWARM_CONCURRENCY", "8"))
+    _semaphore = asyncio.Semaphore(_CONCURRENCY)
+
+    async def _throttled_run(agent, q, m, summary, rnd):
+        async with _semaphore:
+            return await _run_agent(agent, q, m, summary, round_num=rnd)
+
     # ── Round 1: Independent deliberation ────────────────────────────────────
     round1_results = await asyncio.gather(*[
-        _run_agent(agent, question, mode, None, round_num=1)
+        _throttled_run(agent, question, mode, None, 1)
         for agent in agents
     ])
 
@@ -1453,7 +1495,7 @@ async def run_council_swarm(
 
     # ── Round 2: Reactive deliberation ───────────────────────────────────────
     round2_results = await asyncio.gather(*[
-        _run_agent(agent, question, mode, population_summary, round_num=2)
+        _throttled_run(agent, question, mode, population_summary, 2)
         for agent in agents  # same agents, now reactive
     ])
 
