@@ -34,6 +34,7 @@ from voice_engine import (
     list_profiles,
     delete_profile,
     load_refinements,
+    _rewrite_refinements,
     get_full_voice_text,
     teach_interaction,
     write_with_voice,
@@ -610,7 +611,61 @@ async def get_refinements(
     if profile.owner_id != user_id:
         raise HTTPException(status_code=403, detail="Not your profile")
     refinements = load_refinements(profile_id)
+    # Add index to each refinement so the UI can reference them
+    for i, r in enumerate(refinements):
+        r["index"] = i
     return {"profile_id": profile_id, "refinements": refinements, "count": len(refinements)}
+
+
+@app.delete("/profiles/{profile_id}/refinements/{index}")
+async def delete_refinement(
+    profile_id: str,
+    index: int,
+    user_id: str = Depends(get_current_user),
+):
+    """Delete a refinement by index."""
+    profile = load_profile(profile_id)
+    if not profile:
+        raise HTTPException(status_code=404, detail="Profile not found")
+    if profile.owner_id != user_id:
+        raise HTTPException(status_code=403, detail="Not your profile")
+    refinements = load_refinements(profile_id)
+    if index < 0 or index >= len(refinements):
+        raise HTTPException(status_code=404, detail="Refinement not found")
+    refinements.pop(index)
+    _rewrite_refinements(profile_id, refinements)
+    profile.refinement_count = len(refinements)
+    update_profile_metadata(profile)
+    return {"count": len(refinements)}
+
+
+class EditRefinementRequest(BaseModel):
+    content: str
+    type: str | None = None
+
+
+@app.put("/profiles/{profile_id}/refinements/{index}")
+async def edit_refinement(
+    profile_id: str,
+    index: int,
+    req: EditRefinementRequest,
+    user_id: str = Depends(get_current_user),
+):
+    """Edit a refinement's content and optionally its type."""
+    profile = load_profile(profile_id)
+    if not profile:
+        raise HTTPException(status_code=404, detail="Profile not found")
+    if profile.owner_id != user_id:
+        raise HTTPException(status_code=403, detail="Not your profile")
+    refinements = load_refinements(profile_id)
+    if index < 0 or index >= len(refinements):
+        raise HTTPException(status_code=404, detail="Refinement not found")
+    refinements[index]["content"] = req.content
+    if req.type:
+        refinements[index]["type"] = req.type
+    _rewrite_refinements(profile_id, refinements)
+    return {"refinement": refinements[index], "count": len(refinements)}
+
 
 
 # ── Conversation Sessions ──

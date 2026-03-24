@@ -1923,6 +1923,218 @@ function ProfileMenu({ onExport, onDelete }) {
   );
 }
 
+// ── Refinements Browser ──
+function RefinementsPanel({ profileId, onClose, onCountChange }) {
+  const [refinements, setRefinements] = useState(null);
+  const [editing, setEditing] = useState(null); // { index, content, type }
+  const [filter, setFilter] = useState("all");
+  const [saving, setSaving] = useState(false);
+
+  const load = () => {
+    api(`/profiles/${profileId}/refinements`)
+      .then(r => setRefinements(r.refinements))
+      .catch(() => setRefinements([]));
+  };
+  useEffect(load, [profileId]);
+
+  const typeLabels = {
+    example: "Example",
+    correction: "Correction",
+    principle: "Principle",
+    voice_note: "Voice note",
+    anti_pattern: "Anti-pattern",
+  };
+
+  const typeColors = {
+    example: "#7ecfcf",
+    correction: "#e8a87c",
+    principle: "#d4af37",
+    voice_note: "#b8a9c9",
+    anti_pattern: "#cf7e7e",
+  };
+
+  const handleDelete = async (index) => {
+    try {
+      const result = await api(`/profiles/${profileId}/refinements/${index}`, { method: "DELETE" });
+      toastSuccess("Refinement deleted");
+      onCountChange && onCountChange(result.count);
+      load();
+    } catch (e) { toastError(e.message); }
+  };
+
+  const handleSave = async () => {
+    if (!editing) return;
+    setSaving(true);
+    try {
+      await api(`/profiles/${profileId}/refinements/${editing.index}`, {
+        method: "PUT",
+        body: JSON.stringify({ content: editing.content, type: editing.type }),
+      });
+      toastSuccess("Refinement updated");
+      setEditing(null);
+      load();
+    } catch (e) { toastError(e.message); }
+    setSaving(false);
+  };
+
+  const filtered = refinements
+    ? filter === "all" ? refinements : refinements.filter(r => r.type === filter)
+    : null;
+
+  const typeCounts = refinements ? refinements.reduce((acc, r) => {
+    acc[r.type] = (acc[r.type] || 0) + 1;
+    return acc;
+  }, {}) : {};
+
+  return (
+    <div style={{
+      position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)",
+      zIndex: 2000, display: "flex", justifyContent: "center", alignItems: "flex-start",
+      paddingTop: 60, overflowY: "auto",
+    }} onClick={onClose}>
+      <div style={{
+        background: "var(--bg)", border: "1px solid var(--border)",
+        borderRadius: 12, width: "min(680px, 90vw)", maxHeight: "80vh",
+        display: "flex", flexDirection: "column", overflow: "hidden",
+      }} onClick={e => e.stopPropagation()}>
+        {/* Header */}
+        <div style={{
+          padding: "16px 20px", borderBottom: "1px solid var(--border)",
+          display: "flex", justifyContent: "space-between", alignItems: "center",
+        }}>
+          <div>
+            <div style={{ fontSize: 15, fontWeight: 600, fontFamily: "var(--font-sans)", color: "var(--text)" }}>
+              Refinements
+            </div>
+            <div style={{ fontSize: 12, color: "var(--text-faint)", marginTop: 2 }}>
+              {refinements ? refinements.length : "..."} total
+            </div>
+          </div>
+          <button onClick={onClose} style={{
+            background: "none", border: "none", color: "var(--text-dim)",
+            cursor: "pointer", fontSize: 18, padding: "4px 8px",
+          }}>✕</button>
+        </div>
+
+        {/* Filter tabs */}
+        <div style={{
+          padding: "8px 20px", borderBottom: "1px solid var(--border)",
+          display: "flex", gap: 4, flexWrap: "wrap",
+        }}>
+          <button onClick={() => setFilter("all")} style={{
+            padding: "3px 10px", fontSize: 11, borderRadius: 12,
+            border: "1px solid " + (filter === "all" ? "var(--accent)" : "var(--border)"),
+            background: filter === "all" ? "var(--accent-glow)" : "none",
+            color: filter === "all" ? "var(--accent)" : "var(--text-dim)",
+            cursor: "pointer", fontFamily: "var(--font-sans)",
+          }}>All ({refinements?.length || 0})</button>
+          {Object.entries(typeCounts).map(([type, count]) => (
+            <button key={type} onClick={() => setFilter(type)} style={{
+              padding: "3px 10px", fontSize: 11, borderRadius: 12,
+              border: "1px solid " + (filter === type ? (typeColors[type] || "var(--accent)") : "var(--border)"),
+              background: filter === type ? "rgba(200,164,110,0.06)" : "none",
+              color: filter === type ? (typeColors[type] || "var(--accent)") : "var(--text-dim)",
+              cursor: "pointer", fontFamily: "var(--font-sans)",
+            }}>{typeLabels[type] || type} ({count})</button>
+          ))}
+        </div>
+
+        {/* Refinement list */}
+        <div style={{ flex: 1, overflowY: "auto", padding: "8px 12px" }}>
+          {!filtered ? (
+            <div style={{ padding: 20, textAlign: "center", color: "var(--text-faint)" }}>Loading…</div>
+          ) : filtered.length === 0 ? (
+            <div style={{ padding: 20, textAlign: "center", color: "var(--text-faint)" }}>No refinements</div>
+          ) : (
+            filtered.map((r, i) => {
+              const isEditing = editing && editing.index === r.index;
+              return (
+                <div key={r.index} style={{
+                  padding: "12px 14px", borderRadius: 8, marginBottom: 6,
+                  background: isEditing ? "rgba(200,164,110,0.06)" : "var(--bg-elevated)",
+                  border: "1px solid " + (isEditing ? "var(--accent-dim)" : "var(--border)"),
+                  transition: "all 0.15s",
+                }}>
+                  {/* Type tag + actions */}
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                    <span style={{
+                      fontSize: 10, fontWeight: 600, textTransform: "uppercase",
+                      letterSpacing: "0.08em", fontFamily: "var(--font-sans)",
+                      color: typeColors[r.type] || "var(--text-dim)",
+                    }}>
+                      {typeLabels[r.type] || r.type}
+                      {r.auto_detected && <span style={{ marginLeft: 6, opacity: 0.5, fontWeight: 400 }}>auto</span>}
+                      {r.source === "conversation" && <span style={{ marginLeft: 6, opacity: 0.5, fontWeight: 400 }}>from chat</span>}
+                    </span>
+                    <div style={{ display: "flex", gap: 4 }}>
+                      {!isEditing && (
+                        <>
+                          <button onClick={() => setEditing({ index: r.index, content: r.content, type: r.type })}
+                            style={{ background: "none", border: "none", color: "var(--text-faint)", cursor: "pointer", fontSize: 11, fontFamily: "var(--font-sans)", padding: "2px 6px" }}
+                            onMouseEnter={e => e.currentTarget.style.color = "var(--accent)"}
+                            onMouseLeave={e => e.currentTarget.style.color = "var(--text-faint)"}
+                          >edit</button>
+                          <button onClick={() => handleDelete(r.index)}
+                            style={{ background: "none", border: "none", color: "var(--text-faint)", cursor: "pointer", fontSize: 11, fontFamily: "var(--font-sans)", padding: "2px 6px" }}
+                            onMouseEnter={e => e.currentTarget.style.color = "#cf7e7e"}
+                            onMouseLeave={e => e.currentTarget.style.color = "var(--text-faint)"}
+                          >delete</button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Content */}
+                  {isEditing ? (
+                    <div>
+                      <textarea
+                        value={editing.content}
+                        onChange={e => setEditing({ ...editing, content: e.target.value })}
+                        style={{
+                          width: "100%", minHeight: 80, padding: "8px 10px",
+                          background: "var(--bg)", border: "1px solid var(--border)",
+                          borderRadius: 6, color: "var(--text)", fontSize: 13,
+                          fontFamily: "var(--font-serif)", lineHeight: 1.6, resize: "vertical",
+                        }}
+                      />
+                      <div style={{ display: "flex", gap: 6, marginTop: 8, justifyContent: "flex-end" }}>
+                        <button onClick={() => setEditing(null)}
+                          style={{ padding: "4px 12px", background: "none", border: "1px solid var(--border)", borderRadius: 6, color: "var(--text-dim)", cursor: "pointer", fontSize: 12, fontFamily: "var(--font-sans)" }}
+                        >Cancel</button>
+                        <button onClick={handleSave} disabled={saving}
+                          style={{ padding: "4px 12px", background: "var(--accent-glow)", border: "1px solid var(--accent-dim)", borderRadius: 6, color: "var(--accent)", cursor: "pointer", fontSize: 12, fontFamily: "var(--font-sans)" }}
+                        >{saving ? "Saving…" : "Save"}</button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div style={{
+                      fontSize: 13, color: "var(--text)", lineHeight: 1.6,
+                      fontFamily: "var(--font-serif)",
+                      whiteSpace: "pre-wrap",
+                    }}>
+                      {r.content.length > 300 ? r.content.slice(0, 300) + "…" : r.content}
+                    </div>
+                  )}
+
+                  {/* Context (if present) */}
+                  {r.context && !isEditing && (
+                    <div style={{
+                      marginTop: 6, fontSize: 11, color: "var(--text-faint)",
+                      fontStyle: "italic", lineHeight: 1.4,
+                    }}>
+                      context: {r.context.length > 120 ? r.context.slice(0, 120) + "…" : r.context}
+                    </div>
+                  )}
+                </div>
+              );
+            })
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function PastConversationsPanel({ profileId, onLoad, onClose }) {
   const [sessions, setSessions] = useState(null);
   const [confirmDelete, setConfirmDelete] = useState(null); // session_id pending confirmation
@@ -7036,6 +7248,7 @@ function App() {
   const [historySignal, setHistorySignal] = useState(0);
   const [loaded, setLoaded] = useState(false);
   const [showAvatarPicker, setShowAvatarPicker] = useState(false);
+  const [showRefinements, setShowRefinements] = useState(false);
 
   const isGuest = user?.user_id?.startsWith("guest-");
   const [sessionReady, setSessionReady] = useState(false);
@@ -7382,7 +7595,13 @@ function App() {
                   </button>
                   <div>
                     <div className="profile-header-name" style={{ fontSize: 15 }}>{activeProfile.name}</div>
-                    <div className="profile-header-meta" style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11 }}>
+                    <div className="profile-header-meta"
+                      onClick={() => setShowRefinements(true)}
+                      title="View & edit refinements"
+                      style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, cursor: "pointer", transition: "opacity 0.15s" }}
+                      onMouseEnter={e => e.currentTarget.style.opacity = "0.7"}
+                      onMouseLeave={e => e.currentTarget.style.opacity = "1"}
+                    >
                       {(() => {
                         const { current, next, progress, milestoneIndex } = getVoiceMaturity(activeProfile.refinement_count);
                         const overall = (milestoneIndex + progress) / (VOICE_MILESTONES.length - 1);
@@ -7468,6 +7687,18 @@ function App() {
             setShowAvatarPicker(false);
           }}
           onClose={() => setShowAvatarPicker(false)}
+        />
+      )}
+      {showRefinements && activeProfile && (
+        <RefinementsPanel
+          profileId={activeProfile.profile_id}
+          onClose={() => setShowRefinements(false)}
+          onCountChange={(count) => {
+            setActiveProfile(prev => ({ ...prev, refinement_count: count }));
+            setProfiles(prev => prev.map(p =>
+              p.profile_id === activeProfile.profile_id ? { ...p, refinement_count: count } : p
+            ));
+          }}
         />
       )}
       {showAuth && (

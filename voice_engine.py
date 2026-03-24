@@ -152,6 +152,16 @@ def save_refinement(profile_id: str, refinement: dict):
         update_profile_metadata(profile)
 
 
+def _rewrite_refinements(profile_id: str, refinements: list[dict]):
+    """Rewrite the entire refinements file (used for edits and deletes)."""
+    path = PROFILES_DIR / profile_id / "refinements.jsonl"
+    with open(path, "w") as f:
+        for r in refinements:
+            # Strip the temporary index field if present
+            clean = {k: v for k, v in r.items() if k != "index"}
+            f.write(json.dumps(clean) + "\n")
+
+
 # ── Conversation Sessions ──
 
 def _conversations_dir(profile_id: str) -> Path:
