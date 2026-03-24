@@ -744,12 +744,18 @@ Write 2-3 paragraphs in this voice."""
 
         # Correction/feedback signals — user is responding TO the voice
         _correction_signals = any(s in _msg_low for s in [
-            "one thing is", "i'd use", "i would use", "instead of", "too formal",
-            "too casual", "this is good", "this is largely", "this is mostly",
+            "one thing is", "i'd use", "i would use", "i would write",
+            "instead of", "too formal", "too casual", "too long", "too short",
+            "too generic", "too abstract", "too emotional", "more emotional",
+            "more concrete", "more direct", "more like", "less like",
+            "this is good", "this is largely", "this is mostly",
             "i also think", "i don't think", "i prefer", "not quite", "close but",
             "almost right", "you should", "you used", "you wrote", "where you",
             "that assumes", "it assumes", "don't like", "shouldn't", "try using",
-            "rather than", "better if", "more like", "less like",
+            "rather than", "better if", "closer to", "something closer",
+            "not a good", "is not a good", "isn't a good",
+            "let me start", "start again", "try again",
+            "no no", "no, no", "no!", "wrong",
         ])
 
         # Long prose is only an "example" if it's NOT a conversational continuation
@@ -767,12 +773,18 @@ Write 2-3 paragraphs in this voice."""
         _looks_like_example = _explicit_example or _long_prose_example
 
         # ── Detect "rephrase" requests — user wants their idea rewritten, not analyzed ──
-        _rephrase_signals = any(s in _msg_low for s in [
-            "say this a different way", "say this differently", "rephrase this",
-            "rewrite this", "put this differently", "say it another way",
-            "how would you say", "how would i say", "render this",
-            "translate this into", "say this in my voice", "say this better",
-        ])
+        _rephrase_signals = (
+            any(s in _msg_low for s in [
+                "say this a different way", "say this differently", "rephrase this",
+                "rewrite this", "put this differently", "say it another way",
+                "how would you say", "how would i say", "render this",
+                "translate this into", "say this in my voice", "say this better",
+            ]) or
+            _msg_low.startswith("rewrite:") or
+            _msg_low.startswith("rewrite ") or
+            _msg_low.startswith("rephrase:") or
+            _msg_low.startswith("rewrite -")  # "Rewrite: -Bad enough..."
+        )
 
         if _rephrase_signals:
             prompt = f"""You are the voice called "{voice_name}".
@@ -828,6 +840,50 @@ Keep it to 3-5 sentences total. Be a perceptive student, not a performer.
 After your response, on a new line write: TEACH:example
 
 TEACHER'S SAMPLE: {message}"""
+
+        elif _in_active_conversation and _correction_signals:
+            # ── Correction during active writing — REDO with feedback applied ──
+            # The teacher is telling us what's wrong with what we wrote. Don't philosophize
+            # about the feedback — REWRITE the piece incorporating the correction.
+            last_agent_text = ""
+            for msg in reversed(conversation_history):
+                if msg["role"] == "agent":
+                    last_agent_text = msg["content"]
+                    break
+
+            prompt = f"""You are the voice called "{voice_name}".
+
+{voice_text}
+
+{history_text}
+
+You just wrote something and the teacher is correcting it. They are NOT asking for
+philosophical conversation — they are telling you what's WRONG and how to fix it.
+
+YOUR PREVIOUS WRITING:
+{last_agent_text[:1500]}
+
+TEACHER'S CORRECTION:
+{message}
+
+INSTRUCTIONS:
+1. REWRITE your previous piece incorporating the teacher's feedback.
+2. Do NOT explain what you changed or why. Do NOT acknowledge the correction first.
+   Just produce the corrected writing directly.
+3. If they say "more emotional" — make it raw, frustrated, personal.
+4. If they say "closer to [X]" — use their phrasing as the starting point and build from there.
+5. If they say "not a good way to begin" — fix the beginning.
+6. Match the length they seem to want. If they give you a short example, keep it short.
+7. NEVER add "here's my revision" or "let me try again" — just write it.
+
+CRITICAL — these patterns are BANNED:
+- "There's something about..." / "Perhaps more accurately..." / "What strikes me..."
+- "The question becomes..." / "Here's what gets me..."
+- "Maybe this is why..." / "Which means..."
+- Rhetorical questions you answer yourself
+- Starting any paragraph with "But" + qualification
+
+After your rewritten piece, on a new line write: TEACH:correction"""
 
         elif _in_active_conversation and not _correction_signals:
             # ── Philosophical conversation mode ──
