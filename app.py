@@ -556,6 +556,29 @@ async def rename_profile(
     return {"name": name}
 
 
+@app.patch("/profiles/{profile_id}/description")
+async def update_profile_description(
+    profile_id: str,
+    user_id: str = Depends(get_current_user),
+    description: str = Body(..., embed=True),
+):
+    """Update a voice profile's base description."""
+    description = description.strip()
+    if len(description) > 2000:
+        raise HTTPException(400, "Description too long (max 2000 chars)")
+    profile = load_profile(profile_id)
+    if not profile:
+        raise HTTPException(404, "Profile not found")
+    if profile.owner_id != user_id:
+        raise HTTPException(403, "Not your profile")
+    profile.base_description = description
+    update_profile_metadata(profile)
+    # Also update the base.md file that the voice engine reads
+    base_path = Path("data/profiles") / profile_id / "base.md"
+    base_path.write_text(description)
+    return {"description": description}
+
+
 @app.patch("/profiles/{profile_id}/avatar")
 async def set_profile_avatar(
     profile_id: str,

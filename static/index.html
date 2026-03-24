@@ -7523,6 +7523,99 @@ function OnboardingTour({ onDone }) {
   );
 }
 
+function EditableDescription({ profileId, initialDescription, onSave }) {
+  const [editing, setEditing] = useState(false);
+  const [desc, setDesc] = useState(initialDescription);
+  const [saving, setSaving] = useState(false);
+  const textareaRef = useRef(null);
+
+  useEffect(() => { setDesc(initialDescription); }, [initialDescription]);
+  useEffect(() => { if (editing && textareaRef.current) { textareaRef.current.focus(); textareaRef.current.setSelectionRange(desc.length, desc.length); } }, [editing]);
+
+  const save = async () => {
+    const trimmed = desc.trim();
+    setSaving(true);
+    try {
+      await api(`/profiles/${profileId}/description`, {
+        method: "PATCH",
+        body: JSON.stringify({ description: trimmed }),
+      });
+      onSave && onSave(trimmed);
+      setEditing(false);
+      if (trimmed && trimmed !== initialDescription) toastSuccess("Voice description updated");
+    } catch (e) {
+      toastError(e.message);
+    }
+    setSaving(false);
+  };
+
+  const isEmpty = !desc.trim();
+
+  if (!editing) {
+    return (
+      <div
+        onClick={() => setEditing(true)}
+        title="Click to edit voice description"
+        style={{
+          padding: "8px 12px", marginBottom: 6, cursor: "pointer",
+          borderRadius: "var(--radius)", transition: "background 0.15s",
+          border: isEmpty ? "1px dashed var(--border)" : "1px solid transparent",
+        }}
+        onMouseEnter={e => e.currentTarget.style.background = "rgba(200,164,110,0.04)"}
+        onMouseLeave={e => e.currentTarget.style.background = "transparent"}
+      >
+        {isEmpty ? (
+          <span style={{ fontFamily: "var(--font-sans)", fontSize: 12, color: "var(--text-faint)", fontStyle: "italic" }}>
+            + Add a voice description — tell your voice who it is...
+          </span>
+        ) : (
+          <p style={{ fontFamily: "var(--font-sans)", fontSize: 12, color: "var(--text-dim)", lineHeight: 1.6, margin: 0 }}>
+            {desc}
+          </p>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ padding: "8px 12px", marginBottom: 6 }}>
+      <textarea
+        ref={textareaRef}
+        value={desc}
+        onChange={e => setDesc(e.target.value)}
+        placeholder="Describe this voice — its ancestors, its rhythms, what it sounds like at its best. This anchors everything the model writes."
+        style={{
+          width: "100%", minHeight: 80, padding: "10px 12px",
+          background: "var(--bg-elevated)", border: "1px solid var(--accent-dim)",
+          borderRadius: "var(--radius)", color: "var(--text)",
+          fontFamily: "var(--font-sans)", fontSize: 12, lineHeight: 1.6,
+          resize: "vertical",
+        }}
+        onKeyDown={e => {
+          if (e.key === "Escape") { setDesc(initialDescription); setEditing(false); }
+          if (e.key === "Enter" && e.metaKey) save();
+        }}
+      />
+      <div style={{ display: "flex", gap: 6, marginTop: 6, justifyContent: "flex-end" }}>
+        <button onClick={() => { setDesc(initialDescription); setEditing(false); }} style={{
+          background: "none", border: "1px solid var(--border)", borderRadius: 6,
+          padding: "4px 12px", color: "var(--text-faint)", fontSize: 11,
+          fontFamily: "var(--font-sans)", cursor: "pointer",
+        }}>Cancel</button>
+        <button onClick={save} disabled={saving} style={{
+          background: "var(--accent)", border: "none", borderRadius: 6,
+          padding: "4px 14px", color: "var(--bg)", fontSize: 11, fontWeight: 600,
+          fontFamily: "var(--font-sans)", cursor: "pointer", opacity: saving ? 0.6 : 1,
+        }}>{saving ? "Saving..." : "Save"}</button>
+      </div>
+      <div style={{ fontSize: 10, color: "var(--text-faint)", marginTop: 4, fontFamily: "var(--font-sans)" }}>
+        ⌘+Enter to save · Esc to cancel
+      </div>
+    </div>
+  );
+}
+
+
 function App() {
   const [user, setUserState] = useState(getUser);
   const [profiles, setProfiles] = useState([]);
@@ -7874,6 +7967,11 @@ function App() {
           ) : activeProfile ? (
             <>
               {/* ── Unified header: avatar + name + tabs + overflow ── */}
+              <EditableDescription
+                profileId={activeProfile.profile_id}
+                initialDescription={activeProfile.base_description || ""}
+                onSave={(desc) => setActiveProfile(prev => ({ ...prev, base_description: desc }))}
+              />
               <div className="profile-header" style={{ position: "relative", zIndex: 10 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                   <button onClick={() => setShowAvatarPicker(true)} title="Change avatar" style={{
