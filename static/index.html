@@ -5997,146 +5997,158 @@ function CouncilView({ isGuest, onNeedAuth }) {
     );
   }
 
+  // ── Tier descriptions for contextual detail ──
+  const tierInfo = {
+    lite:  { cta: "Quick Council",       desc: "3 thinkers · 1 round · fastest response" },
+    full:  { cta: "Convene the Council", desc: `${thinkers.size} thinkers · 2 rounds · deeper deliberation` },
+    swarm: { cta: "Deploy the Swarm",    desc: "40 agents · 19 traditions · 2 rounds of convergence" },
+  };
+
+  const [showThinkerPicker, setShowThinkerPicker] = useState(false);
+
   return (
     <div className="write-container">
-      <div className="write-section" style={{ maxWidth: 560 }}>
+      <div className="write-section" style={{ maxWidth: 520 }}>
 
-        {/* ── Hero header ── */}
-        <h1 style={{
-          fontFamily: "var(--font)", fontSize: "2.2rem", fontWeight: 600,
-          color: "var(--text)", margin: "0 0 6px", lineHeight: 1.2,
+        {/* ── Compact header ── */}
+        <div style={{
+          fontFamily: "var(--font-sans)", fontSize: 10, letterSpacing: "0.3em",
+          textTransform: "uppercase", color: "var(--accent)", marginBottom: 16,
         }}>
-          {councilTier === "swarm" ? "Ask 40 Philosophical Minds" : "Summon the Council"}
-        </h1>
-        <p style={{
-          fontFamily: "var(--font-sans)", fontSize: 15, color: "var(--text-dim)",
-          margin: "0 0 28px", lineHeight: 1.65,
-        }}>
-          {councilTier === "swarm"
-            ? "From Plato to Nietzsche, watch traditions deliberate your question in real-time."
-            : `${thinkers.size} of history's sharpest minds deliberate your question. Disagreement is the point.`
-          }
-        </p>
+          THE COUNCIL
+        </div>
 
         {/* ── Main input ── */}
-        <textarea
-          value={question}
-          onChange={e => setQuestion(e.target.value)}
-          placeholder="What question do you bring to the council?"
-          style={{
-            width: "100%", minHeight: 100, padding: "16px 18px",
-            background: "var(--bg-elevated)", border: "1px solid var(--accent-dim)",
-            borderRadius: "var(--radius-lg, 12px)", color: "var(--text)",
-            fontFamily: "var(--font)", fontSize: "1.1rem", lineHeight: 1.7,
-            resize: "vertical", marginBottom: 12,
-          }}
-        />
+        <div style={{ position: "relative", marginBottom: 12 }}>
+          <textarea
+            value={question}
+            onChange={e => setQuestion(e.target.value)}
+            placeholder="What question do you bring?"
+            style={{
+              width: "100%", minHeight: 90, padding: "16px 18px",
+              background: "var(--bg-elevated)", border: "1px solid var(--accent-dim)",
+              borderRadius: "var(--radius-lg, 12px)", color: "var(--text)",
+              fontFamily: "var(--font)", fontSize: "1.1rem", lineHeight: 1.7,
+              resize: "vertical",
+            }}
+          />
+          {/* Ghost suggestions inside the input area when empty */}
+          {!question && (
+            <div style={{
+              position: "absolute", bottom: 12, left: 18, right: 18,
+              display: "flex", gap: 6, flexWrap: "wrap",
+            }}>
+              {[
+                "Should I be honest even when it hurts?",
+                "Will democracy survive the internet?",
+                "How do I write about grief without sentimentality?",
+              ].map(q => (
+                <button key={q} onClick={() => setQuestion(q)} style={{
+                  padding: "3px 9px", borderRadius: 14,
+                  border: "1px solid var(--border)", background: "rgba(30,30,30,0.6)",
+                  color: "var(--text-faint)", fontFamily: "var(--font-sans)", fontSize: 10,
+                  cursor: "pointer", transition: "all 0.15s", lineHeight: 1.3,
+                  backdropFilter: "blur(4px)",
+                }}
+                onMouseEnter={e => { e.target.style.borderColor = "var(--accent-dim)"; e.target.style.color = "var(--text-dim)"; }}
+                onMouseLeave={e => { e.target.style.borderColor = "var(--border)"; e.target.style.color = "var(--text-faint)"; }}
+                >{q}</button>
+              ))}
+            </div>
+          )}
+        </div>
 
-        {/* ── Example questions — clickable suggestions ── */}
-        {!question && (
-          <div style={{ display: "flex", gap: 6, marginBottom: 14, flexWrap: "wrap", alignItems: "center" }}>
-            <span style={{ fontFamily: "var(--font-sans)", fontSize: 10, color: "var(--text-faint)", letterSpacing: "0.1em", textTransform: "uppercase", marginRight: 2 }}>Try</span>
-            {[
-              "Should I be honest even when it hurts?",
-              "Will democracy survive the internet?",
-              "How do I write about grief without sentimentality?",
-            ].map(q => (
-              <button key={q} onClick={() => setQuestion(q)} style={{
-                padding: "3px 10px", borderRadius: 16,
-                border: "1px solid var(--border)", background: "none",
-                color: "var(--text-faint)", fontFamily: "var(--font-sans)", fontSize: 11,
-                cursor: "pointer", transition: "all 0.15s",
-                maxWidth: "100%", textAlign: "left", lineHeight: 1.4,
-              }}
-              onMouseEnter={e => { e.target.style.borderColor = "var(--accent-dim)"; e.target.style.color = "var(--text-dim)"; }}
-              onMouseLeave={e => { e.target.style.borderColor = "var(--border)"; e.target.style.color = "var(--text-faint)"; }}
-              >{q}</button>
-            ))}
-          </div>
-        )}
-
-        {/* spacer between examples and tier selector */}
-        <div style={{ marginBottom: 8 }} />
-
-        {/* ── Tier selector — card-based, above submit ── */}
-        <div className="council-tier-grid" style={{
-          display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 16,
+        {/* ── Tier toggle — segmented control ── */}
+        <div style={{
+          display: "flex", marginBottom: 6,
+          background: "var(--bg-elevated)", borderRadius: 8,
+          border: "1px solid var(--border)", overflow: "hidden",
         }}>
           {[
-            { key: "lite",  label: "Lite",  sub: "3 thinkers · 1 round", cost: 1 },
-            { key: "full",  label: "Full",  sub: "6 thinkers · 2 rounds", cost: 3 },
-            { key: "swarm", label: "Swarm", sub: "40 agents · 19 traditions",  cost: 10, recommended: true },
+            { key: "lite",  label: "Lite",  cost: 1 },
+            { key: "full",  label: "Full",  cost: 3 },
+            { key: "swarm", label: "Swarm", cost: 10 },
           ].map(t => (
-            <button key={t.key} onClick={() => { setCouncilTier(t.key); setSwarmMode(t.key === "swarm"); }}
+            <button key={t.key}
+              onClick={() => { setCouncilTier(t.key); setSwarmMode(t.key === "swarm"); setShowThinkerPicker(false); }}
               style={{
-                position: "relative",
-                padding: "12px 10px", border: `1px solid ${councilTier === t.key ? "var(--accent)" : "var(--border)"}`,
-                borderRadius: "var(--radius)", background: councilTier === t.key ? "rgba(200,164,110,0.08)" : "var(--bg-elevated)",
-                color: councilTier === t.key ? "var(--accent)" : "var(--text-dim)",
-                fontFamily: "var(--font-sans)", cursor: "pointer", transition: "all 0.15s",
-                textAlign: "center",
-              }}>
-              {t.recommended && (
-                <div style={{
-                  position: "absolute", top: -8, left: "50%", transform: "translateX(-50%)",
-                  padding: "1px 8px", borderRadius: 10,
-                  background: "var(--accent)", color: "var(--bg)",
-                  fontSize: 9, fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase",
-                  whiteSpace: "nowrap",
-                }}>Recommended</div>
-              )}
-              <div style={{ fontSize: 14, fontWeight: 600, letterSpacing: "0.02em", marginBottom: 3 }}>{t.label}</div>
-              <div style={{ fontSize: 10, opacity: 0.55, lineHeight: 1.4 }}>{t.sub}</div>
-              <div style={{ fontSize: 10, color: "var(--accent)", marginTop: 4, opacity: 0.8 }}>{t.cost} credit{t.cost !== 1 ? "s" : ""}</div>
+                flex: 1, padding: "10px 0", border: "none", cursor: "pointer",
+                background: councilTier === t.key ? "rgba(200,164,110,0.12)" : "transparent",
+                color: councilTier === t.key ? "var(--accent)" : "var(--text-faint)",
+                fontFamily: "var(--font-sans)", fontSize: 12, fontWeight: councilTier === t.key ? 600 : 400,
+                transition: "all 0.15s",
+                borderBottom: councilTier === t.key ? "2px solid var(--accent)" : "2px solid transparent",
+              }}
+            >
+              {t.label}
+              <span style={{ marginLeft: 4, fontSize: 9, opacity: 0.5 }}>{t.cost}cr</span>
             </button>
           ))}
         </div>
 
-        {/* Credit balance */}
-        {credits && (
-          <div style={{ fontFamily: "var(--font-sans)", fontSize: 11, color: "var(--text-dim)", marginBottom: 16, display: "flex", alignItems: "center", gap: 8 }}>
-            <span style={{ color: credits.remaining > 0 ? "var(--accent)" : "#e07070" }}>
-              {credits.remaining} credit{credits.remaining !== 1 ? "s" : ""} remaining
-            </span>
-            <span style={{ opacity: 0.4 }}>·</span>
-            <span>{credits.perWeek}/week on {credits.plan} plan</span>
-            {credits.remaining === 0 && <span style={{ color: "#e07070" }}>· resets Monday</span>}
+        {/* ── Tier detail line + thinker picker toggle ── */}
+        <div style={{
+          display: "flex", alignItems: "center", justifyContent: "space-between",
+          marginBottom: 14, minHeight: 24,
+        }}>
+          <span style={{ fontFamily: "var(--font-sans)", fontSize: 11, color: "var(--text-faint)" }}>
+            {tierInfo[councilTier].desc}
+          </span>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            {councilTier === "full" && (
+              <button onClick={() => setShowThinkerPicker(p => !p)} style={{
+                background: "none", border: "none", cursor: "pointer",
+                fontFamily: "var(--font-sans)", fontSize: 10, color: "var(--accent)",
+                letterSpacing: "0.05em", padding: 0,
+              }}>
+                {showThinkerPicker ? "▴ Hide" : "▾ Choose thinkers"}
+              </button>
+            )}
+            {credits && (
+              <span style={{
+                fontFamily: "var(--font-sans)", fontSize: 10,
+                color: credits.remaining > 0 ? "var(--text-faint)" : "#e07070",
+              }}>
+                {credits.remaining} credit{credits.remaining !== 1 ? "s" : ""} left
+              </span>
+            )}
           </div>
-        )}
+        </div>
 
-        {/* Thinker selector — full mode only */}
-        {councilTier === "full" && (
-          <div style={{ marginBottom: 16 }}>
-            <div style={{ fontFamily: "var(--font-sans)", fontSize: 10, letterSpacing: "0.2em", textTransform: "uppercase", color: "var(--text-faint)", marginBottom: 8 }}>
-              Council Members
-            </div>
+        {/* ── Thinker selector — collapsible, full mode only ── */}
+        {councilTier === "full" && showThinkerPicker && (
+          <div style={{
+            marginBottom: 14, padding: "12px 14px",
+            background: "var(--bg-elevated)", borderRadius: "var(--radius)",
+            border: "1px solid var(--border)",
+          }}>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
               {ALL_THINKERS.map(name => (
                 <button key={name} onClick={() => toggleThinker(name)} style={{
-                  padding: "4px 12px", borderRadius: 20,
+                  padding: "4px 10px", borderRadius: 16,
                   border: `1px solid ${thinkers.has(name) ? "var(--accent-dim)" : "var(--border)"}`,
                   background: thinkers.has(name) ? "rgba(200,164,110,0.1)" : "none",
                   color: thinkers.has(name) ? "var(--text)" : "var(--text-faint)",
                   fontFamily: "var(--font-sans)", fontSize: 11, cursor: "pointer", transition: "all 0.15s",
                 }}>
                   {name}
-                  <span style={{ marginLeft: 4, fontSize: 9, color: "var(--text-faint)", opacity: 0.6 }}>
+                  <span style={{ marginLeft: 3, fontSize: 8, color: "var(--text-faint)", opacity: 0.5 }}>
                     {TRADITION_LABEL[name]}
                   </span>
                 </button>
               ))}
             </div>
-            <div style={{ marginTop: 5, fontFamily: "var(--font-sans)", fontSize: 10, color: "var(--text-faint)" }}>
+            <div style={{ marginTop: 6, fontFamily: "var(--font-sans)", fontSize: 10, color: "var(--text-faint)" }}>
               {thinkers.size} selected · min 2
             </div>
           </div>
         )}
 
-        {error && <div style={{ color: "#e07070", fontFamily: "var(--font-sans)", fontSize: 13, marginBottom: 12 }}>{error}</div>}
+        {error && <div style={{ color: "#e07070", fontFamily: "var(--font-sans)", fontSize: 13, marginBottom: 10 }}>{error}</div>}
 
-        {/* ── Primary CTA — always visible, guests get teaser flow ── */}
-        <button className="action-btn" onClick={handleSubmit} style={{ width: "100%", padding: "14px 0", fontSize: 15 }}>
-          {councilTier === "swarm" ? "Deploy the Swarm" : councilTier === "lite" ? "Quick Council" : "Convene the Council"}
+        {/* ── Primary CTA ── */}
+        <button className="action-btn" onClick={handleSubmit} style={{ width: "100%", padding: "14px 0", fontSize: 14 }}>
+          {tierInfo[councilTier].cta} →
         </button>
 
         {/* ── Guest Teaser Modal ── */}
@@ -6198,13 +6210,6 @@ function CouncilView({ isGuest, onNeedAuth }) {
           </div>
         )}
 
-        {/* ── Network graph — ambient, below the fold ── */}
-        <div style={{ marginTop: 32, opacity: 0.7 }}>
-          {councilTier === "swarm"
-            ? <SwarmNetworkCanvas size={320} active={false} />
-            : <NeuralCanvas thinkers={[...thinkers]} size={240} active={false} />
-          }
-        </div>
       </div>
     </div>
   );

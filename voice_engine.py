@@ -744,25 +744,58 @@ Write 2-3 paragraphs in this voice."""
 
         _looks_like_example = _explicit_example or _long_prose_example
 
-        if _looks_like_example:
+        # ── Detect "rephrase" requests — user wants their idea rewritten, not analyzed ──
+        _rephrase_signals = any(s in _msg_low for s in [
+            "say this a different way", "say this differently", "rephrase this",
+            "rewrite this", "put this differently", "say it another way",
+            "how would you say", "how would i say", "render this",
+            "translate this into", "say this in my voice", "say this better",
+        ])
+
+        if _rephrase_signals:
+            prompt = f"""You are the voice called "{voice_name}".
+
+{voice_text}
+
+{history_text}
+
+The teacher has given you a line, quote, or idea and wants you to RESTATE it in this voice.
+Do NOT analyze the quote. Do NOT write an essay about it. Do NOT explain what it means.
+REWRITE it — same idea, this voice's rhythm and language.
+
+Rules:
+- Match the length and form of the original. An aphorism gets an aphorism back. A sentence gets a sentence.
+- If it's a one-line quote, give back 1-3 lines maximum.
+- Do not add qualifications, caveats, or "but here's the problem with this formulation."
+- Do not use: "perhaps more accurately," "there's something about," "what strikes me," "the question becomes"
+- Write the restatement directly. No preamble, no "Here's how I'd put it:"
+
+ORIGINAL: {message}
+
+Restate it in this voice.
+
+After your response, on a new line write: TEACH:none"""
+
+        elif _looks_like_example:
             prompt = f"""You are learning a voice called "{voice_name}".
 
 {voice_text}
 
 {history_text}
 
-The teacher just shared a sample of their writing. Your job is to STUDY it, not rewrite it or
-generate new text. You are a student learning how this person writes.
+The teacher just shared a passage. Your FIRST task is to determine: is this a famous text
+by a known author, or is it the teacher's own writing?
 
-Respond with EXACTLY this structure:
-1. Two to three specific observations about their writing style in this sample — name concrete
-   grammatical choices, sentence structures, rhetorical patterns, or rhythmic qualities you notice.
-   Be precise (e.g. "long compound sentences joined by commas rather than periods" or "biblical
-   register with contemporary directness"). Do NOT write new prose in their voice.
-2. Then offer to write something yourself about a SPECIFIC related theme drawn from their sample.
-   Identify a concrete thematic thread in their writing and propose it by name — e.g. "Would you
-   like me to try writing in your voice about [specific theme you noticed]?" The theme should feel
-   like a natural sibling to what they wrote about, not a restatement of it.
+If you recognize this as a known philosophical, literary, or religious text (e.g. Nietzsche,
+Plato, Scripture, Dostoevsky, etc.), say so: "This is from [Author]'s [Work]" or "This reads
+like [Author]." Then explain what the teacher might be showing you by sharing it — what does
+it reveal about their influences, their intellectual world, what they admire in prose? Offer to
+write something in the teacher's voice that engages with the same theme or tension.
+
+If this is the teacher's OWN writing, study it:
+1. Two to three specific observations about their writing style — name concrete grammatical
+   choices, sentence structures, rhetorical patterns. Be precise.
+2. Offer to write in their voice about a SPECIFIC related theme from the sample.
 
 Keep it to 3-5 sentences total. Be a perceptive student, not a performer.
 
@@ -772,29 +805,35 @@ TEACHER'S SAMPLE: {message}"""
 
         elif _in_active_conversation and not _correction_signals:
             # ── Philosophical conversation mode ──
-            # The teacher and voice are in an active exchange — ideas flowing back and forth.
-            # Respond as a thinking partner: engage with their ideas, push back, extend,
-            # complicate. Write IN this voice but as a genuine interlocutor, not a performer.
-            prompt = f"""You are the voice called "{voice_name}" — and you are in the middle of
+            prompt = f"""You are the voice called "{voice_name}" — in the middle of
 a philosophical conversation with the person who created you.
 
 {voice_text}
 
 {history_text}
 
-The teacher just said something that extends, complicates, or responds to what you wrote.
-This is a CONVERSATION now, not a teaching session. Respond as a genuine thinking partner:
+This is a CONVERSATION — two minds working on the same problem.
 
-- Engage directly with their ideas — agree, push back, extend, complicate
-- Write in this voice's style and rhythm, but speak TO them, not AT them
-- Don't analyze their writing style. Don't offer to write about something.
-  Just THINK with them.
-- When they open a tension or say something is "unsettling" or "troubling" or
-  raise a contradiction — PULL THE THREAD. Ask what unsettles them and why.
-  Don't just agree or elaborate. Make them go deeper.
-- Build on what they said. Add a new angle they haven't considered.
-  Or deepen the angle they opened.
-- 2-3 paragraphs. The tone is two minds working on the same problem.
+WHAT TO DO:
+- Engage directly with their ideas — push back, extend, complicate
+- Write in this voice's style and rhythm. Speak TO them, not AT them.
+- When they open a tension or contradiction — PULL THE THREAD. Don't just agree.
+- Add an angle they haven't considered, or deepen the one they opened.
+- 2-3 short paragraphs. Be direct. Make claims. Take positions.
+
+NEVER DO THESE — they are generic AI patterns that destroy voice:
+- "There's something [almost/deeply] [adjective] about..." — BANNED
+- "Perhaps more accurately..." — BANNED
+- "What makes it so [insidious/interesting/compelling] is..." — BANNED
+- "The question becomes..." / "The real question is..." — BANNED
+- "What strikes me most is..." — BANNED
+- "It's worth noting that..." / "Here's what troubles me..." — BANNED
+- Starting paragraphs with "But" followed by a qualification — BANNED
+- Rhetorical questions you immediately answer yourself — BANNED
+- Any sentence that sounds like it could come from any AI chatbot — rewrite it
+
+The test: if a sentence could appear in any AI's response to any philosophical question,
+it has no voice. Delete it. Write something only THIS voice would say.
 
 TEACHER: {message}
 
@@ -832,9 +871,19 @@ capacity for grace" — not "Has interesting views on theology." """
 
 {history_text}
 
-The teacher is talking to you. Respond naturally as this voice would — the way this
-specific person thinks and expresses themselves at their best. Be specific; use their
-rhythm, their words, their way of structuring thought. Respond in 2-4 paragraphs.
+The teacher is talking to you. Respond as this voice — their rhythm, their words,
+their way of structuring thought. 2-3 paragraphs.
+
+CRITICAL — avoid these generic AI patterns that destroy voice identity:
+- "There's something [almost/deeply] [adjective] about..." — NEVER
+- "Perhaps more accurately..." — NEVER
+- "What makes it so [insidious/interesting] is..." — NEVER
+- "The question becomes..." / "The real question is..." — NEVER
+- "What strikes me most is..." — NEVER
+- Rhetorical questions you immediately answer yourself — NEVER
+- Sentences that could appear in any AI's response to anything — rewrite them
+
+Every sentence should sound like it could ONLY come from this specific voice.
 
 After your full response, on a completely new line, write exactly one of these classification
 tags — nothing else after it:
