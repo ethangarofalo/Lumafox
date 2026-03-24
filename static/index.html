@@ -2099,6 +2099,21 @@ function RefinementsPanel({ profileId, onClose, onCountChange }) {
                   {/* Content */}
                   {isEditing ? (
                     <div>
+                      {/* For corrections with context, show before (read-only) and after (editable) */}
+                      {r.type === "correction" && r.context && (
+                        <div style={{
+                          marginBottom: 8, padding: "8px 10px",
+                          background: "rgba(207,126,126,0.06)", border: "1px solid rgba(207,126,126,0.15)",
+                          borderRadius: 6, fontSize: 12, color: "var(--text-dim)",
+                          fontFamily: "var(--font-serif)", lineHeight: 1.5,
+                        }}>
+                          <div style={{ fontSize: 9, textTransform: "uppercase", letterSpacing: "0.12em", color: "var(--text-faint)", marginBottom: 4 }}>Voice wrote</div>
+                          {r.context.length > 300 ? r.context.slice(0, 300) + "…" : r.context}
+                        </div>
+                      )}
+                      {r.type === "correction" && r.context && (
+                        <div style={{ fontSize: 9, textTransform: "uppercase", letterSpacing: "0.12em", color: "var(--text-faint)", marginBottom: 4 }}>Teacher corrected to</div>
+                      )}
                       <textarea
                         value={editing.content}
                         onChange={e => setEditing({ ...editing, content: e.target.value })}
@@ -2118,6 +2133,28 @@ function RefinementsPanel({ profileId, onClose, onCountChange }) {
                         >{saving ? "Saving…" : "Save"}</button>
                       </div>
                     </div>
+                  ) : r.type === "correction" && r.context ? (
+                    /* Structured before/after display for corrections */
+                    <div>
+                      <div style={{
+                        padding: "8px 10px", marginBottom: 6,
+                        background: "rgba(207,126,126,0.06)", border: "1px solid rgba(207,126,126,0.12)",
+                        borderRadius: 6, fontSize: 12, color: "var(--text-dim)",
+                        fontFamily: "var(--font-serif)", lineHeight: 1.55,
+                      }}>
+                        <div style={{ fontSize: 9, textTransform: "uppercase", letterSpacing: "0.12em", color: "#cf7e7e", marginBottom: 3, opacity: 0.7 }}>Voice wrote</div>
+                        {r.context.length > 300 ? r.context.slice(0, 300) + "…" : r.context}
+                      </div>
+                      <div style={{
+                        padding: "8px 10px",
+                        background: "rgba(200,164,110,0.06)", border: "1px solid rgba(200,164,110,0.15)",
+                        borderRadius: 6, fontSize: 13, color: "var(--text)",
+                        fontFamily: "var(--font-serif)", lineHeight: 1.6,
+                      }}>
+                        <div style={{ fontSize: 9, textTransform: "uppercase", letterSpacing: "0.12em", color: "var(--accent)", marginBottom: 3, opacity: 0.7 }}>Corrected to</div>
+                        {r.content.length > 300 ? r.content.slice(0, 300) + "…" : r.content}
+                      </div>
+                    </div>
                   ) : (
                     <div style={{
                       fontSize: 13, color: "var(--text)", lineHeight: 1.6,
@@ -2125,16 +2162,6 @@ function RefinementsPanel({ profileId, onClose, onCountChange }) {
                       whiteSpace: "pre-wrap",
                     }}>
                       {r.content.length > 300 ? r.content.slice(0, 300) + "…" : r.content}
-                    </div>
-                  )}
-
-                  {/* Context (if present) */}
-                  {r.context && !isEditing && (
-                    <div style={{
-                      marginTop: 6, fontSize: 11, color: "var(--text-faint)",
-                      fontStyle: "italic", lineHeight: 1.4,
-                    }}>
-                      context: {r.context.length > 120 ? r.context.slice(0, 120) + "…" : r.context}
                     </div>
                   )}
                 </div>

@@ -252,7 +252,14 @@ def build_refinement_context(refinements: list[dict]) -> str:
     for r in refinements:
         rtype = r.get("type", "correction")
         content = r.get("content", "")
-        if rtype in sections:
+        if rtype == "correction":
+            context = r.get("context", "")
+            if context:
+                # Structured before/after pair
+                sections["correction"].append({"before": context, "after": content})
+            else:
+                sections["correction"].append(content)
+        elif rtype in sections:
             sections[rtype].append(content)
         else:
             sections["correction"].append(content)
@@ -269,9 +276,16 @@ def build_refinement_context(refinements: list[dict]) -> str:
         lines.append("")
 
     if sections["correction"]:
-        lines.append("### Corrections")
+        lines.append("### Corrections (Before → After)")
+        lines.append("When the teacher corrects your writing, learn the pattern — not just the instance.\n")
         for c in sections["correction"]:
-            lines.append(f"- {c}")
+            # Structured corrections have before/after; legacy ones are plain text
+            if isinstance(c, dict) and "before" in c and "after" in c:
+                lines.append(f"VOICE WROTE: {c['before']}")
+                lines.append(f"TEACHER CORRECTED TO: {c['after']}")
+                lines.append("")
+            else:
+                lines.append(f"- {c}")
         lines.append("")
 
     if sections["example"]:
@@ -598,7 +612,7 @@ def teach_interaction(profile_id: str, message: str, command: str,
         if command == "correct" and conversation_history:
             for msg in reversed(conversation_history):
                 if msg["role"] == "agent":
-                    context = msg["content"][:200]
+                    context = msg["content"][:500]
                     break
 
         refinement = {
@@ -618,10 +632,12 @@ def teach_interaction(profile_id: str, message: str, command: str,
 
 {history_text}
 
-The teacher is correcting you: {message}
+You wrote: {context}
 
-Acknowledge this correction briefly. Explain in 1-2 sentences how it changes
-your understanding of this voice."""
+The teacher corrects this to: {message}
+
+Acknowledge this correction briefly. Explain in 1-2 sentences what pattern you see —
+not just this instance, but what it reveals about how this voice works."""
 
             response = llm_call(ack_prompt)
             return {"response": response.strip(), "refinement_saved": True, "refinement_type": rtype}
@@ -868,7 +884,7 @@ TEACHER: {message}"""
             if teach_tag == "correction" and conversation_history:
                 for msg in reversed(conversation_history):
                     if msg["role"] == "agent":
-                        context = msg["content"][:200]
+                        context = msg["content"][:500]
                         break
             refinement = {
                 "type": detected_type,
