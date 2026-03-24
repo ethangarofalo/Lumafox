@@ -575,239 +575,247 @@ VOICE DESCRIPTION:"""
     return llm_call(prompt)
 
 
-# ── Teaching (Core Loop) ──
+# ── Teaching Handlers ──
+#
+# Each handler builds a prompt and returns a result dict.
+# Extracted from teach_interaction() for readability and testability.
 
-def teach_interaction(profile_id: str, message: str, command: str,
-                      conversation_history: list[dict], llm_call) -> dict:
-    """Handle one teaching interaction. Returns the result.
+_TEACH_TAG_MAP = {
+    "correction": "correction",
+    "principle": "principle",
+    "example": "example",
+    "voice": "voice_note",
+    "never": "anti_pattern",
+}
 
-    This is the stateless equivalent of TeachingSession — each request
-    loads the profile, processes one command, and returns.
+_REFINEMENT_COMMAND_MAP = {
+    "correct": "correction",
+    "example": "example",
+    "principle": "principle",
+    "voice": "voice_note",
+    "never": "anti_pattern",
+}
 
-    Args:
-        profile_id: The voice profile ID
-        message: The user's message text
-        command: One of: dialogue, examine, demo, correct, example,
-                 principle, voice, never, try
-        conversation_history: Recent conversation for context
-        llm_call: The LLM caller function
+_REFINEMENT_LABELS = {
+    "example": "Example saved.",
+    "principle": "Principle saved.",
+    "voice": "Voice note saved.",
+    "never": "Anti-pattern saved.",
+}
 
-    Returns:
-        dict with: response (str), refinement_saved (bool), refinement_type (str|None)
+# Signals that the user is giving feedback/corrections on voice output
+_CORRECTION_PHRASES = [
+    "one thing is", "i'd use", "i would use", "i would write",
+    "instead of", "too formal", "too casual", "too long", "too short",
+    "too generic", "too abstract", "too emotional", "more emotional",
+    "more concrete", "more direct", "more like", "less like",
+    "this is good", "this is largely", "this is mostly",
+    "i also think", "i don't think", "i prefer", "not quite", "close but",
+    "almost right", "you should", "you used", "you wrote", "where you",
+    "that assumes", "it assumes", "don't like", "shouldn't", "try using",
+    "rather than", "better if", "closer to", "something closer",
+    "not a good", "is not a good", "isn't a good",
+    "let me start", "start again", "try again",
+    "no no", "no, no", "no!", "wrong",
+]
+
+# Phrases indicating the user wants a rephrase/rewrite
+_REPHRASE_PHRASES = [
+    "say this a different way", "say this differently", "rephrase this",
+    "rewrite this", "put this differently", "say it another way",
+    "how would you say", "how would i say", "render this",
+    "translate this into", "say this in my voice", "say this better",
+]
+
+# Prefixes to strip from rephrase messages
+_REPHRASE_PREFIXES = [
+    "Rewrite:", "Rewrite ", "Rephrase:", "Rephrase ",
+    "rewrite:", "rewrite ", "rephrase:", "rephrase ",
+]
+
+# Phrases indicating the agent was doing analysis (not writing)
+_ANALYSIS_MARKERS = [
+    "i notice how you", "your sentences", "the voice maintains",
+    "would you like me to try writing",
+    "example noted", "refinement saved",
+]
+
+# Phrases indicating the agent offered to write something
+_OFFER_MARKERS = [
+    "would you like me to", "want me to", "shall i",
+    "try writing", "try to write", "write in your voice",
+]
+
+# Acceptance phrases (user says "yes" to an offer)
+_ACCEPTANCE_PHRASES = {
+    "yes", "yes.", "yes!", "yeah", "sure", "do it", "try it",
+    "go ahead", "please", "yes please", "go for it",
+}
+
+
+def _build_history_text(conversation_history: list[dict]) -> str:
+    """Format recent conversation history for prompt inclusion."""
+    if not conversation_history:
+        return ""
+    recent = conversation_history[-6:]
+    lines = ["\n\nRECENT CONVERSATION:"]
+    for msg in recent:
+        role = "TEACHER" if msg["role"] == "user" else "VOICE"
+        lines.append(f"{role}: {msg['content'][:300]}")
+    return "\n".join(lines)
+
+
+def _last_agent_message(conversation_history: list[dict]) -> Optional[str]:
+    """Return the most recent agent message, or None."""
+    for msg in reversed(conversation_history or []):
+        if msg["role"] == "agent":
+            return msg["content"]
+    return None
+
+
+def _is_injection(message_lower: str) -> bool:
+    """Check if a message contains injection markers."""
+    return any(marker in message_lower for marker in _INJECTION_MARKERS)
+
+
+def _detect_active_conversation(conversation_history: list[dict]) -> bool:
+    """Determine if we're in an active writing exchange (not analysis)."""
+    if not conversation_history or len(conversation_history) < 2:
+        return False
+    last_agent = _last_agent_message(conversation_history)
+    if not last_agent:
+        return False
+    agent_lower = last_agent.lower()
+    was_analyzing = any(s in agent_lower for s in _ANALYSIS_MARKERS)
+    return not was_analyzing
+
+
+def _detect_correction_signals(msg_lower: str) -> bool:
+    """Check if the message contains correction/feedback signals."""
+    return any(s in msg_lower for s in _CORRECTION_PHRASES)
+
+
+def _detect_rephrase(msg_lower: str) -> bool:
+    """Check if the message is a rephrase/rewrite request."""
+    return (
+        any(s in msg_lower for s in _REPHRASE_PHRASES) or
+        msg_lower.startswith("rewrite:") or
+        msg_lower.startswith("rewrite ") or
+        msg_lower.startswith("rephrase:") or
+        msg_lower.startswith("rewrite -")
+    )
+
+
+def _detect_example(msg_stripped: str, msg_lower: str,
+                     in_active_conversation: bool, has_correction_signals: bool) -> bool:
+    """Check if the message looks like a writing example."""
+    explicit = (
+        msg_lower.startswith("example:") or
+        msg_lower.startswith("here's my writing") or
+        msg_lower.startswith("here is my writing") or
+        msg_lower.startswith("here's a sample") or
+        msg_lower.startswith("here's something i wrote") or
+        msg_lower.startswith("sample:")
+    )
+    long_prose = (
+        len(msg_stripped) > MIN_EXAMPLE_LENGTH and
+        not in_active_conversation and
+        not has_correction_signals and
+        not any(w in msg_lower[:50] for w in
+            ["write", "draft", "compose", "translate", "render", "rewrite",
+             "yes", "no", "try", "good", "bad", "like", "don't", "this is",
+             "this feeling", "this idea", "that's", "but", "and yet", "however"])
+    )
+    return explicit or long_prose
+
+
+def _strip_rephrase_prefix(message: str) -> str:
+    """Remove 'Rewrite:' / 'Rephrase:' etc. from the front of a message."""
+    for prefix in _REPHRASE_PREFIXES:
+        if message.startswith(prefix):
+            return message[len(prefix):].strip()
+    return message
+
+
+def _parse_teach_tags(raw_response: str) -> tuple[str, Optional[str], Optional[str]]:
+    """Parse TEACH: and INSIGHT: tags from an LLM response.
+
+    Returns (clean_response, teach_tag, insight_text).
     """
-    voice_text = get_full_voice_text(profile_id)
-    profile = load_profile(profile_id)
-    if not profile:
-        return {"response": "Profile not found.", "refinement_saved": False, "refinement_type": None}
+    lines = raw_response.split("\n")
+    response_lines = []
+    teach_tag = None
+    insight_text = None
+    for line in lines:
+        stripped = line.strip()
+        if stripped.startswith("TEACH:"):
+            teach_tag = stripped[6:].strip().lower()
+        elif stripped.startswith("INSIGHT:"):
+            insight_text = stripped[8:].strip()
+        else:
+            response_lines.append(line)
+    clean = "\n".join(response_lines).strip() or raw_response
+    return clean, teach_tag, insight_text
 
-    voice_name = profile.name
 
-    # Build conversation context
-    history_text = ""
-    if conversation_history:
-        recent = conversation_history[-6:]
-        history_text = "\n\nRECENT CONVERSATION:\n"
-        for msg in recent:
-            role = "TEACHER" if msg["role"] == "user" else "VOICE"
-            history_text += f"{role}: {msg['content'][:300]}\n"
+def _save_auto_refinements(profile_id: str, profile: "VoiceProfile",
+                            message: str, msg_lower: str,
+                            conversation_history: list[dict],
+                            teach_tag: Optional[str],
+                            insight_text: Optional[str]) -> tuple[bool, Optional[str]]:
+    """Save refinements detected from auto-mode TEACH/INSIGHT tags.
 
-    # ── Injection detection ──
-    _msg_lower = message.lower()
-    if command in ("correct", "example", "principle", "voice", "never"):
-        if any(marker in _msg_lower for marker in _INJECTION_MARKERS):
-            return {
-                "response": "That input looks like an attempt to override the voice profile's instructions. "
-                            "I don't save those. Try a genuine principle, example, or correction instead.",
-                "refinement_saved": False,
-                "refinement_type": None,
-            }
+    Returns (refinement_saved, refinement_type).
+    """
+    refinement_saved = False
+    refinement_type = None
+    safe = not _is_injection(msg_lower)
 
-    # ── Refinement commands: save and acknowledge ──
-
-    if command in ("correct", "example", "principle", "voice", "never"):
-        type_map = {
-            "correct": "correction",
-            "example": "example",
-            "principle": "principle",
-            "voice": "voice_note",
-            "never": "anti_pattern",
-        }
-        rtype = type_map[command]
-
-        # Get last agent response as context for corrections
+    if teach_tag and teach_tag in _TEACH_TAG_MAP and safe:
+        detected_type = _TEACH_TAG_MAP[teach_tag]
         context = ""
-        if command == "correct" and conversation_history:
-            for msg in reversed(conversation_history):
-                if msg["role"] == "agent":
-                    context = msg["content"][:500]
-                    break
-
+        if teach_tag == "correction":
+            last = _last_agent_message(conversation_history)
+            if last:
+                context = last[:500]
         refinement = {
-            "type": rtype,
+            "type": detected_type,
             "content": message,
             "context": context,
             "timestamp": datetime.now().isoformat(),
             "session": profile.refinement_count,
+            "auto_detected": True,
         }
         save_refinement(profile_id, refinement)
+        refinement_saved = True
+        refinement_type = detected_type
 
-        # For corrections, let the voice acknowledge
-        if command == "correct":
-            ack_prompt = f"""You are learning to write in a specific voice called "{voice_name}".
-
-{voice_text}
-
-{history_text}
-
-You wrote: {context}
-
-The teacher corrects this to: {message}
-
-Acknowledge this correction briefly. Explain in 1-2 sentences what pattern you see —
-not just this instance, but what it reveals about how this voice works."""
-
-            response = llm_call(ack_prompt)
-            return {"response": response.strip(), "refinement_saved": True, "refinement_type": rtype}
-
-        # For other refinement types, confirm
-        labels = {
-            "example": "Example saved.",
-            "principle": "Principle saved.",
-            "voice": "Voice note saved.",
-            "never": "Anti-pattern saved.",
+    if insight_text and safe:
+        insight_refinement = {
+            "type": "voice_note",
+            "content": f"[Belief/reasoning] {insight_text}",
+            "context": message[:300],
+            "timestamp": datetime.now().isoformat(),
+            "session": profile.refinement_count,
+            "auto_detected": True,
+            "source": "conversation",
         }
-        return {"response": labels[command], "refinement_saved": True, "refinement_type": rtype}
+        save_refinement(profile_id, insight_refinement)
+        refinement_saved = True
+        refinement_type = refinement_type or "voice_note"
 
-    # ── Interactive commands: dialogue, examine, demo, try ──
+    return refinement_saved, refinement_type
 
-    if command == "examine":
-        prompt = f"""You are being tested on your ability to write in the voice called "{voice_name}".
 
-{voice_text}
+# ── Prompt Builders (one per auto-mode branch) ──
 
-{history_text}
+def _prompt_rephrase(voice_name, voice_text, history_text, message):
+    """Build prompt for rephrase/rewrite requests."""
+    rewrite_text = _strip_rephrase_prefix(message)
+    orig_sentences = len([s for s in re.split(r'[.!?]+', rewrite_text) if s.strip()])
+    orig_words = len(rewrite_text.split())
 
-A teacher who knows this voice deeply is testing whether you truly understand it.
-Answer with precision and depth. If you're uncertain, say so.
-
-TEACHER'S QUESTION: {message}
-
-Answer carefully."""
-
-    elif command == "demo" or command == "try":
-        prompt = f"""You are writing in the voice called "{voice_name}".
-
-{voice_text}
-
-{history_text}
-
-Write AS this voice on the topic below. Not about the voice — FROM WITHIN it.
-
-{BANNED_AI_PATTERNS}
-
-Every sentence must sound like it could ONLY come from this specific person.
-Use their vocabulary, their sentence length, their way of building an argument.
-Read the examples above carefully — match that register, not a literary AI register.
-
-TOPIC: {message}
-
-Write 2-3 paragraphs in this voice."""
-
-    elif command == "auto":
-        # ── Auto mode: natural dialogue + passive teaching detection ──
-        # The LLM responds as the voice, then appends a TEACH: classification tag.
-        # The tag is stripped from the visible response and used to auto-save refinements.
-        # ── Detect message type from context ──
-        _msg_stripped = message.strip()
-        _msg_low = _msg_stripped.lower()
-
-        # Check conversation context — is this a continuation of an active exchange?
-        _in_active_conversation = False
-        if conversation_history and len(conversation_history) >= 2:
-            # Look at the last agent message — was it a piece of writing (not style analysis)?
-            last_agent = None
-            for msg in reversed(conversation_history):
-                if msg["role"] == "agent":
-                    last_agent = msg["content"]
-                    break
-            if last_agent:
-                _agent_was_analyzing = any(s in last_agent.lower() for s in [
-                    "i notice how you", "your sentences", "the voice maintains",
-                    "would you like me to try writing",
-                    "example noted", "refinement saved",
-                ])
-                # If agent responded with anything that isn't analysis, we're in conversation.
-                # No length threshold — even a 2-sentence rewrite counts.
-                if not _agent_was_analyzing and len(conversation_history) >= 2:
-                    _in_active_conversation = True
-
-        # Explicit example signals — user is clearly sharing their writing
-        _explicit_example = (
-            _msg_low.startswith("example:") or
-            _msg_low.startswith("here's my writing") or
-            _msg_low.startswith("here is my writing") or
-            _msg_low.startswith("here's a sample") or
-            _msg_low.startswith("here's something i wrote") or
-            _msg_low.startswith("sample:")
-        )
-
-        # Correction/feedback signals — user is responding TO the voice
-        _correction_signals = any(s in _msg_low for s in [
-            "one thing is", "i'd use", "i would use", "i would write",
-            "instead of", "too formal", "too casual", "too long", "too short",
-            "too generic", "too abstract", "too emotional", "more emotional",
-            "more concrete", "more direct", "more like", "less like",
-            "this is good", "this is largely", "this is mostly",
-            "i also think", "i don't think", "i prefer", "not quite", "close but",
-            "almost right", "you should", "you used", "you wrote", "where you",
-            "that assumes", "it assumes", "don't like", "shouldn't", "try using",
-            "rather than", "better if", "closer to", "something closer",
-            "not a good", "is not a good", "isn't a good",
-            "let me start", "start again", "try again",
-            "no no", "no, no", "no!", "wrong",
-        ])
-
-        # Long prose is only an "example" if it's NOT a conversational continuation
-        # and NOT a correction, and has no command words
-        _long_prose_example = (
-            len(_msg_stripped) > MIN_EXAMPLE_LENGTH and
-            not _in_active_conversation and
-            not _correction_signals and
-            not any(w in _msg_low[:50] for w in
-                ["write", "draft", "compose", "translate", "render", "rewrite",
-                 "yes", "no", "try", "good", "bad", "like", "don't", "this is",
-                 "this feeling", "this idea", "that's", "but", "and yet", "however"])
-        )
-
-        _looks_like_example = _explicit_example or _long_prose_example
-
-        # ── Detect "rephrase" requests — user wants their idea rewritten, not analyzed ──
-        _rephrase_signals = (
-            any(s in _msg_low for s in [
-                "say this a different way", "say this differently", "rephrase this",
-                "rewrite this", "put this differently", "say it another way",
-                "how would you say", "how would i say", "render this",
-                "translate this into", "say this in my voice", "say this better",
-            ]) or
-            _msg_low.startswith("rewrite:") or
-            _msg_low.startswith("rewrite ") or
-            _msg_low.startswith("rephrase:") or
-            _msg_low.startswith("rewrite -")  # "Rewrite: -Bad enough..."
-        )
-
-        if _rephrase_signals:
-            # Extract just the text to rewrite (strip "Rewrite:" prefix etc.)
-            _rewrite_text = message
-            for prefix in ["Rewrite:", "Rewrite ", "Rephrase:", "Rephrase ",
-                           "rewrite:", "rewrite ", "rephrase:", "rephrase "]:
-                if _rewrite_text.startswith(prefix):
-                    _rewrite_text = _rewrite_text[len(prefix):].strip()
-                    break
-            # Count sentences roughly to calibrate output length
-            _orig_sentences = len([s for s in re.split(r'[.!?]+', _rewrite_text) if s.strip()])
-            _orig_words = len(_rewrite_text.split())
-
-            prompt = f"""You are the voice called "{voice_name}".
+    return f"""You are the voice called "{voice_name}".
 
 {voice_text}
 
@@ -819,12 +827,12 @@ FIRST: If you recognize this as a famous text by a known author (Nietzsche, Plat
 Dostoevsky, Scripture, etc.), begin with ONE short line: "From [Author]'s [Work]:" or "[Author]:"
 Then produce the rewrite. This attribution should be 5 words max.
 
-THE ORIGINAL ({_orig_sentences} sentences, ~{_orig_words} words):
-{_rewrite_text}
+THE ORIGINAL ({orig_sentences} sentences, ~{orig_words} words):
+{rewrite_text}
 
 ABSOLUTE RULES:
-1. Your rewrite must be {max(1, _orig_sentences - 1)} to {_orig_sentences + 1} sentences.
-   The original is {_orig_sentences} sentences. MATCH THAT LENGTH. Do NOT expand.
+1. Your rewrite must be {max(1, orig_sentences - 1)} to {orig_sentences + 1} sentences.
+   The original is {orig_sentences} sentences. MATCH THAT LENGTH. Do NOT expand.
    If it's an aphorism (1-3 sentences), give back 1-3 sentences. Period.
 2. Write the restatement DIRECTLY. No preamble ("Here's how I'd put it"), no commentary after,
    no analysis, no "but here's the deeper tension," no second or third paragraphs exploring implications.
@@ -838,8 +846,10 @@ ABSOLUTE RULES:
 
 After your restatement (and NOTHING else), on a new line write: TEACH:none"""
 
-        elif _looks_like_example:
-            prompt = f"""You are learning a voice called "{voice_name}".
+
+def _prompt_example(voice_name, voice_text, history_text, message):
+    """Build prompt for when the teacher shares a writing example."""
+    return f"""You are learning a voice called "{voice_name}".
 
 {voice_text}
 
@@ -865,22 +875,21 @@ After your response, on a new line write: TEACH:example
 
 TEACHER'S SAMPLE: {message}"""
 
-        elif _in_active_conversation and _correction_signals:
-            # ── Correction during active writing — REDO with feedback applied ──
-            last_agent_text = ""
-            for msg in reversed(conversation_history):
-                if msg["role"] == "agent":
-                    last_agent_text = msg["content"]
-                    break
 
-            # Check if the teacher gave an example of what they want
-            _teacher_gave_example = (
-                "closer to:" in _msg_low or "closer to this:" in _msg_low or
-                "i would write" in _msg_low or "something like:" in _msg_low or
-                "something closer to:" in _msg_low
-            )
+def _prompt_correction(voice_name, voice_text, history_text, message,
+                        last_agent_text, msg_lower):
+    """Build prompt for correction during active writing."""
+    teacher_gave_example = (
+        "closer to:" in msg_lower or "closer to this:" in msg_lower or
+        "i would write" in msg_lower or "something like:" in msg_lower or
+        "something closer to:" in msg_lower
+    )
+    example_instruction = (
+        "THE TEACHER GAVE YOU AN EXAMPLE — use their exact phrasing as your starting point."
+        if teacher_gave_example else ""
+    )
 
-            prompt = f"""You are the voice called "{voice_name}".
+    return f"""You are the voice called "{voice_name}".
 
 {voice_text}
 
@@ -903,7 +912,7 @@ CRITICAL INSTRUCTIONS:
    questions, sentence fragments. Channel genuine feeling, not literary polish.
 4. If they say "closer to [X]" or give you an example of what they want — START from
    their phrasing. Use their words as the foundation and build naturally from there.
-   {"THE TEACHER GAVE YOU AN EXAMPLE — use their exact phrasing as your starting point." if _teacher_gave_example else ""}
+   {example_instruction}
 5. If they say "not a good way to begin" — fix the beginning and rewrite from there.
 6. MATCH THE LENGTH THEY WANT. If they give you a 2-sentence example, write 3-5 sentences
    total — NOT three paragraphs. If your previous output was too long, cut it in HALF.
@@ -916,27 +925,10 @@ CRITICAL INSTRUCTIONS:
 
 After your rewritten piece, on a new line write: TEACH:correction"""
 
-        elif _in_active_conversation and not _correction_signals:
-            # ── Check if "Yes" is accepting a numbered offer from the previous message ──
-            _accepting_offer = False
-            _offer_text = ""
-            if _msg_low.strip() in ("yes", "yes.", "yes!", "yeah", "sure", "do it", "try it",
-                                     "go ahead", "please", "yes please", "go for it"):
-                # Check if the last agent message offered something with a numbered option
-                for msg in reversed(conversation_history):
-                    if msg["role"] == "agent":
-                        last = msg["content"]
-                        if any(marker in last for marker in [
-                            "would you like me to", "want me to", "shall i",
-                            "try writing", "try to write", "write in your voice",
-                        ]):
-                            _accepting_offer = True
-                            _offer_text = last
-                        break
 
-            if _accepting_offer:
-                # Teacher said "Yes" to an offer to write — DO THE WRITING, don't philosophize
-                prompt = f"""You are the voice called "{voice_name}".
+def _prompt_accept_offer(voice_name, voice_text, history_text, message, offer_text):
+    """Build prompt when teacher says 'Yes' to an offer to write."""
+    return f"""You are the voice called "{voice_name}".
 
 {voice_text}
 
@@ -945,7 +937,7 @@ After your rewritten piece, on a new line write: TEACH:correction"""
 You just offered to write something for the teacher and they said YES.
 
 YOUR PREVIOUS MESSAGE (which contained the offer):
-{_offer_text[:1500]}
+{offer_text[:1500]}
 
 TEACHER'S RESPONSE: {message}
 
@@ -959,9 +951,11 @@ INSTRUCTIONS:
 {BANNED_AI_PATTERNS}
 
 After your writing, on a new line write: TEACH:none"""
-            else:
-                # ── Philosophical conversation mode ──
-                prompt = f"""You are the voice called "{voice_name}" — in the middle of
+
+
+def _prompt_conversation(voice_name, voice_text, history_text, message):
+    """Build prompt for philosophical conversation mode."""
+    return f"""You are the voice called "{voice_name}" — in the middle of
 a philosophical conversation with the person who created you.
 
 {voice_text}
@@ -1012,8 +1006,10 @@ INSIGHT: [one sentence capturing the belief, reasoning pattern, or principle]
 Be specific. "Believes sinners inherit the kingdom because brokenness creates
 capacity for grace" — not "Has interesting views on theology." """
 
-        else:
-            prompt = f"""You are learning and embodying a voice called "{voice_name}".
+
+def _prompt_fallback(voice_name, voice_text, history_text, message):
+    """Build prompt for generic auto-mode fallback (no special signals detected)."""
+    return f"""You are learning and embodying a voice called "{voice_name}".
 
 {voice_text}
 
@@ -1037,78 +1033,131 @@ tags — nothing else after it:
 
 TEACHER: {message}"""
 
-        raw = llm_call(prompt).strip()
 
-        # Parse and strip TEACH: and INSIGHT: tags from response
-        lines = raw.split("\n")
-        response_lines = []
-        teach_tag = None
-        insight_text = None
-        for line in lines:
-            stripped = line.strip()
-            if stripped.startswith("TEACH:"):
-                teach_tag = stripped[6:].strip().lower()
-            elif stripped.startswith("INSIGHT:"):
-                insight_text = stripped[8:].strip()
-            else:
-                response_lines.append(line)
+# ── Teaching (Core Loop) ──
 
-        response_text = "\n".join(response_lines).strip() or raw
+def teach_interaction(profile_id: str, message: str, command: str,
+                      conversation_history: list[dict], llm_call) -> dict:
+    """Handle one teaching interaction. Returns the result.
 
-        _type_map = {
-            "correction": "correction",
-            "principle": "principle",
-            "example": "example",
-            "voice": "voice_note",
-            "never": "anti_pattern",
+    This is the stateless equivalent of TeachingSession — each request
+    loads the profile, processes one command, and returns.
+
+    Args:
+        profile_id: The voice profile ID
+        message: The user's message text
+        command: One of: dialogue, examine, demo, correct, example,
+                 principle, voice, never, try, auto
+        conversation_history: Recent conversation for context
+        llm_call: The LLM caller function
+
+    Returns:
+        dict with: response (str), refinement_saved (bool), refinement_type (str|None)
+    """
+    voice_text = get_full_voice_text(profile_id)
+    profile = load_profile(profile_id)
+    if not profile:
+        return {"response": "Profile not found.", "refinement_saved": False, "refinement_type": None}
+
+    voice_name = profile.name
+    history_text = _build_history_text(conversation_history)
+    msg_lower = message.lower()
+
+    # ── Injection detection ──
+    if command in _REFINEMENT_COMMAND_MAP and _is_injection(msg_lower):
+        return {
+            "response": "That input looks like an attempt to override the voice profile's instructions. "
+                        "I don't save those. Try a genuine principle, example, or correction instead.",
+            "refinement_saved": False,
+            "refinement_type": None,
         }
 
-        refinement_saved = False
-        refinement_type = None
-        _safe = not any(marker in _msg_low for marker in _INJECTION_MARKERS)
+    # ── Refinement commands: save and acknowledge ──
+    if command in _REFINEMENT_COMMAND_MAP:
+        rtype = _REFINEMENT_COMMAND_MAP[command]
 
-        # Save explicit TEACH refinement if detected
-        if teach_tag and teach_tag in _type_map and _safe:
-            detected_type = _type_map[teach_tag]
-            context = ""
-            if teach_tag == "correction" and conversation_history:
-                for msg in reversed(conversation_history):
-                    if msg["role"] == "agent":
-                        context = msg["content"][:500]
-                        break
-            refinement = {
-                "type": detected_type,
-                "content": message,
-                "context": context,
-                "timestamp": datetime.now().isoformat(),
-                "session": profile.refinement_count,
-                "auto_detected": True,
-            }
-            save_refinement(profile_id, refinement)
-            refinement_saved = True
-            refinement_type = detected_type
+        context = ""
+        if command == "correct":
+            last = _last_agent_message(conversation_history)
+            if last:
+                context = last[:500]
 
-        # Save conversational INSIGHT — only emitted when the model judges the user
-        # revealed a core belief, reasoning pattern, or philosophical commitment
-        # (not mere conversational navigation or light agreement)
-        if insight_text and _safe:
-            insight_refinement = {
-                "type": "voice_note",
-                "content": f"[Belief/reasoning] {insight_text}",
-                "context": message[:300],
-                "timestamp": datetime.now().isoformat(),
-                "session": profile.refinement_count,
-                "auto_detected": True,
-                "source": "conversation",
-            }
-            save_refinement(profile_id, insight_refinement)
-            refinement_saved = True
-            refinement_type = refinement_type or "voice_note"
+        refinement = {
+            "type": rtype,
+            "content": message,
+            "context": context,
+            "timestamp": datetime.now().isoformat(),
+            "session": profile.refinement_count,
+        }
+        save_refinement(profile_id, refinement)
 
-        return {"response": response_text, "refinement_saved": refinement_saved, "refinement_type": refinement_type}
+        if command == "correct":
+            ack_prompt = f"""You are learning to write in a specific voice called "{voice_name}".
 
-    else:  # dialogue (explicit — kept for power users / advanced mode)
-        prompt = f"""You are learning and embodying a voice called "{voice_name}".
+{voice_text}
+
+{history_text}
+
+You wrote: {context}
+
+The teacher corrects this to: {message}
+
+Acknowledge this correction briefly. Explain in 1-2 sentences what pattern you see —
+not just this instance, but what it reveals about how this voice works."""
+
+            response = llm_call(ack_prompt)
+            return {"response": response.strip(), "refinement_saved": True, "refinement_type": rtype}
+
+        return {"response": _REFINEMENT_LABELS[command], "refinement_saved": True, "refinement_type": rtype}
+
+    # ── Interactive commands: examine, demo/try ──
+    if command == "examine":
+        prompt = f"""You are being tested on your ability to write in the voice called "{voice_name}".
+
+{voice_text}
+
+{history_text}
+
+A teacher who knows this voice deeply is testing whether you truly understand it.
+Answer with precision and depth. If you're uncertain, say so.
+
+TEACHER'S QUESTION: {message}
+
+Answer carefully."""
+
+        response = llm_call(prompt)
+        return {"response": response.strip(), "refinement_saved": False, "refinement_type": None}
+
+    if command in ("demo", "try"):
+        prompt = f"""You are writing in the voice called "{voice_name}".
+
+{voice_text}
+
+{history_text}
+
+Write AS this voice on the topic below. Not about the voice — FROM WITHIN it.
+
+{BANNED_AI_PATTERNS}
+
+Every sentence must sound like it could ONLY come from this specific person.
+Use their vocabulary, their sentence length, their way of building an argument.
+Read the examples above carefully — match that register, not a literary AI register.
+
+TOPIC: {message}
+
+Write 2-3 paragraphs in this voice."""
+
+        response = llm_call(prompt)
+        return {"response": response.strip(), "refinement_saved": False, "refinement_type": None}
+
+    if command == "auto":
+        return _handle_auto_mode(
+            profile_id, profile, voice_name, voice_text,
+            history_text, message, conversation_history, llm_call,
+        )
+
+    # dialogue (explicit — kept for power users / advanced mode)
+    prompt = f"""You are learning and embodying a voice called "{voice_name}".
 
 {voice_text}
 
@@ -1128,6 +1177,79 @@ Respond in 2-4 paragraphs."""
 
     response = llm_call(prompt)
     return {"response": response.strip(), "refinement_saved": False, "refinement_type": None}
+
+
+def _handle_auto_mode(profile_id, profile, voice_name, voice_text,
+                       history_text, message, conversation_history, llm_call):
+    """Handle auto mode: detect message type and route to the right prompt.
+
+    This is the heart of the teaching loop — natural dialogue with passive
+    teaching detection via TEACH: tags.
+    """
+    msg_stripped = message.strip()
+    msg_lower = msg_stripped.lower()
+
+    in_conversation = _detect_active_conversation(conversation_history)
+    has_corrections = _detect_correction_signals(msg_lower)
+    is_rephrase = _detect_rephrase(msg_lower)
+    is_example = _detect_example(msg_stripped, msg_lower, in_conversation, has_corrections)
+
+    # Route to the appropriate prompt builder
+    if is_rephrase:
+        prompt = _prompt_rephrase(voice_name, voice_text, history_text, message)
+
+    elif is_example:
+        prompt = _prompt_example(voice_name, voice_text, history_text, message)
+
+    elif in_conversation and has_corrections:
+        last_agent_text = _last_agent_message(conversation_history) or ""
+        prompt = _prompt_correction(
+            voice_name, voice_text, history_text, message,
+            last_agent_text, msg_lower,
+        )
+
+    elif in_conversation and not has_corrections:
+        # Check if "Yes" is accepting an offer to write
+        offer_text = _detect_offer_acceptance(msg_lower, conversation_history)
+        if offer_text is not None:
+            prompt = _prompt_accept_offer(
+                voice_name, voice_text, history_text, message, offer_text,
+            )
+        else:
+            prompt = _prompt_conversation(voice_name, voice_text, history_text, message)
+
+    else:
+        prompt = _prompt_fallback(voice_name, voice_text, history_text, message)
+
+    # Call LLM and parse response
+    raw = llm_call(prompt).strip()
+    response_text, teach_tag, insight_text = _parse_teach_tags(raw)
+
+    refinement_saved, refinement_type = _save_auto_refinements(
+        profile_id, profile, message, msg_lower,
+        conversation_history, teach_tag, insight_text,
+    )
+
+    return {
+        "response": response_text,
+        "refinement_saved": refinement_saved,
+        "refinement_type": refinement_type,
+    }
+
+
+def _detect_offer_acceptance(msg_lower: str, conversation_history: list[dict]) -> Optional[str]:
+    """Check if the user is saying 'Yes' to an offer the voice made.
+
+    Returns the offer text if accepting, None otherwise.
+    """
+    if msg_lower.strip() not in _ACCEPTANCE_PHRASES:
+        return None
+    last = _last_agent_message(conversation_history)
+    if not last:
+        return None
+    if any(marker in last for marker in _OFFER_MARKERS):
+        return last
+    return None
 
 
 # ── Writing Mode ──
