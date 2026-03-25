@@ -6151,6 +6151,107 @@ function CouncilView({ isGuest, onNeedAuth }) {
           {tierInfo[councilTier].cta} →
         </button>
 
+        {/* ── How It Works — 3-step visual ── */}
+        <div style={{ marginTop: 40, marginBottom: 32 }}>
+          <div style={{
+            fontFamily: "var(--font-sans)", fontSize: 9, letterSpacing: "0.25em",
+            textTransform: "uppercase", color: "var(--text-faint)", marginBottom: 16,
+          }}>How it works</div>
+
+          <div style={{ display: "flex", gap: 12 }}>
+            {[
+              { step: "01", title: "You ask", desc: "Pose any question — moral, strategic, creative. The Council auto-detects the type." },
+              { step: "02", title: "They deliberate", desc: "Each thinker responds from their tradition, then reacts to each other across rounds." },
+              { step: "03", title: "Wisdom emerges", desc: "Tensions and alliances surface. A synthesis distills the collective insight." },
+            ].map(s => (
+              <div key={s.step} style={{
+                flex: 1, padding: "14px 16px",
+                background: "var(--bg-elevated)", borderRadius: 10,
+                border: "1px solid var(--border)",
+              }}>
+                <div style={{
+                  fontFamily: "var(--font-sans)", fontSize: 18, fontWeight: 700,
+                  color: "var(--accent)", opacity: 0.35, marginBottom: 6,
+                }}>{s.step}</div>
+                <div style={{
+                  fontFamily: "var(--font-sans)", fontSize: 12, fontWeight: 600,
+                  color: "var(--text)", marginBottom: 4,
+                }}>{s.title}</div>
+                <div style={{
+                  fontFamily: "var(--font-sans)", fontSize: 11, lineHeight: 1.5,
+                  color: "var(--text-faint)",
+                }}>{s.desc}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* ── The Thinkers — portrait cards ── */}
+        <div style={{ marginBottom: 32 }}>
+          <div style={{
+            fontFamily: "var(--font-sans)", fontSize: 9, letterSpacing: "0.25em",
+            textTransform: "uppercase", color: "var(--text-faint)", marginBottom: 14,
+          }}>The thinkers</div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+            {ALL_THINKERS.map(name => {
+              const bio = THINKER_BIOS[name];
+              const color = TRADITION_COLORS[name] || "var(--accent)";
+              return (
+                <div key={name} style={{
+                  padding: "14px 16px",
+                  background: "var(--bg-elevated)", borderRadius: 10,
+                  border: "1px solid var(--border)",
+                  borderLeft: `3px solid ${color}`,
+                  transition: "border-color 0.2s",
+                }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                    <div style={{
+                      width: 7, height: 7, borderRadius: "50%", background: color, flexShrink: 0,
+                    }} />
+                    <span style={{
+                      fontFamily: "var(--font-sans)", fontSize: 12, fontWeight: 600, color: "var(--text)",
+                    }}>{name}</span>
+                  </div>
+                  <div style={{
+                    fontFamily: "var(--font-sans)", fontSize: 10, color: "var(--text-faint)",
+                    marginBottom: 8, letterSpacing: "0.03em",
+                  }}>
+                    {bio.dates} · {bio.tradition.split(" · ")[1] || bio.tradition}
+                  </div>
+                  <div style={{
+                    fontFamily: "var(--font-serif)", fontSize: 12, fontStyle: "italic",
+                    color: "var(--text-dim)", lineHeight: 1.5,
+                  }}>
+                    "{bio.quote}"
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* ── What makes this different ── */}
+        <div style={{
+          padding: "18px 20px", marginBottom: 24,
+          background: "linear-gradient(135deg, rgba(200,164,110,0.06), rgba(200,164,110,0.02))",
+          borderRadius: 10, border: "1px solid rgba(200,164,110,0.12)",
+        }}>
+          <div style={{
+            fontFamily: "var(--font-sans)", fontSize: 9, letterSpacing: "0.25em",
+            textTransform: "uppercase", color: "var(--text-faint)", marginBottom: 12,
+          }}>Not a chatbot</div>
+          <div style={{
+            fontFamily: "var(--font-serif)", fontSize: 13, lineHeight: 1.7,
+            color: "var(--text-dim)",
+          }}>
+            Each thinker has a full psychological profile — biases, fears, private goals they won't
+            admit to. They don't just answer your question. They <em style={{ color: "var(--text)" }}>argue
+            with each other</em>, change their minds, and form alliances. The synthesis captures what
+            emerges from the friction — not a compromise, but a deeper truth.
+          </div>
+        </div>
+
         {/* ── Guest Teaser Modal ── */}
         {showGuestTeaser && guestTeaserData && (
           <div style={{
