@@ -37,3 +37,18 @@ data/playtests/
 .vscode/
 *.swp
 *.swo
+
+# Claude Code
+.claude/
+
+# Council memory (runtime data)
+data/council_memory/
+data/council_usage/
+data/starters/
+
+# Personal files — never commit
+Lumafox/
+*.docx
+
+# Internal strategy docs
+polis/voice_product_sketch.md
