@@ -23,23 +23,95 @@ _PROFILE_ID_RE = re.compile(r'^[0-9a-f]{8}$')
 
 MIN_EXAMPLE_LENGTH = 200  # chars — messages shorter than this aren't treated as writing samples
 
-BANNED_AI_PATTERNS = """CRITICAL — these patterns are BANNED (they are generic AI, not this voice):
+BANNED_AI_PATTERNS = """CRITICAL — STRUCTURAL PATTERNS THAT ARE BANNED
+
+These are not just phrases to avoid — they are CLASSES OF CONSTRUCTION that generic AI
+defaults to. Learn to recognize the STRUCTURE, not just the words. For each banned pattern,
+you'll see what the AI wants to write, why it fails, and what to write instead.
+
+## BANNED PHRASES (specific strings — never use these in any form)
 - "There's something [almost/deeply] [adjective] about..."
 - "Perhaps more accurately..." / "What strikes me most..."
 - "What makes it so [insidious/interesting/compelling] is..."
 - "The question becomes..." / "The real question is..."
 - "It's worth noting..." / "Here's what troubles me..."
-- "Yes, exactly—and..." / "Yes, and that's..." (don't agree-then-extend)
+- "Yes, exactly—and..." / "Yes, and that's..." (agree-then-extend)
 - "But here's what gets me..." / "Maybe this is why..."
 - "Which means..." / "And to say it once more..." / "The cruelest irony is..."
-- Parallel antithesis: "Where X, he Y; where A, he B"
-- Simile factories: "guards his X like others guard Y"
-- Rhetorical questions you immediately answer yourself
-- Starting paragraphs with "But" + qualification
-- Starting with "The [noun] [verbs]" (e.g. "The noble man guards...")
+
+## BANNED STRUCTURES (classes of construction — recognize the pattern across phrasings)
+
+### 1. The Antithetical Formula: "doesn't just X — he Y"
+Any sentence where the first clause negates or sets up a reframe that the second clause
+delivers. The construction is mechanical because it TELLS the reader where to turn instead
+of letting them feel the turn.
+EXAMPLES OF THE BANNED PATTERN:
+  - "He doesn't just avoid the game — he builds an entire theology around refusal."
+  - "She isn't merely grieving — she's constructing a monument to what was lost."
+  - "This isn't about politics — it's about the stories we tell ourselves."
+WHY IT FAILS: It pre-digests the insight. The reader is handed the turn rather than
+discovering it. Real prose lets the juxtaposition do the work without the scaffolding.
+WRITE THIS INSTEAD: Place the two ideas next to each other and trust the reader.
+  - "He builds an entire theology around refusal." (The avoidance is implied.)
+  - "She constructs a monument to what was lost." (The grief is already there.)
+
+### 2. Formulaic Parallel Construction: "turns his X into Y, his A into B"
+Stacked parallel phrases where each element maps one domain onto another in the same
+grammatical frame. The AI loves this because it LOOKS like craft — balanced, rhythmic,
+structured. But it's assembly-line rhetoric.
+EXAMPLES OF THE BANNED PATTERN:
+  - "turns his paralysis into a moral system, his fear into a philosophy"
+  - "makes silence into a weapon and absence into an argument"
+  - "where others see failure he finds vindication, where they see weakness he builds strength"
+WHY IT FAILS: The parallel structure does the thinking FOR the reader. Each pair clicks
+into place too neatly. Real insight is messier — one observation is enough if it's the
+right one.
+WRITE THIS INSTEAD: Commit to one strong observation. Let it breathe.
+  - "His paralysis becomes a moral system." (One clean thought. No stacking.)
+
+### 3. Stacked Poetic Devices: metaphor + alliteration + parallel in one sentence
+When the AI layers multiple rhetorical devices into a single sentence, producing something
+that reads like prize prose but says nothing precise.
+EXAMPLES OF THE BANNED PATTERN:
+  - "wear their weakness like a scar they refuse to powder over"
+  - "carries his conviction like a stone in his chest, heavy and warm and immovable"
+  - "the silence between them grew teeth and learned to bite"
+WHY IT FAILS: Poetic density without earned context. Each device competes for attention.
+The sentence becomes about its own cleverness rather than its subject.
+WRITE THIS INSTEAD: One device per sentence, chosen because it reveals something.
+  - "He won't hide the weakness." (Direct. The metaphor was doing work the plain statement
+    does better.)
+
+### 4. The Reframe Pivot: "The real [noun] isn't X — it's Y"
+A sentence that claims to reveal what something is REALLY about by negating the obvious
+reading and substituting a deeper one. Closely related to the antithetical formula but
+framed as revelation.
+EXAMPLES OF THE BANNED PATTERN:
+  - "The real tragedy isn't his death — it's that he saw it coming."
+  - "The problem isn't what he said — it's what he couldn't bring himself to say."
+  - "What matters here isn't the betrayal — it's the silence that followed."
+WHY IT FAILS: It's a formula for appearing insightful. The "real X" construction promises
+depth but delivers a pivot that the reader can see coming by the third word.
+WRITE THIS INSTEAD: State the deeper reading directly. If it's true, it doesn't need
+the theatrical setup.
+  - "He saw it coming." (The tragedy is self-evident.)
+
+### 5. The Self-Answering Rhetorical Question
+Any rhetorical question immediately followed by the writer's own answer. The question
+exists only to create a dramatic pause before delivering the point.
+EXAMPLES OF THE BANNED PATTERN:
+  - "But what does this really mean? It means that..."
+  - "Why does this matter? Because..."
+  - "And what do we make of this silence? We make of it exactly what he intended."
+WHY IT FAILS: It's a lecture technique, not a prose technique. The question adds nothing
+the answer doesn't already contain.
+WRITE THIS INSTEAD: Just state the point.
+
+## GENERAL RULES
 - THREE PARAGRAPHS when one would do — say it once, say it well, stop.
 - ANY sentence that could appear in any AI chatbot's response — rewrite it.
-These are generic AI writing. This voice has its OWN patterns — use those."""
+- If you catch yourself writing a construction from any banned category above, stop.
+  Ask: what am I actually trying to say? Say THAT, plainly, in this voice's own patterns."""
 
 # ── Injection Markers ──
 
@@ -188,6 +260,27 @@ def save_refinement(profile_id: str, refinement: dict):
         profile.refinement_count += 1
         profile.last_taught = datetime.now().isoformat()
         update_profile_metadata(profile)
+
+
+def maybe_synthesize(profile_id: str, llm_call) -> bool:
+    """Trigger voice document synthesis if the refinement count crossed a threshold.
+
+    Call this after save_refinement() in any context that has llm_call available.
+    Returns True if synthesis was performed.
+    """
+    profile = load_profile(profile_id)
+    if not profile:
+        return False
+
+    count = profile.refinement_count
+    last_synth_count = _get_synth_refinement_count(profile_id)
+
+    # Synthesize if we've accumulated SYNTHESIS_INTERVAL new refinements since last synthesis
+    if count >= SYNTHESIS_INTERVAL and (count - last_synth_count) >= SYNTHESIS_INTERVAL:
+        synthesize_voice_document(profile_id, llm_call)
+        _save_synth_metadata(profile_id, count)
+        return True
+    return False
 
 
 def _rewrite_refinements(profile_id: str, refinements: list[dict]):
@@ -351,8 +444,19 @@ def build_refinement_context(refinements: list[dict]) -> str:
     return "\n".join(lines)
 
 
-def get_full_voice_text(profile_id: str) -> str:
-    """Assemble the full voice prompt: base description + all refinements."""
+SYNTHESIS_INTERVAL = 10  # Resynthesize voice document every N refinements
+
+
+def synthesize_voice_document(profile_id: str, llm_call) -> str:
+    """Rewrite the entire voice description as a coherent narrative.
+
+    Takes the base description + all refinements and asks the LLM to produce
+    a single, unified voice document where each observation builds on the last.
+    This replaces the flat bullet-list approach — instead of appending refinements,
+    we fold them into a living document that gets richer over time.
+
+    Stores the result as synthesized.md alongside base.md.
+    """
     profile = load_profile(profile_id)
     if not profile:
         return ""
@@ -360,7 +464,114 @@ def get_full_voice_text(profile_id: str) -> str:
     base_path = PROFILES_DIR / profile_id / "base.md"
     base_text = base_path.read_text() if base_path.exists() else ""
     refinements = load_refinements(profile_id)
+
+    if not refinements and not base_text:
+        return ""
+
+    # Build a raw dump of all refinements for the LLM to work with
+    refinement_dump = []
+    for r in refinements:
+        rtype = r.get("type", "note")
+        content = r.get("content", "")
+        context = r.get("context", "")
+        entry = f"[{rtype}] {content}"
+        if context and isinstance(context, str) and context != "Extracted from uploaded writing samples":
+            entry += f"\n  Context: {context}"
+        refinement_dump.append(entry)
+
+    refinement_text = "\n".join(refinement_dump) if refinement_dump else "(No refinements yet.)"
+
+    # Check if there's an existing synthesized document to build on
+    synth_path = PROFILES_DIR / profile_id / "synthesized.md"
+    existing_synth = synth_path.read_text() if synth_path.exists() else ""
+
+    prompt = f"""You are rewriting a voice description for an AI writing system. Your job is to
+produce a single, coherent narrative document that captures everything known about this voice —
+not as a checklist, but as a living document where each observation builds on the last.
+
+Think of yourself as a biographer revising a chapter after learning something new about their
+subject. You are not appending bullet points — you are rewriting the document so that every
+refinement the teacher has taught is WOVEN into the fabric of the description.
+
+The document should read like a teacher explaining this voice to a student over the course
+of an hour. Each observation should build on the last. The reasoning behind each prohibition
+is what makes the prohibition stick. The examples are what make the principles concrete.
+
+IMPORTANT RULES:
+- Every refinement must be incorporated — nothing gets dropped.
+- Corrections (before/after pairs) should become contrastive examples within the narrative.
+- Anti-patterns should come with the reasoning for WHY this voice avoids them.
+- Examples should be quoted and explained, not just listed.
+- The tone should be authoritative and precise — a master class, not a manual.
+- 400-800 words. Dense with insight. No filler.
+
+{f"CURRENT BASE DESCRIPTION:{chr(10)}{base_text}" if base_text else "No base description yet."}
+
+{f"PREVIOUS SYNTHESIZED DOCUMENT (revise and improve this):{chr(10)}{existing_synth}" if existing_synth else ""}
+
+ALL REFINEMENTS FROM THE TEACHER (incorporate every one):
+{refinement_text}
+
+Write the synthesized voice document now. No preamble, no meta-commentary — just the document."""
+
+    result = llm_call(prompt)
+
+    # Save the synthesized document
+    synth_path.write_text(result)
+
+    return result
+
+
+def get_full_voice_text(profile_id: str) -> str:
+    """Assemble the full voice prompt: synthesized doc (preferred) or base + refinements.
+
+    If a synthesized.md exists (produced by periodic synthesis), use it — it contains
+    the base description and all refinements woven into a coherent narrative.
+    Falls back to base.md + flat refinement list for profiles that haven't been synthesized yet.
+    """
+    profile = load_profile(profile_id)
+    if not profile:
+        return ""
+
+    # Prefer the synthesized document if it exists
+    synth_path = PROFILES_DIR / profile_id / "synthesized.md"
+    if synth_path.exists():
+        synth_text = synth_path.read_text()
+        if synth_text.strip():
+            # Append any refinements added AFTER the last synthesis
+            refinements = load_refinements(profile_id)
+            synth_count = _get_synth_refinement_count(profile_id)
+            new_refinements = refinements[synth_count:]
+            if new_refinements:
+                return synth_text + build_refinement_context(new_refinements)
+            return synth_text
+
+    # Fallback: base description + flat refinement list
+    base_path = PROFILES_DIR / profile_id / "base.md"
+    base_text = base_path.read_text() if base_path.exists() else ""
+    refinements = load_refinements(profile_id)
     return base_text + build_refinement_context(refinements)
+
+
+def _get_synth_refinement_count(profile_id: str) -> int:
+    """Return the refinement count at last synthesis (stored in synth metadata)."""
+    meta_path = PROFILES_DIR / profile_id / "synth_meta.json"
+    if meta_path.exists():
+        try:
+            data = json.loads(meta_path.read_text())
+            return data.get("refinement_count", 0)
+        except (json.JSONDecodeError, KeyError):
+            pass
+    return 0
+
+
+def _save_synth_metadata(profile_id: str, refinement_count: int):
+    """Record the refinement count at time of synthesis."""
+    meta_path = PROFILES_DIR / profile_id / "synth_meta.json"
+    meta_path.write_text(json.dumps({
+        "refinement_count": refinement_count,
+        "synthesized_at": datetime.now().isoformat(),
+    }))
 
 
 # ── File Upload / Ingest ──
@@ -504,6 +715,10 @@ WRITING SAMPLES:
         save_refinement(profile_id, refinement)
         new_refinements.append(refinement)
 
+    # Trigger synthesis if enough refinements have accumulated
+    if new_refinements:
+        maybe_synthesize(profile_id, llm_call)
+
     return new_refinements
 
 
@@ -514,57 +729,64 @@ def analyze_samples(samples: list[str], llm_call) -> str:
 
     This is the 'Find Your Voice' entry point — the user pastes writing
     they admire, and we identify the patterns.
+
+    Uses a mind-first approach: understand HOW this person thinks and builds
+    arguments, then ground that understanding in linguistic specifics.
     """
     combined = "\n\n---\n\n".join(samples)
 
-    prompt = f"""You are a philological voice analyst — trained in formal grammar, rhetoric,
-and stylistics. The user has provided writing samples (their own work or work they admire).
-Your job is to produce a Voice Description with the precision of a grammarian, not the
-vagueness of a book review.
+    prompt = f"""You are a philological voice analyst. The user has provided writing samples
+(their own work or work they admire). Your job is to produce a Voice Description that
+captures the MIND behind this writing — not just what the writer does, but why they do it,
+how they think, and what they're trying to accomplish when they write.
 
-Use the following linguistic taxonomy to ground every observation in specific categories:
+Use this linguistic taxonomy to ground observations in precise terms (but let the taxonomy
+SERVE the narrative, not replace it):
 
 {LINGUISTIC_TAXONOMY}
 
-Analyze the samples and produce a Voice Description covering:
+Write the Voice Description as a NARRATIVE — not a checklist, not a taxonomy report. It
+should read like a teacher explaining this voice to a student over the course of an hour,
+where each observation builds on the last, where the reasoning behind each pattern is what
+makes the pattern stick.
 
-1. **Sentence Architecture**: Classify the dominant sentence style(s) from the taxonomy
-   (cumulative, periodic, segregating, balanced, etc.). What is the coordination-to-
-   subordination ratio? Which subordinate clause types appear most? What are the
-   characteristic sentence lengths and how does length vary for effect?
+Structure the narrative around these layers (but write it as flowing prose, not numbered
+sections):
 
-2. **Rhetorical Devices**: Which emphasis and repetition patterns does this voice use?
-   Polysyndeton or asyndeton? Anaphora? Chiasmus? Negative-positive restatement?
-   How does the writer handle interruption and parenthetical material?
+**THE MIND**: How does this person think? What shape do their arguments take — do they
+build linearly, spiral around a center, set up and demolish, accumulate until the weight
+makes the point? What is the relationship between their thinking and their sentences? A
+writer who thinks in accumulation writes cumulative sentences not because they learned to
+but because that's how the thought actually moves. Name the shape.
 
-3. **Diction**: Anglo-Saxon or Latinate etymology? Concrete or abstract? General or
-   specific? What register — formal, informal, or deliberately mixed? Any unusual
-   collocations, transferred epithets, nonce compounds, or archaisms?
+**THE INSTRUMENT**: How does this voice use language as a tool of thought? If they use
+extended metaphor, explain that it's not decoration — it's how they do philosophy, or how
+they make abstraction physical, or how they commit to one world and let it carry the
+argument. If they use parataxis, explain that it's not style — it's a refusal to tell the
+reader where to turn, a trust that placement alone creates meaning. Every linguistic feature
+should be explained in terms of what it ACCOMPLISHES for this mind.
 
-4. **Figurative Language**: Simile or metaphor? Single-use or extended? What source
-   domains do metaphors draw from (body, nature, architecture, warfare, domestic life)?
-   What is the allusion density? Any irony, litotes, hyperbole, or zeugma?
+**THE ARCHITECTURE**: How do paragraphs and pieces take shape? What is the characteristic
+movement — does the piece start concrete and go abstract, or abstract and go concrete? Does
+it build to a crescendo or land the blow early and spend the rest unpacking? What is the
+relationship between sentences within a paragraph — does each sentence advance, or do they
+circle and deepen? Name the pattern in terms of the taxonomy, but explain WHY this mind
+builds this way.
 
-5. **Imagery**: Which sensory channels dominate (visual, auditory, tactile, kinesthetic,
-   olfactory)? How dense is the imagery — every sentence, or reserved for key moments?
+**THE PROHIBITIONS**: What does this voice NEVER do — and WHY? Not "avoids Latinate
+abstractions" but "avoids Latinate abstractions because the whole point is to make thought
+physical, and Latin pulls toward the disembodied." Not "no transition words" but "no
+transition words because the reader should feel the turn, not be told where to turn." Every
+prohibition should come with the reasoning that makes it stick.
 
-6. **Punctuation as Style**: Semicolons or dashes? Oxford comma or not? How does the
-   writer handle series? Colons for announcement? Deliberate comma splices? Fragment
-   sentences?
+**THE FAILURE MODES**: Where does imitation of this voice typically go wrong? What does
+a competent mimic get right on the surface but miss underneath? What is the most common
+way an AI would fail to reproduce this voice — and what specifically would be wrong about
+the result? Name 3-4 specific failure modes with examples of what the failure looks like.
 
-7. **Paragraph Architecture**: Deductive, inductive, pivoting, or accumulative development?
-   Short or long paragraphs? Explicit transitions, implicit, or absent? Tight or loose unity?
-
-8. **Stance and Address**: Relationship to reader — "we," "one," "you," "I"? Warm or cool?
-   Intimate or public? Does it contend, persuade, confess, declare, interrogate?
-
-9. **What This Voice NEVER Does**: Name the specific absences using taxonomy terms.
-   Not "avoids fancy words" but "never uses Latinate abstractions when an Anglo-Saxon
-   concrete exists." Not "keeps it simple" but "no periodic sentences, no semicolons,
-   no subordinate clauses deeper than one level."
-
-Write the Voice Description as a practical, technically precise guide that an AI could
-use to write in this voice. Every claim should be classifiable within the taxonomy above.
+The Voice Description should be 400-600 words of flowing prose. An AI reading this should
+understand not just WHAT to do but WHY — because understanding the why is what prevents
+the kind of surface-level mimicry that sounds right for one sentence and wrong for a paragraph.
 
 WRITING SAMPLES:
 
@@ -1090,6 +1312,7 @@ def teach_interaction(profile_id: str, message: str, command: str,
             "session": profile.refinement_count,
         }
         save_refinement(profile_id, refinement)
+        maybe_synthesize(profile_id, llm_call)
 
         if command == "correct":
             ack_prompt = f"""You are learning to write in a specific voice called "{voice_name}".
@@ -1229,6 +1452,9 @@ def _handle_auto_mode(profile_id, profile, voice_name, voice_text,
         profile_id, profile, message, msg_lower,
         conversation_history, teach_tag, insight_text,
     )
+
+    if refinement_saved:
+        maybe_synthesize(profile_id, llm_call)
 
     return {
         "response": response_text,

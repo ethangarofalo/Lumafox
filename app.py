@@ -52,6 +52,7 @@ from voice_engine import (
     load_conversation_session,
     delete_conversation_session,
     translate_with_voice,
+    synthesize_voice_document,
 )
 
 # ── LLM Setup ──
@@ -840,6 +841,31 @@ async def ingest_uploads(
         "new_refinements": len(new_refinements),
         "total_refinements": updated.refinement_count if updated else 0,
         "refinements": new_refinements,
+    }
+
+
+@app.post("/profiles/{profile_id}/synthesize")
+async def synthesize_voice(
+    profile_id: str,
+    user_id: str = Depends(get_current_user),
+):
+    """Manually trigger voice document synthesis.
+
+    Rewrites the entire voice description as a coherent narrative incorporating
+    all refinements. This happens automatically every 10 refinements, but can
+    also be triggered manually.
+    """
+    profile = load_profile(profile_id)
+    if not profile:
+        raise HTTPException(status_code=404, detail="Profile not found")
+    if profile.owner_id != user_id:
+        raise HTTPException(status_code=403, detail="Not your profile")
+
+    result = await asyncio.to_thread(synthesize_voice_document, profile_id, LLM_CALL)
+    return {
+        "profile_id": profile_id,
+        "synthesized": bool(result),
+        "length": len(result),
     }
 
 
