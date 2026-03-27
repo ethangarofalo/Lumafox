@@ -1136,9 +1136,7 @@ async def get_voice_dimensions(
         raise HTTPException(status_code=400, detail="Not enough voice data yet")
 
     import json as _json
-    raw = LLM_CALL([
-        {"role": "user", "content": _DIMENSIONS_PROMPT + voice_text[:4000]},
-    ])
+    raw = LLM_CALL(_DIMENSIONS_PROMPT + voice_text[:4000])
 
     try:
         parsed = _json.loads(raw.strip())
