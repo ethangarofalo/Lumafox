@@ -874,6 +874,23 @@ _ACCEPTANCE_PHRASES = {
     "go ahead", "please", "yes please", "go for it",
 }
 
+# Phrases indicating the user wants multiple outputs synthesized into one piece
+_SYNTHESIS_PHRASES = [
+    "put those together", "put that together",
+    "combine those", "combine that",
+    "weave those", "weave those together", "weave that together",
+    "merge those", "merge that",
+    "bring those together", "thread those together",
+    "synthesize that", "synthesize those",
+    "distill that", "distill those",
+    "make that one", "make those one",
+    "into one piece", "into a single piece",
+    "into one thought", "into a single thought",
+    "stitch those", "stitch that",
+    "fuse those", "fuse that",
+    "make it one", "turn those into one",
+]
+
 
 def _build_history_text(conversation_history: list[dict]) -> str:
     """Format recent conversation history for prompt inclusion."""
@@ -915,6 +932,38 @@ def _detect_active_conversation(conversation_history: list[dict]) -> bool:
 def _detect_correction_signals(msg_lower: str) -> bool:
     """Check if the message contains correction/feedback signals."""
     return any(s in msg_lower for s in _CORRECTION_PHRASES)
+
+
+def _detect_synthesis(msg_lower: str) -> bool:
+    """Check if the message asks to combine or synthesize recent outputs."""
+    return any(s in msg_lower for s in _SYNTHESIS_PHRASES)
+
+
+def _extract_form_constraint(msg_lower: str) -> dict:
+    """Parse the user's message for length/form constraints.
+
+    Returns a dict with 'label' (human-readable) and 'max_sentences' (int or None).
+    """
+    if any(p in msg_lower for p in ["single thought", "one thought", "single sentence", "one sentence", "one line"]):
+        return {"max_sentences": 3, "label": "a single, unified thought — 1 to 3 sentences. STOP there."}
+    if any(p in msg_lower for p in ["one paragraph", "single paragraph"]):
+        return {"max_sentences": None, "label": "exactly one paragraph. No more."}
+    if any(p in msg_lower for p in ["two sentences", "two lines"]):
+        return {"max_sentences": 2, "label": "two sentences. STOP there."}
+    if any(p in msg_lower for p in ["short", "brief", "tight", "concise"]):
+        return {"max_sentences": 4, "label": "brief — 2 to 4 sentences. STOP there."}
+    return {"max_sentences": None, "label": "tight — 1 to 2 paragraphs. STOP when the thought is complete."}
+
+
+def _collect_recent_voice_outputs(conversation_history: list[dict], max_outputs: int = 4) -> list[str]:
+    """Collect the most recent voice outputs from conversation history, oldest first."""
+    outputs = []
+    for msg in reversed(conversation_history or []):
+        if msg["role"] == "agent":
+            outputs.insert(0, msg["content"])
+        if len(outputs) >= max_outputs:
+            break
+    return outputs
 
 
 def _detect_rephrase(msg_lower: str) -> bool:
@@ -1086,10 +1135,17 @@ like [Author]." Then explain what the teacher might be showing you by sharing it
 it reveal about their influences, their intellectual world, what they admire in prose? Offer to
 write something in the teacher's voice that engages with the same theme or tension.
 
-If this is the teacher's OWN writing, study it:
-1. Two to three specific observations about their writing style — name concrete grammatical
-   choices, sentence structures, rhetorical patterns. Be precise.
-2. Offer to write in their voice about a SPECIFIC related theme from the sample.
+If this is the teacher's OWN writing, study it at the CRAFT level — not the idea level:
+1. One specific observation about sentence architecture: how they open sentences, clause
+   patterns, whether they use segregating or cumulative structure, how they handle rhythm.
+2. One specific observation about diction: register (formal/vernacular), etymology
+   (Latinate vs. Anglo-Saxon), the ratio of concrete to abstract, any distinctive word choices.
+3. Offer to write in their voice about a SPECIFIC related theme — name it directly.
+
+DO NOT respond to the content of what they wrote. DO NOT validate or evaluate the ideas.
+DO NOT say "This is interesting" or "You've captured something." Study the FORM, not the argument.
+If it's a message or pitch (not pure prose), note what their rhetorical strategy reveals about
+how they structure persuasion — then offer to sharpen it or write something in the same register.
 
 Keep it to 3-5 sentences total. Be a perceptive student, not a performer.
 
@@ -1256,6 +1312,47 @@ tags — nothing else after it:
 TEACHER: {message}"""
 
 
+def _prompt_synthesis(voice_name, voice_text, history_text, message, recent_outputs):
+    """Build prompt for synthesis: fuse multiple recent outputs into one unified piece."""
+    form = _extract_form_constraint(message.lower())
+
+    if not recent_outputs:
+        outputs_block = "(No distinct recent outputs — synthesize from the conversation thread above.)"
+    else:
+        labeled = []
+        for i, o in enumerate(recent_outputs, 1):
+            labeled.append(f"OUTPUT {i}:\n{o[:700]}")
+        outputs_block = "\n\n".join(labeled)
+
+    return f"""You are the voice called "{voice_name}".
+
+{voice_text}
+
+{history_text}
+
+The teacher wants you to SYNTHESIZE — take the thread running through this conversation and forge it into one unified piece of writing.
+
+RECENT OUTPUTS TO DRAW FROM:
+{outputs_block}
+
+TEACHER'S INSTRUCTION: {message}
+
+TARGET FORM: {form['label']}
+
+RULES:
+1. This is WRITING — not dialogue, not analysis, not meta-commentary. Produce a finished piece.
+2. Find the single deep idea beneath all these threads and embody it completely.
+3. DO NOT label the parts ("First...", "On one hand..."). FUSE them seamlessly.
+4. DO NOT explain what you're synthesizing. No "Here's how those connect." Just write.
+5. DO NOT end with a question or an offer to explore further. End with the thought itself.
+6. Write with the full weight and precision of this voice — its rhythms, its diction, its architecture.
+7. Honor the form constraint: {form['label']} If it says 1-3 sentences, write 1-3 sentences. Stop.
+
+{BANNED_AI_PATTERNS}
+
+After your synthesis, on a new line write: TEACH:none"""
+
+
 # ── Teaching (Core Loop) ──
 
 def teach_interaction(profile_id: str, message: str, command: str,
@@ -1416,9 +1513,14 @@ def _handle_auto_mode(profile_id, profile, voice_name, voice_text,
     has_corrections = _detect_correction_signals(msg_lower)
     is_rephrase = _detect_rephrase(msg_lower)
     is_example = _detect_example(msg_stripped, msg_lower, in_conversation, has_corrections)
+    is_synthesis = _detect_synthesis(msg_lower)
 
     # Route to the appropriate prompt builder
-    if is_rephrase:
+    if is_synthesis:
+        recent_outputs = _collect_recent_voice_outputs(conversation_history)
+        prompt = _prompt_synthesis(voice_name, voice_text, history_text, message, recent_outputs)
+
+    elif is_rephrase:
         prompt = _prompt_rephrase(voice_name, voice_text, history_text, message)
 
     elif is_example:

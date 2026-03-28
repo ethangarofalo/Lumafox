@@ -3141,7 +3141,7 @@ const PLACEHOLDER_EXAMPLES = [
   "Describe the feeling of finishing a book that changed you…",
 ];
 
-function VoiceView({ profileId, profileName, refinementCount, onRefinementSaved, onDiscover, openHistorySignal, onAnalyze }) {
+function VoiceView({ profileId, profileName, refinementCount, onRefinementSaved, onDiscover, openHistorySignal, onAnalyze, onSendToCouncil }) {
   const isNew = refinementCount === 0;
   const [sessionId] = useState(() => new Date().toISOString().replace(/[:.]/g, "-"));
 
@@ -3279,6 +3279,10 @@ function VoiceView({ profileId, profileName, refinementCount, onRefinementSaved,
       if (result.refinement_saved) {
         toastSuccess(`${result.refinement_type} saved — ${result.refinement_count} total refinements`);
         onRefinementSaved && onRefinementSaved(result.refinement_count);
+      }
+      // Save a short preview snippet so the profile card can show what this voice sounds like
+      if (result.intent === "write") {
+        try { localStorage.setItem(`voice_preview_${profileId}`, result.response.slice(0, 100)); } catch {}
       }
     } catch (e) {
       setLoading(false);
@@ -3569,6 +3573,13 @@ function VoiceView({ profileId, profileName, refinementCount, onRefinementSaved,
                   {isWrite && correctingIdx !== i && (
                     <button className="msg-save-btn" onClick={() => { setCorrectingIdx(i); setCorrectionText(""); }}>
                       correct this
+                    </button>
+                  )}
+                  {/* Send to Council — let thinkers critique the writing */}
+                  {isWrite && onSendToCouncil && (
+                    <button className="msg-save-btn" style={{ color: "var(--accent)", borderColor: "rgba(200,164,110,0.3)" }}
+                      onClick={() => onSendToCouncil(m.content)}>
+                      → Council
                     </button>
                   )}
                   {/* Re-render — for translate responses */}
@@ -5339,8 +5350,15 @@ function CouncilDeliberating({ thinkers, swarm = false, tier = "full" }) {
   );
 }
 
-function CouncilView({ isGuest, onNeedAuth }) {
+function CouncilView({ isGuest, onNeedAuth, councilBridge, onBridgeUsed }) {
   const [question, setQuestion] = useState("");
+
+  // Pre-populate question when voice sends writing to Council for critique
+  React.useEffect(() => {
+    if (!councilBridge) return;
+    setQuestion(`Critique this writing — what does it do well, where does it fail, and what would make it stronger?\n\n"${councilBridge.text.slice(0, 600)}${councilBridge.text.length > 600 ? "…" : ""}"`);
+    onBridgeUsed && onBridgeUsed();
+  }, [councilBridge]);
   const [thinkers, setThinkers] = useState(new Set(ALL_THINKERS));
   const [swarmMode, setSwarmMode] = useState(false);
   const [councilTier, setCouncilTier] = useState("full"); // "lite" | "full" | "swarm"
@@ -5854,25 +5872,25 @@ function CouncilView({ isGuest, onNeedAuth }) {
                 </div>
               )}
 
-              {/* Narrative — collapsible */}
+              {/* Narrative — always visible */}
               {!isSwarm && result.narrative && (
-                <details style={{ marginBottom: 24 }}>
-                  <summary style={{
+                <div style={{ marginBottom: 24 }}>
+                  <div style={{
                     fontFamily: "var(--font-sans)", fontSize: 10, letterSpacing: "0.15em",
-                    textTransform: "uppercase", color: "var(--text-faint)", cursor: "pointer",
-                    marginBottom: 8, listStyle: "none",
+                    textTransform: "uppercase", color: "var(--text-faint)",
+                    marginBottom: 8,
                   }}>
-                    ▸ How the deliberation unfolded
-                  </summary>
+                    How it unfolded
+                  </div>
                   <p style={{
                     fontFamily: "var(--font-sans)", fontSize: 13, color: "var(--text-dim)",
                     lineHeight: 1.75, padding: "12px 16px",
                     background: "var(--bg-elevated)", borderRadius: "var(--radius)",
-                    border: "1px solid var(--border)",
+                    border: "1px solid var(--border)", margin: 0,
                   }}>
                     {result.narrative}
                   </p>
-                </details>
+                </div>
               )}
 
               <button className="action-btn" onClick={handleReset} style={{ marginBottom: 24 }}>
@@ -5969,16 +5987,22 @@ function CouncilView({ isGuest, onNeedAuth }) {
                             color: "var(--accent)", padding: "2px 8px",
                           }}>Ask {t.name.split(" ")[0]}</button>
                         </div>
+                        {t.private_thought && (
+                          <p style={{
+                            fontFamily: "var(--font-sans)", fontSize: 11,
+                            color: "var(--text-faint)", fontStyle: "italic",
+                            marginTop: 8, marginBottom: 0,
+                            paddingLeft: 10, borderLeft: "2px solid rgba(200,164,110,0.2)",
+                            lineHeight: 1.55,
+                          }}>
+                            "{t.private_thought}"
+                          </p>
+                        )}
                         {t.key_argument && (
                           <div id={`thinker-arg-${i}`} style={{ display: "none", marginTop: 8 }}>
                             <p style={{ fontFamily: "var(--font-sans)", fontSize: 11, color: "var(--text-dim)", lineHeight: 1.65, margin: 0 }}>
                               {t.key_argument}
                             </p>
-                            {t.private_thought && (
-                              <p style={{ fontFamily: "var(--font-sans)", fontSize: 11, color: "var(--text-faint)", fontStyle: "italic", marginTop: 6, borderTop: "1px solid var(--border)", paddingTop: 6 }}>
-                                Private thought: "{t.private_thought}"
-                              </p>
-                            )}
                           </div>
                         )}
                         {/* Inline ask panel — minimal version */}
@@ -6023,7 +6047,7 @@ function CouncilView({ isGuest, onNeedAuth }) {
           <textarea
             value={question}
             onChange={e => setQuestion(e.target.value)}
-            placeholder="What question do you bring?"
+            placeholder="What question do you bring to the council?"
             style={{
               width: "100%", minHeight: 90, padding: "16px 18px",
               background: "var(--bg-elevated)", border: "1px solid var(--accent-dim)",
@@ -6039,9 +6063,10 @@ function CouncilView({ isGuest, onNeedAuth }) {
               display: "flex", gap: 6, flexWrap: "wrap",
             }}>
               {[
-                "Should I be honest even when it hurts?",
-                "Will democracy survive the internet?",
-                "How do I write about grief without sentimentality?",
+                "Am I being principled or just proud?",
+                "What does history say happens to people who build what I'm building?",
+                "Is the argument in my writing actually sound?",
+                "What am I not seeing about this decision?",
               ].map(q => (
                 <button key={q} onClick={() => setQuestion(q)} style={{
                   padding: "3px 9px", borderRadius: 14,
@@ -6483,17 +6508,20 @@ function ThinkerCard({ thinker, deliberationResult }) {
           </button>
         )}
       </div>
+      {thinker.private_thought && (
+        <p style={{
+          fontFamily: "var(--font-sans)", fontSize: 12, color: "var(--text-faint)",
+          fontStyle: "italic", marginTop: 10, marginBottom: 0,
+          paddingLeft: 10, borderLeft: "2px solid rgba(200,164,110,0.2)", lineHeight: 1.55,
+        }}>
+          "{thinker.private_thought}"
+        </p>
+      )}
       {expanded && thinker.key_argument && (
         <p style={{ fontFamily: "var(--font-sans)", fontSize: 13, color: "var(--text-dim)", lineHeight: 1.7, marginTop: 10 }}>
           {thinker.key_argument}
         </p>
       )}
-      {thinker.private_thought && expanded && (
-        <p style={{ fontFamily: "var(--font-sans)", fontSize: 12, color: "var(--text-faint)", fontStyle: "italic", marginTop: 8, borderTop: "1px solid var(--border)", paddingTop: 8 }}>
-          Private thought: "{thinker.private_thought}"
-        </p>
-      )}
-
       {/* ── Interrogation panel ── */}
       {askOpen && (
         <div style={{ marginTop: 14, borderTop: "1px solid var(--border)", paddingTop: 12 }}>
@@ -6656,6 +6684,9 @@ function ProfileEditModal({ p, onClose, onSaved }) {
 // ── Profile Card with inline rename + description edit ──
 function ProfileCard({ p, active, onSelect, onRenamed }) {
   const [showEditModal, setShowEditModal] = React.useState(false);
+  const preview = React.useMemo(() => {
+    try { return localStorage.getItem(`voice_preview_${p.profile_id}`) || ""; } catch { return ""; }
+  }, [p.profile_id, p.refinement_count]);
 
   return (
     <>
@@ -6669,7 +6700,13 @@ function ProfileCard({ p, active, onSelect, onRenamed }) {
           <div className="profile-card-name" style={{ display: "flex", alignItems: "center", gap: 5 }}>
             <span style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.name}</span>
           </div>
-          <div className="profile-card-meta">{p.refinement_count} refinements</div>
+          {preview ? (
+            <div className="profile-card-meta" style={{ fontStyle: "italic", opacity: 0.65, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              "{preview.length > 55 ? preview.slice(0, 55) + "…" : preview}"
+            </div>
+          ) : (
+            <div className="profile-card-meta">{p.refinement_count} refinement{p.refinement_count !== 1 ? "s" : ""}</div>
+          )}
         </div>
         <button
           onClick={e => { e.stopPropagation(); setShowEditModal(true); }}
@@ -7704,6 +7741,7 @@ function App() {
   const [activeProfile, setActiveProfile] = useState(null);
   const [mode, setMode] = useState("voice");
   const [showCouncil, setShowCouncil] = useState(false);
+  const [councilBridge, setCouncilBridge] = useState(null); // { text, from } — carries voice output into Council
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
   const [showFind, setShowFind] = useState(false);
@@ -8045,7 +8083,7 @@ function App() {
           {/* Ambient particle field — sits behind everything except the welcome screen (which has its own) */}
           {!showCouncil && activeProfile && <ParticleField />}
           {showCouncil ? (
-            <CouncilView isGuest={isGuest} onNeedAuth={() => setShowAuth(true)} />
+            <CouncilView isGuest={isGuest} onNeedAuth={() => setShowAuth(true)} councilBridge={councilBridge} onBridgeUsed={() => setCouncilBridge(null)} />
           ) : activeProfile ? (
             <>
               {/* ── Unified header: avatar + name + tabs + overflow ── */}
@@ -8111,7 +8149,7 @@ function App() {
                 />
               )}
               <div style={{ display: (mode === "voice" || mode === "teach" || mode === "write" || mode === "translate") ? "contents" : "none", position: "relative", zIndex: 1 }}>
-                <VoiceView profileId={activeProfile.profile_id} profileName={activeProfile.name} refinementCount={activeProfile.refinement_count} onRefinementSaved={handleRefinementSaved} onDiscover={() => setMode("discover")} openHistorySignal={historySignal} onAnalyze={() => setMode("analyze")} />
+                <VoiceView profileId={activeProfile.profile_id} profileName={activeProfile.name} refinementCount={activeProfile.refinement_count} onRefinementSaved={handleRefinementSaved} onDiscover={() => setMode("discover")} openHistorySignal={historySignal} onAnalyze={() => setMode("analyze")} onSendToCouncil={(text) => { setCouncilBridge({ text, from: "write" }); setShowCouncil(true); }} />
               </div>
               <div style={{ display: mode === "analyze" ? "contents" : "none", position: "relative", zIndex: 1 }}>
                 <AnalyzeView profileId={activeProfile.profile_id} profileName={activeProfile.name} />
