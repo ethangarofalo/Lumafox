@@ -1674,13 +1674,147 @@ def _detect_offer_acceptance(msg_lower: str, conversation_history: list[dict]) -
 
 # ── Writing Mode ──
 
+def _detect_write_format(instruction_lower: str) -> dict:
+    """Detect what kind of writing the user is asking for.
+
+    Returns a dict with:
+        mode:   "fiction" | "essay" | "social" | "general"
+        genre:  optional genre tag (horror, fable, comedy, etc.)
+        length: target length guidance string
+    """
+    # Genre detection
+    genre = None
+    _GENRE_MAP = {
+        "horror": ["horror", "scary", "terrifying", "creepy", "haunting", "nightmare",
+                    "monster", "demon", "ghost story", "witch", "cursed"],
+        "fable": ["fable", "fairy tale", "fairytale", "folk tale", "folktale",
+                   "parable", "allegory", "moral story", "once upon a time"],
+        "comedy": ["funny", "comedy", "comedic", "humor", "humorous", "satirical",
+                    "satire", "parody", "joke"],
+        "tragedy": ["tragedy", "tragic", "heartbreaking", "devastating"],
+        "thriller": ["thriller", "suspense", "suspenseful", "tense"],
+        "romance": ["romance", "love story", "romantic"],
+    }
+    for g, signals in _GENRE_MAP.items():
+        if any(s in instruction_lower for s in signals):
+            genre = g
+            break
+
+    # Fiction detection — stories, scenes, narratives
+    _FICTION_SIGNALS = [
+        "story", "short story", "fiction", "scene", "narrative",
+        "tale", "chapter", "flash fiction", "micro fiction",
+        "vignette", "monologue", "dialogue between",
+        "write about", "a story about", "a tale about",
+        "once upon", "imagine", "a man who", "a woman who",
+        "two children", "a boy who", "a girl who",
+    ]
+    is_fiction = any(s in instruction_lower for s in _FICTION_SIGNALS) or genre is not None
+
+    # Social media / short-form detection
+    _SOCIAL_SIGNALS = [
+        "tweet", "thread", "post", "caption", "social media",
+        "instagram", "tiktok", "x post", "twitter", "bluesky",
+        "for social", "short post", "micro", "flash",
+    ]
+    is_social = any(s in instruction_lower for s in _SOCIAL_SIGNALS)
+
+    # Length targeting
+    _SHORT_SIGNALS = ["short", "brief", "quick", "micro", "flash", "tiny",
+                      "very short", "super short"]
+    _LONG_SIGNALS = ["long", "extended", "full", "detailed", "in-depth",
+                     "essay", "article", "blog post", "chapter"]
+
+    if is_social or any(s in instruction_lower for s in _SHORT_SIGNALS):
+        length = "SHORT — 100 to 300 words. Tight. Every sentence must earn its place."
+    elif any(s in instruction_lower for s in _LONG_SIGNALS):
+        length = "FULL LENGTH — 500 to 1500 words. Develop the piece fully."
+    elif is_fiction:
+        length = "MEDIUM — 200 to 600 words. Complete the arc. Do not pad."
+    else:
+        length = "NATURAL — let the content determine the length. Stop when the thought is complete."
+
+    if is_social:
+        mode = "social"
+    elif is_fiction:
+        mode = "fiction"
+    else:
+        mode = "general"
+
+    return {"mode": mode, "genre": genre, "length": length}
+
+
+# Genre-specific craft instructions — what makes each genre WORK at the sentence level
+_GENRE_CRAFT = {
+    "horror": """HORROR CRAFT — what makes horror work is NOT gore or shock. It is:
+- WITHHOLDING. The reader's imagination is more frightening than anything you describe.
+  Name the shadow, not the thing casting it. Let the reader fill in the worst part.
+- DOMESTIC DETAIL. Ground the world in the mundane before you break it. The horror
+  is stronger when the wallpaper and the weather are real.
+- THE TURN. Every horror piece has one moment where the ordinary becomes wrong.
+  That turn must be precise — a single image, a single sentence that shifts everything.
+  Do not explain the turn. Do not moralize after it. Let it sit.
+- RHYTHM. Short sentences during tension. The breath quickens. Fragments are permitted.
+  Then a longer sentence to release — but only partially, because the next short one
+  tightens the wire again.
+- ENDING. End on an image, not an explanation. The last line should land in the stomach.""",
+
+    "fable": """FABLE CRAFT — what makes a fable work is NOT the moral. It is:
+- ECONOMY. Every sentence advances the action or reveals character. No description
+  that doesn't serve the arc. Fables are lean by nature — pad nothing.
+- TYPE, NOT CHARACTER. Fable characters are archetypes — the fox, the woodcutter,
+  the youngest son. Give them one defining trait and let the plot test it.
+- THE REVERSAL. The plot turns on one moment of choice or consequence.
+  Set it up cleanly and deliver it without commentary.
+- THE CLOSING. The moral (if any) should feel inevitable, not imposed.
+  Better to let the story carry it implicitly than to state it.""",
+
+    "comedy": """COMEDY CRAFT — what makes comedy work is NOT the punchline. It is:
+- TIMING. The gap between setup and payoff. Delay just long enough.
+- SPECIFICITY. Vague observations are never funny. Precise, concrete details are.
+  "A man walks into a bar" is nothing. "A man in orthopedic shoes" is something.
+- ESCALATION. Each beat raises the stakes or the absurdity. Never repeat the same
+  level of funny — build toward the peak.
+- THE DEADPAN. The funniest voice is the one that doesn't know it's being funny.
+  Earnestness in the face of absurdity.""",
+
+    "tragedy": """TRAGEDY CRAFT:
+- INEVITABILITY. The reader should feel the ending approaching like weather.
+  The character's flaw is visible before its consequences arrive.
+- DIGNITY. The character must be worth grieving. Give them one moment of genuine
+  strength before the fall.
+- RESTRAINT. The sadder the material, the drier the prose. Understatement
+  is more devastating than melodrama.""",
+
+    "thriller": """THRILLER CRAFT:
+- MOMENTUM. Every paragraph must create a question the reader needs answered.
+  End sections mid-action, not at rest.
+- INFORMATION CONTROL. The reader knows slightly less than they need to.
+  Reveal in fragments. Never dump.
+- PHYSICAL STAKES. Keep the body in the scene — heartbeat, breath, hands.
+  Abstract danger is not dangerous.""",
+
+    "romance": """ROMANCE CRAFT:
+- TENSION IS PROXIMITY. The power is in the almost — the hand not taken,
+  the sentence not finished. Consummation is less interesting than approach.
+- SPECIFICITY OF DESIRE. What does this particular person want from this
+  particular other person? Generic attraction is boring.
+- DIALOGUE. Romance lives in conversation — what's said, what's held back,
+  what's understood without words.""",
+}
+
+
 def write_with_voice(profile_id: str, instruction: str, llm_call,
                      context: str = "", max_tokens: int = 2000) -> str:
     """Generate text using a trained voice profile.
 
+    Detects format (fiction/social/essay), genre (horror/fable/etc.),
+    and target length from the instruction, then builds a prompt that
+    gives the model genre-specific craft awareness alongside the voice.
+
     Args:
         profile_id: The voice profile ID
-        instruction: What to write (e.g., "Draft a blog post about solitude")
+        instruction: What to write (e.g., "Write me a horror story about...")
         llm_call: The LLM caller function
         context: Optional context (e.g., an outline, notes, previous draft)
 
@@ -1691,6 +1825,8 @@ def write_with_voice(profile_id: str, instruction: str, llm_call,
     profile = load_profile(profile_id)
     if not profile:
         return "Profile not found."
+
+    fmt = _detect_write_format(instruction.lower())
 
     context_block = ""
     if context:
@@ -1709,6 +1845,37 @@ def write_with_voice(profile_id: str, instruction: str, llm_call,
     except Exception:
         pass
 
+    # Genre craft block
+    genre_block = ""
+    if fmt["genre"] and fmt["genre"] in _GENRE_CRAFT:
+        genre_block = f"\n\nGENRE CRAFT GUIDE:\n{_GENRE_CRAFT[fmt['genre']]}\n"
+
+    # Mode-specific instructions
+    if fmt["mode"] == "fiction":
+        mode_instructions = """You are writing FICTION — a story, a scene, a narrative.
+This is not an essay. This is not analysis. This is not commentary.
+
+FICTION RULES:
+1. SHOW, do not tell. "She was afraid" is nothing. "Her hand stopped on the latch" is something.
+2. Stay in scene. Do not pull back to explain. Do not editorialize. Do not moralize.
+3. The voice you are writing in determines HOW the story is told — the sentence patterns,
+   the diction, the rhythm — but the story itself must obey the laws of narrative craft.
+4. Every story needs: a world (grounded in physical detail), a character (with at least
+   one specific want), and a turn (the moment something changes irreversibly).
+5. End on an image or an action. Not a reflection. Not a lesson."""
+    elif fmt["mode"] == "social":
+        mode_instructions = """You are writing for SOCIAL MEDIA — short-form content.
+This must be tight enough to read in under 60 seconds and compelling enough to stop a scroll.
+
+SOCIAL RULES:
+1. The first sentence is everything. If it doesn't grip, nothing else matters.
+2. No throat-clearing. No preamble. Start in the middle of the action or the thought.
+3. Whitespace is your friend. Short paragraphs. Line breaks between beats.
+4. End with an image that lingers, not a moral that lectures."""
+    else:
+        mode_instructions = """You are writing prose — an essay, article, or general text.
+Let the content determine the structure. Match the voice exactly."""
+
     prompt = f"""You are writing in a specific voice. Every grammatical and rhetorical
 choice you make — sentence architecture, clause patterns, diction register and
 etymology, figurative language, punctuation, paragraph development — must match
@@ -1720,14 +1887,21 @@ THE VOICE:
 LINGUISTIC REFERENCE (use this to interpret the voice description precisely):
 {LINGUISTIC_TAXONOMY}
 {example_block}
+{genre_block}
+
+{mode_instructions}
+
+LENGTH: {fmt['length']}
 {context_block}
+
+{BANNED_AI_PATTERNS}
 
 INSTRUCTION: {instruction}
 
 Output ONLY the written text. Begin immediately — no preamble, no explanation,
 no commentary about the voice or these instructions. Do not acknowledge the task.
-Do not describe what you are doing. Simply produce the writing itself, as this
-voice would produce it, at its best.
+Do not describe what you are doing. Do not title it unless the instruction asks for a title.
+Simply produce the writing itself, as this voice would produce it, at its best.
 
 When in doubt, match the voice's sentence style (cumulative, periodic, etc.),
 diction level (Anglo-Saxon vs. Latinate), punctuation habits (dashes vs. semicolons),
