@@ -624,6 +624,26 @@ def read_uploaded_text(profile_id: str, filename: str) -> str:
     return path.read_text(errors="replace")
 
 
+def _extract_pdf_text(path: Path) -> str:
+    """Extract text from a PDF file using PyMuPDF. Returns empty string on failure."""
+    try:
+        import fitz  # PyMuPDF
+        doc = fitz.open(str(path))
+        pages = []
+        for page in doc:
+            text = page.get_text().strip()
+            if text:
+                pages.append(text)
+        doc.close()
+        return "\n\n".join(pages)
+    except ImportError:
+        print("[voice_engine] PyMuPDF not installed — cannot read PDF files")
+        return ""
+    except Exception as e:
+        print(f"[voice_engine] Failed to read PDF {path.name}: {e}")
+        return ""
+
+
 def ingest_writing_samples(profile_id: str, llm_call, max_examples: int = 5) -> list[dict]:
     """Analyze all uploaded files and extract voice examples + principles.
 
@@ -639,10 +659,17 @@ def ingest_writing_samples(profile_id: str, llm_call, max_examples: int = 5) -> 
     # Gather all text
     texts = []
     for f in sorted(upload_dir.iterdir()):
-        if f.is_file() and f.suffix in (".txt", ".md", ".html", ".text"):
+        if not f.is_file():
+            continue
+
+        text = ""
+        if f.suffix in (".txt", ".md", ".html", ".text"):
             text = f.read_text(errors="replace").strip()
-            if text:
-                texts.append({"filename": f.name, "text": text[:5000]})  # cap per file
+        elif f.suffix == ".pdf":
+            text = _extract_pdf_text(f)
+
+        if text:
+            texts.append({"filename": f.name, "text": text[:15000]})  # cap per file
 
     if not texts:
         return []

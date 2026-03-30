@@ -776,7 +776,7 @@ async def upload_writing_sample(
     file: UploadFile = File(...),
     user_id: str = Depends(get_current_user),
 ):
-    """Upload a writing sample file (.txt, .md, .html)."""
+    """Upload a writing sample file (.txt, .md, .html, .pdf)."""
     profile = load_profile(profile_id)
     if not profile:
         raise HTTPException(status_code=404, detail="Profile not found")
@@ -784,14 +784,15 @@ async def upload_writing_sample(
         raise HTTPException(status_code=403, detail="Not your profile")
 
     # Validate file type
-    allowed = (".txt", ".md", ".html", ".text")
+    allowed = (".txt", ".md", ".html", ".text", ".pdf")
     if not any(file.filename.lower().endswith(ext) for ext in allowed):
         raise HTTPException(status_code=400, detail=f"File type not supported. Use: {', '.join(allowed)}")
 
-    # Size limit: 500KB
+    # Size limit: 10MB for PDFs, 500KB for text files
     content = await file.read()
-    if len(content) > 500_000:
-        raise HTTPException(status_code=400, detail="File too large (max 500KB)")
+    max_size = 10_000_000 if file.filename.lower().endswith(".pdf") else 500_000
+    if len(content) > max_size:
+        raise HTTPException(status_code=400, detail=f"File too large (max {max_size // 1_000_000}MB)")
 
     try:
         path = save_uploaded_file(profile_id, file.filename, content)

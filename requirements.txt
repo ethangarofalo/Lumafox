@@ -8,3 +8,4 @@ PyJWT>=2.8.0
 stripe>=7.0.0
 voyageai>=0.2.4
 numpy>=1.24.0
+pymupdf>=1.24.0
