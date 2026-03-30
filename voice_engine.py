@@ -1025,6 +1025,61 @@ def _strip_rephrase_prefix(message: str) -> str:
     return message
 
 
+# Phrases that signal a referential rewrite ("rewrite THE FIRST REQUEST without X")
+# rather than a rewrite where the body text is the prose to transform.
+_REFERENTIAL_REWRITE_PHRASES = [
+    "the first request", "the first one", "the original request",
+    "the original", "the original passage", "the original text",
+    "it again", "that again", "it without", "that without",
+    "it but without", "that but without", "the passage",
+    "my original", "the first message",
+]
+
+
+def _is_referential_rewrite(stripped_text: str) -> bool:
+    """Return True when the stripped rewrite body is a reference phrase, not prose.
+
+    E.g. "the first request without mentioning killing" is a reference.
+    "The dangerous ones I know smile easy..." is actual prose.
+    """
+    if len(stripped_text) > 120:
+        return False
+    lower = stripped_text.lower()
+    return any(phrase in lower for phrase in _REFERENTIAL_REWRITE_PHRASES)
+
+
+def _find_last_rewrite_source(conversation_history: list[dict]) -> str:
+    """Walk back through history to find the most recent prose the user submitted.
+
+    Skips short messages, referential messages, and agent turns.
+    Returns the original text (with Rewrite: prefix stripped if present).
+    """
+    for msg in reversed(conversation_history or []):
+        if msg.get("role") != "user":
+            continue
+        content = msg.get("content", "").strip()
+        stripped = _strip_rephrase_prefix(content)
+        # Must be substantial prose, not a referential command
+        if len(stripped) > 80 and not _is_referential_rewrite(stripped):
+            return stripped
+    return ""
+
+
+def _extract_rewrite_constraint(text: str) -> str:
+    """Pull the 'without X' constraint clause from a referential rewrite request.
+
+    E.g. "the first request without mentioning killing" → "without mentioning killing"
+    """
+    lower = text.lower()
+    for marker in ["without mentioning", "without using", "without the word",
+                   "but without", "without "]:
+        idx = lower.find(marker)
+        if idx >= 0:
+            return text[idx:].strip()
+    return ""
+    return message
+
+
 def _parse_teach_tags(raw_response: str) -> tuple[str, Optional[str], Optional[str]]:
     """Parse TEACH: and INSIGHT: tags from an LLM response.
 
@@ -1097,9 +1152,28 @@ def _save_auto_refinements(profile_id: str, profile: "VoiceProfile",
 
 # ── Prompt Builders (one per auto-mode branch) ──
 
-def _prompt_rephrase(voice_name, voice_text, history_text, message):
+def _prompt_rephrase(voice_name, voice_text, history_text, message,
+                     conversation_history: list | None = None):
     """Build prompt for rephrase/rewrite requests."""
     rewrite_text = _strip_rephrase_prefix(message)
+
+    # Referential rewrite: "Rewrite the first request without X"
+    # The stripped body is a reference phrase, not the prose itself.
+    # Recover the original from history and extract the constraint.
+    constraint_note = ""
+    if _is_referential_rewrite(rewrite_text) and conversation_history:
+        original = _find_last_rewrite_source(conversation_history)
+        if original:
+            constraint = _extract_rewrite_constraint(rewrite_text)
+            rewrite_text = original
+            if constraint:
+                constraint_note = (
+                    f"\nCONSTRAINT FROM TEACHER: {constraint}. "
+                    f"This is a non-negotiable restriction — do NOT violate it.\n"
+                    f"Your previous attempt broke this rule. Write a completely new version "
+                    f"that honors both the voice and this constraint.\n"
+                )
+
     orig_sentences = len([s for s in re.split(r'[.!?]+', rewrite_text) if s.strip()])
     orig_words = len(rewrite_text.split())
 
@@ -1117,7 +1191,7 @@ Then produce the rewrite. This attribution should be 5 words max.
 
 THE ORIGINAL ({orig_sentences} sentences, ~{orig_words} words):
 {rewrite_text}
-
+{constraint_note}
 ABSOLUTE RULES:
 1. Your rewrite must be {max(1, orig_sentences - 1)} to {orig_sentences + 1} sentences.
    The original is {orig_sentences} sentences. MATCH THAT LENGTH. Do NOT expand.
@@ -1538,7 +1612,8 @@ def _handle_auto_mode(profile_id, profile, voice_name, voice_text,
         prompt = _prompt_synthesis(voice_name, voice_text, history_text, message, recent_outputs)
 
     elif is_rephrase:
-        prompt = _prompt_rephrase(voice_name, voice_text, history_text, message)
+        prompt = _prompt_rephrase(voice_name, voice_text, history_text, message,
+                                  conversation_history)
 
     elif is_example:
         prompt = _prompt_example(voice_name, voice_text, history_text, message)
