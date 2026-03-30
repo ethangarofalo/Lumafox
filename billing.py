@@ -44,8 +44,8 @@ COUNCIL_CREDIT_COSTS = {
 }
 
 PLAN_LIMITS = {
-    "guest":   {"profiles": 1,   "teaches_per_month": 10,     "write": True, "analyze": True, "export": False, "council_credits_per_week": 1},
-    "free":    {"profiles": 1,   "teaches_per_month": 50,     "write": True, "analyze": True, "export": True,  "council_credits_per_week": 3},
+    "guest":   {"profiles": 5,   "teaches_per_month": 10,     "write": True, "analyze": True, "export": False, "council_credits_per_week": 1},
+    "free":    {"profiles": 5,   "teaches_per_month": 50,     "write": True, "analyze": True, "export": True,  "council_credits_per_week": 3},
     "starter": {"profiles": 3,   "teaches_per_month": 500,    "write": True, "analyze": True, "export": True,  "council_credits_per_week": 25},
     "pro":     {"profiles": 999, "teaches_per_month": 999999, "write": True, "analyze": True, "export": True,  "council_credits_per_week": 100},
     "admin":   {"profiles": 999, "teaches_per_month": 999999, "write": True, "analyze": True, "export": True,  "council_credits_per_week": 99999},
