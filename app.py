@@ -1844,9 +1844,18 @@ async def list_thinkers():
 
 @app.get("/health")
 async def health():
+    import subprocess
+    try:
+        sha = subprocess.check_output(
+            ["git", "rev-parse", "--short", "HEAD"],
+            stderr=subprocess.DEVNULL, timeout=2,
+        ).decode().strip()
+    except Exception:
+        sha = "unknown"
     return {
         "status": "ok",
         "version": "0.1.0",
+        "commit": sha,
         "llm_configured": bool(os.environ.get("ANTHROPIC_API_KEY")),
     }
 
