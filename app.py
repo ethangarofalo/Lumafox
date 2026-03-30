@@ -1842,7 +1842,7 @@ async def list_thinkers():
     return {"thinkers": COUNCIL_NAMES, "modes": sorted(VALID_MODES)}
 
 
-_DEPLOY_SHA = "8229be2"  # updated on each deploy commit
+_DEPLOY_SHA = "587782b"  # updated on each deploy commit
 
 @app.get("/health")
 async def health():
