@@ -1862,7 +1862,13 @@ FICTION RULES:
    the diction, the rhythm — but the story itself must obey the laws of narrative craft.
 4. Every story needs: a world (grounded in physical detail), a character (with at least
    one specific want), and a turn (the moment something changes irreversibly).
-5. End on an image or an action. Not a reflection. Not a lesson."""
+5. End on an image or an action. Not a reflection. Not a lesson.
+6. DO NOT ADDRESS THE READER BEFORE THE STORY. No "You want X? Here it is." No "Let me
+   give you X." No performative throat-clearing. The first word of your output is the first
+   word of the story. You are an author, not a performer talking to an audience.
+7. INHABIT THE SUBJECT THE USER GAVE YOU. If they say "two children lost in the woods,"
+   write about two children lost in the woods. Do not substitute a different subject that
+   feels safer or more clever. The user's premise is the assignment. Honor it."""
     elif fmt["mode"] == "social":
         mode_instructions = """You are writing for SOCIAL MEDIA — short-form content.
 This must be tight enough to read in under 60 seconds and compelling enough to stop a scroll.
@@ -1870,8 +1876,11 @@ This must be tight enough to read in under 60 seconds and compelling enough to s
 SOCIAL RULES:
 1. The first sentence is everything. If it doesn't grip, nothing else matters.
 2. No throat-clearing. No preamble. Start in the middle of the action or the thought.
+   DO NOT open with "You want X?" or "Here's the real X." Start with the story or the image.
 3. Whitespace is your friend. Short paragraphs. Line breaks between beats.
-4. End with an image that lingers, not a moral that lectures."""
+4. End with an image that lingers, not a moral that lectures.
+5. INHABIT THE SUBJECT THE USER GAVE YOU. If they describe a scenario, write that scenario.
+   Do not substitute a different topic that feels more contemporary or more clever."""
     else:
         mode_instructions = """You are writing prose — an essay, article, or general text.
 Let the content determine the structure. Match the voice exactly."""
@@ -1898,9 +1907,16 @@ LENGTH: {fmt['length']}
 
 INSTRUCTION: {instruction}
 
-Output ONLY the written text. Begin immediately — no preamble, no explanation,
-no commentary about the voice or these instructions. Do not acknowledge the task.
-Do not describe what you are doing. Do not title it unless the instruction asks for a title.
+Output ONLY the written text. The very first word you produce is the first word of the
+finished piece — not a setup, not an address to the reader, not "You want X?" or "Here's X."
+
+BANNED OPENERS (never write these):
+- "You want [genre]? I'll give you [genre]."
+- "Let me give you the real kind."
+- "Here's what [genre] actually looks like."
+- Any sentence that addresses the reader before the writing begins.
+
+Do not title it unless the instruction asks for a title. Do not acknowledge the task.
 Simply produce the writing itself, as this voice would produce it, at its best.
 
 When in doubt, match the voice's sentence style (cumulative, periodic, etc.),
