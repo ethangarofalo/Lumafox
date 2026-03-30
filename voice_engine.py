@@ -624,18 +624,66 @@ def read_uploaded_text(profile_id: str, filename: str) -> str:
     return path.read_text(errors="replace")
 
 
-def _extract_pdf_text(path: Path) -> str:
-    """Extract text from a PDF file using PyMuPDF. Returns empty string on failure."""
+def _extract_pdf_text(path: Path, max_chars: int = 60000) -> str:
+    """Extract text from a PDF, skipping front matter and sampling from the body.
+
+    Strategy for long documents:
+    1. Skip pages that look like front matter (roman numeral page refs,
+       "editor's note", "introduction", "preface", "copyright", ToC patterns).
+    2. From the remaining body pages, sample evenly — take passages from
+       the beginning, middle, and end so the voice analysis sees the full
+       range of the author's style, not just the opening.
+    3. Cap total output at max_chars.
+    """
     try:
         import fitz  # PyMuPDF
         doc = fitz.open(str(path))
-        pages = []
-        for page in doc:
+        total_pages = len(doc)
+
+        # Phase 1: extract all pages, tag front matter
+        _FRONT_MATTER_SIGNALS = [
+            "editor's note", "editor's introduction", "translator's note",
+            "preface", "foreword", "acknowledgment", "copyright",
+            "table of contents", "contents", "bibliography",
+            "introduction by", "published by", "all rights reserved",
+            "isbn", "library of congress",
+        ]
+
+        body_pages = []
+        for i, page in enumerate(doc):
             text = page.get_text().strip()
-            if text:
-                pages.append(text)
+            if not text or len(text) < 100:
+                continue
+
+            text_lower = text[:500].lower()
+
+            # Skip pages that look like front matter (only in first 15% of doc)
+            if i < total_pages * 0.15:
+                if any(signal in text_lower for signal in _FRONT_MATTER_SIGNALS):
+                    continue
+
+            body_pages.append(text)
+
         doc.close()
-        return "\n\n".join(pages)
+
+        if not body_pages:
+            return ""
+
+        # Phase 2: sample evenly from body if too long
+        full_text = "\n\n".join(body_pages)
+        if len(full_text) <= max_chars:
+            return full_text
+
+        # Take chunks from beginning, middle, and end of the body
+        chunk_size = max_chars // 3
+        beginning = "\n\n".join(body_pages[:len(body_pages)//4])[:chunk_size]
+        mid_start = len(body_pages) // 3
+        mid_end = mid_start + len(body_pages) // 3
+        middle = "\n\n".join(body_pages[mid_start:mid_end])[:chunk_size]
+        ending = "\n\n".join(body_pages[-(len(body_pages)//4):])[:chunk_size]
+
+        return f"{beginning}\n\n[...]\n\n{middle}\n\n[...]\n\n{ending}"
+
     except ImportError:
         print("[voice_engine] PyMuPDF not installed — cannot read PDF files")
         return ""
@@ -669,7 +717,9 @@ def ingest_writing_samples(profile_id: str, llm_call, max_examples: int = 5) -> 
             text = _extract_pdf_text(f)
 
         if text:
-            texts.append({"filename": f.name, "text": text[:15000]})  # cap per file
+            # PDFs are already capped by _extract_pdf_text(); text files get a generous limit
+            cap = 60000 if f.suffix == ".pdf" else 15000
+            texts.append({"filename": f.name, "text": text[:cap]})
 
     if not texts:
         return []
