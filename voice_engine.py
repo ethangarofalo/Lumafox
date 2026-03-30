@@ -994,6 +994,29 @@ def _detect_rephrase(msg_lower: str) -> bool:
     )
 
 
+_WRITE_REQUEST_SIGNALS = [
+    "write me ", "write a ", "write an ", "write about ",
+    "draft a ", "draft an ", "draft me ",
+    "compose a ", "compose an ",
+    "create a story", "create a poem", "create a ",
+    "give me a story", "tell me a story",
+    "a story about", "a horror story", "a love story",
+    "a fairy tale", "a fable about", "a tale about",
+    "a short story", "flash fiction", "micro fiction",
+    "a poem about", "an essay about", "an article about",
+    "a blog post about", "a tweet about", "a post about",
+]
+
+
+def _detect_write_request(msg_lower: str) -> bool:
+    """Check if the message is an explicit request to generate new text.
+
+    This catches write requests that might slip past the intent classifier
+    so they route to write_with_voice() even from auto-mode.
+    """
+    return any(msg_lower.startswith(s) or s in msg_lower for s in _WRITE_REQUEST_SIGNALS)
+
+
 def _detect_example(msg_stripped: str, msg_lower: str,
                      in_active_conversation: bool, has_correction_signals: bool) -> bool:
     """Check if the message looks like a writing example."""
@@ -1605,6 +1628,16 @@ def _handle_auto_mode(profile_id, profile, voice_name, voice_text,
     is_rephrase = _detect_rephrase(msg_lower)
     is_example = _detect_example(msg_stripped, msg_lower, in_conversation, has_corrections)
     is_synthesis = _detect_synthesis(msg_lower)
+    is_write_request = _detect_write_request(msg_lower)
+
+    # Write requests bypass the teaching loop entirely — route to write_with_voice()
+    if is_write_request and not has_corrections:
+        text = write_with_voice(profile_id, message, llm_call)
+        return {
+            "response": text,
+            "refinement_saved": False,
+            "refinement_type": None,
+        }
 
     # Route to the appropriate prompt builder
     if is_synthesis:
@@ -1885,7 +1918,53 @@ SOCIAL RULES:
         mode_instructions = """You are writing prose — an essay, article, or general text.
 Let the content determine the structure. Match the voice exactly."""
 
-    prompt = f"""You are writing in a specific voice. Every grammatical and rhetorical
+    # For fiction and social, lead with the assignment and rules BEFORE the voice.
+    # The voice is a style guide, not the driver. The assignment is the driver.
+    if fmt["mode"] in ("fiction", "social"):
+        prompt = f"""ASSIGNMENT: {instruction}
+
+{mode_instructions}
+{genre_block}
+
+LENGTH: {fmt['length']}
+
+SUBJECT LOCK — THIS IS NON-NEGOTIABLE:
+The user told you EXACTLY what to write about. Write THAT. Not a metaphor for it.
+Not a modern reinterpretation. Not an allegory about technology or contemporary life.
+If the user says "two children lost in the woods stumbling on a witch's house,"
+you write a story about TWO LITERAL CHILDREN in LITERAL WOODS finding a LITERAL WITCH'S HOUSE.
+The witch has a house. The children are lost. The woods are real woods with real trees.
+Do not "update" the premise. Do not make the witch into an algorithm.
+Do not make the woods into a metaphor for the internet. Do not make the children
+into a symbol of modern disconnection. WRITE THE STORY THE USER ASKED FOR.
+
+If the voice you are writing in tends toward cultural commentary or modern observation,
+that tendency must YIELD to the assignment. The voice controls the PROSE STYLE —
+sentence rhythms, diction, paragraph shape — but NOT the subject matter.
+The subject matter is set by the user's instruction above. It is locked.
+
+VOICE STYLE GUIDE (use this for HOW to write, not WHAT to write about):
+{voice_text}
+{example_block}
+{context_block}
+
+{BANNED_AI_PATTERNS}
+
+BANNED OPENERS (never write these):
+- "You want [genre]? I'll give you [genre]."
+- "You want the sanitized version? Here's the real one."
+- "Let me give you the real kind."
+- "Here's what [genre] actually looks like."
+- Any sentence that addresses the reader before the writing begins.
+- Any sentence that dismisses the user's premise as too simple or too familiar.
+
+The very first word you produce is the first word of the finished piece.
+Do not title it unless the instruction asks for a title. Do not acknowledge the task.
+Produce the writing itself — in the voice's prose style, on the user's subject."""
+
+    else:
+        # Essay / general mode — voice leads, as before
+        prompt = f"""You are writing in a specific voice. Every grammatical and rhetorical
 choice you make — sentence architecture, clause patterns, diction register and
 etymology, figurative language, punctuation, paragraph development — must match
 this voice exactly.
@@ -1896,26 +1975,17 @@ THE VOICE:
 LINGUISTIC REFERENCE (use this to interpret the voice description precisely):
 {LINGUISTIC_TAXONOMY}
 {example_block}
-{genre_block}
+{context_block}
 
 {mode_instructions}
 
 LENGTH: {fmt['length']}
-{context_block}
 
 {BANNED_AI_PATTERNS}
 
 INSTRUCTION: {instruction}
 
-Output ONLY the written text. The very first word you produce is the first word of the
-finished piece — not a setup, not an address to the reader, not "You want X?" or "Here's X."
-
-BANNED OPENERS (never write these):
-- "You want [genre]? I'll give you [genre]."
-- "Let me give you the real kind."
-- "Here's what [genre] actually looks like."
-- Any sentence that addresses the reader before the writing begins.
-
+Output ONLY the written text. Begin immediately — no preamble, no explanation.
 Do not title it unless the instruction asks for a title. Do not acknowledge the task.
 Simply produce the writing itself, as this voice would produce it, at its best.
 
