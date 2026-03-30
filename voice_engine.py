@@ -254,6 +254,14 @@ def save_refinement(profile_id: str, refinement: dict):
     with open(path, "a") as f:
         f.write(json.dumps(refinement) + "\n")
 
+    # Index for semantic retrieval (fire-and-forget — fails silently if Voyage AI unavailable)
+    try:
+        from voice_rag import index_refinement
+        profile_dir = str(PROFILES_DIR / profile_id)
+        index_refinement(profile_dir, refinement.get("content", ""))
+    except Exception:
+        pass
+
     # Update profile metadata
     profile = load_profile(profile_id)
     if profile:
@@ -714,6 +722,15 @@ WRITING SAMPLES:
         }
         save_refinement(profile_id, refinement)
         new_refinements.append(refinement)
+
+    # Index raw writing samples for semantic retrieval in write_with_voice()
+    try:
+        from voice_rag import index_writing_samples
+        profile_dir = str(PROFILES_DIR / profile_id)
+        raw_texts = [t["text"] for t in texts]
+        index_writing_samples(profile_dir, raw_texts)
+    except Exception:
+        pass
 
     # Trigger synthesis if enough refinements have accumulated
     if new_refinements:
@@ -1604,6 +1621,19 @@ def write_with_voice(profile_id: str, instruction: str, llm_call,
     if context:
         context_block = f"\n\nCONTEXT / NOTES PROVIDED:\n{context}\n"
 
+    # Inject concrete passages from the user's own writing when available
+    example_block = ""
+    try:
+        from voice_rag import retrieve_relevant_samples
+        profile_dir = str(PROFILES_DIR / profile_id)
+        examples = retrieve_relevant_samples(profile_dir, instruction, top_k=3)
+        if examples:
+            example_block = "\n\nEXAMPLES FROM YOUR OWN WRITING (match this style exactly):\n"
+            example_block += "\n\n".join(f"---\n{e}" for e in examples)
+            example_block += "\n---\n"
+    except Exception:
+        pass
+
     prompt = f"""You are writing in a specific voice. Every grammatical and rhetorical
 choice you make — sentence architecture, clause patterns, diction register and
 etymology, figurative language, punctuation, paragraph development — must match
@@ -1614,7 +1644,7 @@ THE VOICE:
 
 LINGUISTIC REFERENCE (use this to interpret the voice description precisely):
 {LINGUISTIC_TAXONOMY}
-
+{example_block}
 {context_block}
 
 INSTRUCTION: {instruction}
