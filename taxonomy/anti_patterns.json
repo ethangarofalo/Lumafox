@@ -1,0 +1,239 @@
+{
+  "version": "1.0.0",
+  "last_updated": "2026-03-30",
+  "title": "Lumafox Anti-Pattern Taxonomy",
+  "description": "A formal classification of structural failure patterns in LLM prose generation. Each entry describes a CLASS of construction — not a specific phrase but a recognizable structural formula that generic AI defaults to. Patterns are categorized by type, documented with examples of the failure and the fix, and annotated with a rhetorical explanation of why the structure fails.",
+  "methodology": "Patterns were identified through iterative voice-teaching sessions on Lumafox, where users corrected model outputs and the corrections were analyzed for recurring structural failures. Each pattern was promoted from observation to taxonomy entry only after appearing across multiple voices, multiple prompts, and multiple model versions.",
+
+  "banned_phrases": {
+    "description": "Specific string patterns that appear with high frequency in generic LLM output. These are surface-level indicators of deeper structural habits.",
+    "entries": [
+      {
+        "id": "BP-001",
+        "pattern": "There's something [almost/deeply] [adjective] about...",
+        "failure_type": "hedged_profundity",
+        "notes": "The construction signals depth without committing to a specific observation. The adjective slot can be filled with almost anything, which is the tell — if the frame works with any adjective, the frame is doing the work, not the thought."
+      },
+      {
+        "id": "BP-002",
+        "pattern": "Perhaps more accurately...",
+        "failure_type": "false_precision",
+        "notes": "Self-correction as performance. The model pretends to refine its own thinking in real time, but both the original and the correction were generated in the same pass."
+      },
+      {
+        "id": "BP-003",
+        "pattern": "What strikes me most...",
+        "failure_type": "simulated_subjectivity",
+        "notes": "The model does not have subjective experience. 'What strikes me' is a borrowed human frame that creates false intimacy."
+      },
+      {
+        "id": "BP-004",
+        "pattern": "What makes it so [insidious/interesting/compelling] is...",
+        "failure_type": "pre_digested_evaluation",
+        "notes": "Evaluates the subject before presenting the evidence. The reader is told what to feel before seeing why."
+      },
+      {
+        "id": "BP-005",
+        "pattern": "The question becomes... / The real question is...",
+        "failure_type": "false_pivot",
+        "notes": "Presents a manufactured escalation as if the conversation has naturally arrived at a deeper level. The 'real question' is almost always the question the model wanted to answer from the start."
+      },
+      {
+        "id": "BP-006",
+        "pattern": "It's worth noting... / Here's what troubles me...",
+        "failure_type": "false_editorial_voice",
+        "notes": "Borrowed from opinion journalism. Creates a persona of the thoughtful observer without earning it through actual observation."
+      },
+      {
+        "id": "BP-007",
+        "pattern": "Yes, exactly — and... / Yes, and that's...",
+        "failure_type": "agree_then_extend",
+        "notes": "The model reflexively validates the user before adding its own point. Eliminates genuine disagreement from the conversation. Particularly corrosive in teaching contexts where the model should be capable of saying 'no.'"
+      },
+      {
+        "id": "BP-008",
+        "pattern": "But here's what gets me... / Maybe this is why...",
+        "failure_type": "performed_arrival",
+        "notes": "Simulates the experience of reaching an insight in real time. The insight was generated simultaneously with the setup — the 'arrival' is theater."
+      },
+      {
+        "id": "BP-009",
+        "pattern": "Which means... / And to say it once more... / The cruelest irony is...",
+        "failure_type": "over_signposting",
+        "notes": "Explicit logical connectives and repetition markers that do the reader's thinking for them. Good prose trusts the reader to follow the argument."
+      }
+    ]
+  },
+
+  "banned_structures": {
+    "description": "Classes of construction — recognizable structural formulas that appear across many different phrasings. These are more dangerous than banned phrases because they cannot be caught by string matching; they require structural analysis.",
+    "entries": [
+      {
+        "id": "BS-001",
+        "name": "The Antithetical Formula",
+        "template": "doesn't just X — he Y",
+        "description": "Any sentence where the first clause negates or sets up a reframe that the second clause delivers. The construction is mechanical because it TELLS the reader where to turn instead of letting them feel the turn.",
+        "examples": [
+          "He doesn't just avoid the game — he builds an entire theology around refusal.",
+          "She isn't merely grieving — she's constructing a monument to what was lost.",
+          "This isn't about politics — it's about the stories we tell ourselves."
+        ],
+        "why_it_fails": "Pre-digests the insight. The reader is handed the turn rather than discovering it. Real prose lets the juxtaposition do the work without the scaffolding.",
+        "correction_strategy": "Place the two ideas next to each other and trust the reader.",
+        "corrected_examples": [
+          "He builds an entire theology around refusal.",
+          "She constructs a monument to what was lost."
+        ],
+        "rhetorical_category": "antithesis",
+        "detection_difficulty": "medium",
+        "frequency_in_llm_output": "very_high"
+      },
+      {
+        "id": "BS-002",
+        "name": "Formulaic Parallel Construction",
+        "template": "turns his X into Y, his A into B",
+        "description": "Stacked parallel phrases where each element maps one domain onto another in the same grammatical frame. Looks like craft — balanced, rhythmic, structured — but is assembly-line rhetoric.",
+        "examples": [
+          "turns his paralysis into a moral system, his fear into a philosophy",
+          "makes silence into a weapon and absence into an argument",
+          "where others see failure he finds vindication, where they see weakness he builds strength"
+        ],
+        "why_it_fails": "The parallel structure does the thinking FOR the reader. Each pair clicks into place too neatly. Real insight is messier — one observation is enough if it's the right one.",
+        "correction_strategy": "Commit to one strong observation. Let it breathe.",
+        "corrected_examples": [
+          "His paralysis becomes a moral system."
+        ],
+        "rhetorical_category": "isocolon",
+        "detection_difficulty": "medium",
+        "frequency_in_llm_output": "high"
+      },
+      {
+        "id": "BS-003",
+        "name": "Stacked Poetic Devices",
+        "template": "metaphor + alliteration + parallel in one sentence",
+        "description": "Multiple rhetorical devices layered into a single sentence, producing something that reads like prize prose but says nothing precise.",
+        "examples": [
+          "wear their weakness like a scar they refuse to powder over",
+          "carries his conviction like a stone in his chest, heavy and warm and immovable",
+          "the silence between them grew teeth and learned to bite"
+        ],
+        "why_it_fails": "Poetic density without earned context. Each device competes for attention. The sentence becomes about its own cleverness rather than its subject.",
+        "correction_strategy": "One device per sentence, chosen because it reveals something.",
+        "corrected_examples": [
+          "He won't hide the weakness."
+        ],
+        "rhetorical_category": "hyperbaton",
+        "detection_difficulty": "hard",
+        "frequency_in_llm_output": "high"
+      },
+      {
+        "id": "BS-004",
+        "name": "The Reframe Pivot",
+        "template": "The real [noun] isn't X — it's Y",
+        "description": "A sentence that claims to reveal what something is REALLY about by negating the obvious reading and substituting a deeper one.",
+        "examples": [
+          "The real tragedy isn't his death — it's that he saw it coming.",
+          "The problem isn't what he said — it's what he couldn't bring himself to say.",
+          "What matters here isn't the betrayal — it's the silence that followed."
+        ],
+        "why_it_fails": "A formula for appearing insightful. The 'real X' construction promises depth but delivers a pivot the reader can see coming by the third word.",
+        "correction_strategy": "State the deeper reading directly. If it's true, it doesn't need the theatrical setup.",
+        "corrected_examples": [
+          "He saw it coming."
+        ],
+        "rhetorical_category": "correctio",
+        "detection_difficulty": "easy",
+        "frequency_in_llm_output": "very_high"
+      },
+      {
+        "id": "BS-005",
+        "name": "The Self-Answering Rhetorical Question",
+        "template": "But what does this really mean? It means that...",
+        "description": "A rhetorical question immediately followed by the writer's own answer. The question exists only to create a dramatic pause before delivering the point.",
+        "examples": [
+          "But what does this really mean? It means that...",
+          "Why does this matter? Because...",
+          "And what do we make of this silence? We make of it exactly what he intended."
+        ],
+        "why_it_fails": "A lecture technique, not a prose technique. The question adds nothing the answer doesn't already contain.",
+        "correction_strategy": "Just state the point.",
+        "corrected_examples": [],
+        "rhetorical_category": "hypophora",
+        "detection_difficulty": "easy",
+        "frequency_in_llm_output": "high"
+      }
+    ]
+  },
+
+  "general_rules": [
+    {
+      "id": "GR-001",
+      "rule": "Three paragraphs when one would do — say it once, say it well, stop.",
+      "failure_type": "over_expansion"
+    },
+    {
+      "id": "GR-002",
+      "rule": "Any sentence that could appear in any AI chatbot's response — rewrite it.",
+      "failure_type": "generic_output"
+    },
+    {
+      "id": "GR-003",
+      "rule": "If you catch yourself writing a construction from any banned category, stop. Ask: what am I actually trying to say? Say THAT, plainly, in this voice's own patterns.",
+      "failure_type": "self_correction_protocol"
+    }
+  ],
+
+  "failure_modes": {
+    "description": "Documented behavioral failures in LLM generation that the taxonomy addresses indirectly. These are higher-order patterns observed during voice-teaching sessions — not individual constructions but systemic tendencies.",
+    "entries": [
+      {
+        "id": "FM-001",
+        "name": "Form Constraint Collapse",
+        "description": "When instructed to produce output in a specific form ('a single thought', 'one sentence', 'two paragraphs'), the model ignores the constraint and produces its default length.",
+        "discovered": "2026-03",
+        "status": "resolved",
+        "fix": "Explicit form constraint extraction with hard sentence/paragraph limits injected into the prompt."
+      },
+      {
+        "id": "FM-002",
+        "name": "Content-Over-Craft Default",
+        "description": "When given a writing sample, the model responds to the IDEAS in the text rather than analyzing the FORM. It validates the argument instead of studying the sentence architecture.",
+        "discovered": "2026-03",
+        "status": "resolved",
+        "fix": "Hard prohibition in example-mode prompt: 'DO NOT respond to the content. DO NOT validate the ideas. Study the FORM.'"
+      },
+      {
+        "id": "FM-003",
+        "name": "Subject Substitution in Fiction",
+        "description": "When asked to write fiction on a specific premise ('two children lost in the woods'), the model substitutes a different subject it considers more clever or contemporary (technology addiction, modern alienation). The user's premise is abandoned.",
+        "discovered": "2026-03",
+        "status": "resolved",
+        "fix": "Subject lock in fiction prompt: assignment and rules placed BEFORE voice text; explicit prohibition on metaphorical substitution."
+      },
+      {
+        "id": "FM-004",
+        "name": "Referential Command Failure",
+        "description": "When a rewrite command uses a reference ('Rewrite the first request without mentioning killing') instead of containing the prose directly, the model has no text to work with and either returns the original unchanged or produces nonsense.",
+        "discovered": "2026-03",
+        "status": "resolved",
+        "fix": "Referential rewrite detection: recover original from conversation history, extract constraint clause, inject both into prompt."
+      },
+      {
+        "id": "FM-005",
+        "name": "Conversational Register Leak",
+        "description": "A voice trained through dialogue develops a habit of addressing the user directly. When switched to fiction generation, this register leaks: 'You want horror? I'll give you the real kind.' The model performs confidence before writing.",
+        "discovered": "2026-03",
+        "status": "resolved",
+        "fix": "Banned openers list in fiction/social mode; voice demoted from driver to style guide in fiction prompts."
+      },
+      {
+        "id": "FM-006",
+        "name": "Synthesis-Dialogue Confusion",
+        "description": "When asked to 'put those together into a single thought,' the model produces a multi-paragraph dialogue response rather than a unified piece of finished writing.",
+        "discovered": "2026-03",
+        "status": "resolved",
+        "fix": "Synthesis detection as first check in auto-mode cascade; dedicated synthesis prompt that produces writing, not conversation."
+      }
+    ]
+  }
+}

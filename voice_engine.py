@@ -23,95 +23,57 @@ _PROFILE_ID_RE = re.compile(r'^[0-9a-f]{8}$')
 
 MIN_EXAMPLE_LENGTH = 200  # chars — messages shorter than this aren't treated as writing samples
 
-BANNED_AI_PATTERNS = """CRITICAL — STRUCTURAL PATTERNS THAT ARE BANNED
+def _load_taxonomy_prompt() -> str:
+    """Load the anti-pattern taxonomy from JSON and format it for prompt injection.
 
-These are not just phrases to avoid — they are CLASSES OF CONSTRUCTION that generic AI
-defaults to. Learn to recognize the STRUCTURE, not just the words. For each banned pattern,
-you'll see what the AI wants to write, why it fails, and what to write instead.
+    The taxonomy lives in taxonomy/anti_patterns.json as a versioned, machine-readable
+    artifact. This function converts it into the prompt-ready string that gets embedded
+    in every generation and teaching prompt.
+    """
+    taxonomy_path = Path(__file__).parent / "taxonomy" / "anti_patterns.json"
+    try:
+        with open(taxonomy_path) as f:
+            tax = json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError):
+        # Fallback: if the file is missing or corrupt, use a minimal inline version
+        return "(Anti-pattern taxonomy unavailable — write with care.)"
 
-## BANNED PHRASES (specific strings — never use these in any form)
-- "There's something [almost/deeply] [adjective] about..."
-- "Perhaps more accurately..." / "What strikes me most..."
-- "What makes it so [insidious/interesting/compelling] is..."
-- "The question becomes..." / "The real question is..."
-- "It's worth noting..." / "Here's what troubles me..."
-- "Yes, exactly—and..." / "Yes, and that's..." (agree-then-extend)
-- "But here's what gets me..." / "Maybe this is why..."
-- "Which means..." / "And to say it once more..." / "The cruelest irony is..."
+    lines = ["CRITICAL — STRUCTURAL PATTERNS THAT ARE BANNED",
+             "",
+             "These are not just phrases to avoid — they are CLASSES OF CONSTRUCTION that generic AI",
+             "defaults to. Learn to recognize the STRUCTURE, not just the words.",
+             ""]
 
-## BANNED STRUCTURES (classes of construction — recognize the pattern across phrasings)
+    # Banned phrases
+    lines.append("## BANNED PHRASES (specific strings — never use these in any form)")
+    for bp in tax.get("banned_phrases", {}).get("entries", []):
+        lines.append(f'- "{bp["pattern"]}"')
+    lines.append("")
 
-### 1. The Antithetical Formula: "doesn't just X — he Y"
-Any sentence where the first clause negates or sets up a reframe that the second clause
-delivers. The construction is mechanical because it TELLS the reader where to turn instead
-of letting them feel the turn.
-EXAMPLES OF THE BANNED PATTERN:
-  - "He doesn't just avoid the game — he builds an entire theology around refusal."
-  - "She isn't merely grieving — she's constructing a monument to what was lost."
-  - "This isn't about politics — it's about the stories we tell ourselves."
-WHY IT FAILS: It pre-digests the insight. The reader is handed the turn rather than
-discovering it. Real prose lets the juxtaposition do the work without the scaffolding.
-WRITE THIS INSTEAD: Place the two ideas next to each other and trust the reader.
-  - "He builds an entire theology around refusal." (The avoidance is implied.)
-  - "She constructs a monument to what was lost." (The grief is already there.)
+    # Banned structures
+    lines.append("## BANNED STRUCTURES (classes of construction — recognize the pattern across phrasings)")
+    lines.append("")
+    for i, bs in enumerate(tax.get("banned_structures", {}).get("entries", []), 1):
+        lines.append(f'### {i}. {bs["name"]}: "{bs["template"]}"')
+        lines.append(bs["description"])
+        lines.append("EXAMPLES OF THE BANNED PATTERN:")
+        for ex in bs.get("examples", []):
+            lines.append(f'  - "{ex}"')
+        lines.append(f'WHY IT FAILS: {bs["why_it_fails"]}')
+        lines.append(f'WRITE THIS INSTEAD: {bs["correction_strategy"]}')
+        for cx in bs.get("corrected_examples", []):
+            lines.append(f'  - "{cx}"')
+        lines.append("")
 
-### 2. Formulaic Parallel Construction: "turns his X into Y, his A into B"
-Stacked parallel phrases where each element maps one domain onto another in the same
-grammatical frame. The AI loves this because it LOOKS like craft — balanced, rhythmic,
-structured. But it's assembly-line rhetoric.
-EXAMPLES OF THE BANNED PATTERN:
-  - "turns his paralysis into a moral system, his fear into a philosophy"
-  - "makes silence into a weapon and absence into an argument"
-  - "where others see failure he finds vindication, where they see weakness he builds strength"
-WHY IT FAILS: The parallel structure does the thinking FOR the reader. Each pair clicks
-into place too neatly. Real insight is messier — one observation is enough if it's the
-right one.
-WRITE THIS INSTEAD: Commit to one strong observation. Let it breathe.
-  - "His paralysis becomes a moral system." (One clean thought. No stacking.)
+    # General rules
+    lines.append("## GENERAL RULES")
+    for gr in tax.get("general_rules", []):
+        lines.append(f'- {gr["rule"]}')
 
-### 3. Stacked Poetic Devices: metaphor + alliteration + parallel in one sentence
-When the AI layers multiple rhetorical devices into a single sentence, producing something
-that reads like prize prose but says nothing precise.
-EXAMPLES OF THE BANNED PATTERN:
-  - "wear their weakness like a scar they refuse to powder over"
-  - "carries his conviction like a stone in his chest, heavy and warm and immovable"
-  - "the silence between them grew teeth and learned to bite"
-WHY IT FAILS: Poetic density without earned context. Each device competes for attention.
-The sentence becomes about its own cleverness rather than its subject.
-WRITE THIS INSTEAD: One device per sentence, chosen because it reveals something.
-  - "He won't hide the weakness." (Direct. The metaphor was doing work the plain statement
-    does better.)
+    return "\n".join(lines)
 
-### 4. The Reframe Pivot: "The real [noun] isn't X — it's Y"
-A sentence that claims to reveal what something is REALLY about by negating the obvious
-reading and substituting a deeper one. Closely related to the antithetical formula but
-framed as revelation.
-EXAMPLES OF THE BANNED PATTERN:
-  - "The real tragedy isn't his death — it's that he saw it coming."
-  - "The problem isn't what he said — it's what he couldn't bring himself to say."
-  - "What matters here isn't the betrayal — it's the silence that followed."
-WHY IT FAILS: It's a formula for appearing insightful. The "real X" construction promises
-depth but delivers a pivot that the reader can see coming by the third word.
-WRITE THIS INSTEAD: State the deeper reading directly. If it's true, it doesn't need
-the theatrical setup.
-  - "He saw it coming." (The tragedy is self-evident.)
 
-### 5. The Self-Answering Rhetorical Question
-Any rhetorical question immediately followed by the writer's own answer. The question
-exists only to create a dramatic pause before delivering the point.
-EXAMPLES OF THE BANNED PATTERN:
-  - "But what does this really mean? It means that..."
-  - "Why does this matter? Because..."
-  - "And what do we make of this silence? We make of it exactly what he intended."
-WHY IT FAILS: It's a lecture technique, not a prose technique. The question adds nothing
-the answer doesn't already contain.
-WRITE THIS INSTEAD: Just state the point.
-
-## GENERAL RULES
-- THREE PARAGRAPHS when one would do — say it once, say it well, stop.
-- ANY sentence that could appear in any AI chatbot's response — rewrite it.
-- If you catch yourself writing a construction from any banned category above, stop.
-  Ask: what am I actually trying to say? Say THAT, plainly, in this voice's own patterns."""
+BANNED_AI_PATTERNS = _load_taxonomy_prompt()
 
 # ── Injection Markers ──
 
