@@ -1842,20 +1842,14 @@ async def list_thinkers():
     return {"thinkers": COUNCIL_NAMES, "modes": sorted(VALID_MODES)}
 
 
+_DEPLOY_SHA = "8229be2"  # updated on each deploy commit
+
 @app.get("/health")
 async def health():
-    import subprocess
-    try:
-        sha = subprocess.check_output(
-            ["git", "rev-parse", "--short", "HEAD"],
-            stderr=subprocess.DEVNULL, timeout=2,
-        ).decode().strip()
-    except Exception:
-        sha = "unknown"
     return {
         "status": "ok",
         "version": "0.1.0",
-        "commit": sha,
+        "commit": _DEPLOY_SHA,
         "llm_configured": bool(os.environ.get("ANTHROPIC_API_KEY")),
     }
 
