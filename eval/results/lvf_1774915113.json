@@ -1,0 +1,961 @@
+{
+  "timestamp": "2026-03-30T19:58:33Z",
+  "total": 50,
+  "passed": 46,
+  "failed": 4,
+  "score": 92.0,
+  "categories": {
+    "structure": {
+      "total": 10,
+      "passed": 10
+    },
+    "form": {
+      "total": 10,
+      "passed": 10
+    },
+    "subject": {
+      "total": 10,
+      "passed": 7
+    },
+    "register": {
+      "total": 10,
+      "passed": 9
+    },
+    "fiction": {
+      "total": 10,
+      "passed": 10
+    }
+  },
+  "results": [
+    {
+      "id": "STR-01",
+      "category": "structure",
+      "name": "Antithetical formula temptation",
+      "passed": true,
+      "duration_ms": 8282,
+      "checks": [
+        {
+          "name": "no_antithetical_formula",
+          "passed": true,
+          "detail": "Clean"
+        },
+        {
+          "name": "no_banned_phrases",
+          "passed": true,
+          "detail": "Clean"
+        }
+      ],
+      "output_preview": "Marcus stepped away from the heated boardroom debate, not because the accusations stung\u2014though they did\u2014but because he recognized the familiar tightening in his chest, the quickening pulse that preceded the version of himself he'd spent years learning to redirect. He knew his capacity for devastatio"
+    },
+    {
+      "id": "STR-02",
+      "category": "structure",
+      "name": "Reframe pivot temptation",
+      "passed": true,
+      "duration_ms": 10272,
+      "checks": [
+        {
+          "name": "no_reframe_pivot",
+          "passed": true,
+          "detail": "Clean"
+        },
+        {
+          "name": "no_banned_phrases",
+          "passed": true,
+          "detail": "Clean"
+        }
+      ],
+      "output_preview": "The real danger of social media isn't the endless scroll or the dopamine hits from notifications\u2014it's the slow death of solitary thinking. We've created a world where every half-formed idea demands immediate broadcast, where thoughts barely have time to crystallize before they're typed, posted, and "
+    },
+    {
+      "id": "STR-03",
+      "category": "structure",
+      "name": "Parallel construction temptation",
+      "passed": true,
+      "duration_ms": 46283,
+      "checks": [
+        {
+          "name": "no_banned_phrases",
+          "passed": true,
+          "detail": "Clean"
+        },
+        {
+          "name": "no_antithetical_formula",
+          "passed": true,
+          "detail": "Clean"
+        }
+      ],
+      "output_preview": "Maya Chen's first board meeting as CEO began with disaster. The projector failed, her slides vanished into digital oblivion, and half the board members sat with crossed arms, skeptical of the 32-year-old who'd inherited the position after her mentor's sudden retirement.\n\n\"Perfect,\" she said, setting"
+    },
+    {
+      "id": "STR-04",
+      "category": "structure",
+      "name": "Self-answering question temptation",
+      "passed": true,
+      "duration_ms": 10018,
+      "checks": [
+        {
+          "name": "no_self_answering_question",
+          "passed": true,
+          "detail": "Clean"
+        },
+        {
+          "name": "no_banned_phrases",
+          "passed": true,
+          "detail": "Clean"
+        }
+      ],
+      "output_preview": "People remain trapped in jobs they despise for reasons as varied as they are compelling. Financial obligations often serve as the strongest shackles\u2014mortgages, medical bills, and children's education create a web of responsibilities that make the risk of leaving feel insurmountable. Fear plays an eq"
+    },
+    {
+      "id": "STR-05",
+      "category": "structure",
+      "name": "Poetic density temptation",
+      "passed": true,
+      "duration_ms": 8297,
+      "checks": [
+        {
+          "name": "no_banned_phrases",
+          "passed": true,
+          "detail": "Clean"
+        }
+      ],
+      "output_preview": "Grief arrives like the tide, washing over the shores of the heart in waves that cannot be predicted or controlled. It is love with nowhere to go, a cathedral of memories where we light candles for those who once warmed our days. In its depths, we discover that sorrow and beauty are not opposites but"
+    },
+    {
+      "id": "STR-06",
+      "category": "structure",
+      "name": "Agree-then-extend temptation",
+      "passed": true,
+      "duration_ms": 9321,
+      "checks": [
+        {
+          "name": "no_banned_phrases",
+          "passed": true,
+          "detail": "Clean"
+        }
+      ],
+      "output_preview": "That's a beautifully sharp observation. It captures something true about how we often find our bravest moments not when fear disappears, but when circumstances force us to move through it anyway. The ticking clock transforms paralysis into action.\n\nI've noticed this in my own life - the speech I dre"
+    },
+    {
+      "id": "STR-07",
+      "category": "structure",
+      "name": "False profundity temptation",
+      "passed": true,
+      "duration_ms": 28361,
+      "checks": [
+        {
+          "name": "no_banned_phrases",
+          "passed": true,
+          "detail": "Clean"
+        }
+      ],
+      "output_preview": "Solitude is the silent collaborator in the creative process, the unseen hand that guides the artist's brush, the writer's pen, the composer's notes. In the absence of external voices, our inner voice emerges with startling clarity, unfiltered and uninterrupted.\n\nThe relationship between solitude and"
+    },
+    {
+      "id": "STR-08",
+      "category": "structure",
+      "name": "Multiple structures under pressure",
+      "passed": true,
+      "duration_ms": 21405,
+      "checks": [
+        {
+          "name": "no_antithetical_formula",
+          "passed": true,
+          "detail": "Clean"
+        },
+        {
+          "name": "no_reframe_pivot",
+          "passed": true,
+          "detail": "Clean"
+        },
+        {
+          "name": "no_self_answering_question",
+          "passed": true,
+          "detail": "Clean"
+        }
+      ],
+      "output_preview": "Marcus felt the hot coffee seep through his shirt as his coworker's hand \"accidentally\" knocked over the cup during the meeting. The room went silent, waiting for the explosion that never came. He simply reached for the napkins, dabbing at the spreading stain while everyone stared.\n\n\"Sorry,\" Derek m"
+    },
+    {
+      "id": "STR-09",
+      "category": "structure",
+      "name": "Clean prose under abstract topic",
+      "passed": true,
+      "duration_ms": 9101,
+      "checks": [
+        {
+          "name": "no_banned_phrases",
+          "passed": true,
+          "detail": "Clean"
+        },
+        {
+          "name": "no_antithetical_formula",
+          "passed": true,
+          "detail": "Clean"
+        },
+        {
+          "name": "no_reframe_pivot",
+          "passed": true,
+          "detail": "Clean"
+        }
+      ],
+      "output_preview": "Trust is the invisible thread that binds human relationships, fragile yet essential to our social fabric. It grows slowly, like moss on ancient stone, built through countless small acts of reliability and care. Yet it can shatter in an instant, leaving sharp fragments that cut deeper than the origin"
+    },
+    {
+      "id": "STR-10",
+      "category": "structure",
+      "name": "No meta-commentary",
+      "passed": true,
+      "duration_ms": 11672,
+      "checks": [
+        {
+          "name": "no_meta_commentary",
+          "passed": true,
+          "detail": "Clean"
+        },
+        {
+          "name": "no_banned_phrases",
+          "passed": true,
+          "detail": "Clean"
+        }
+      ],
+      "output_preview": "To listen well is to create space for another person to exist fully in your presence. It means quieting the constant chatter of your own thoughts\u2014the urge to interrupt, to relate everything back to yourself, to formulate your response while the other person is still speaking. True listening requires"
+    },
+    {
+      "id": "FRM-01",
+      "category": "form",
+      "name": "Single sentence",
+      "passed": true,
+      "duration_ms": 2252,
+      "checks": [
+        {
+          "name": "sentence_count_1_1",
+          "passed": true,
+          "detail": "1 sentences (target: 1-1)"
+        }
+      ],
+      "output_preview": "The ocean stretches endlessly beneath the sky, its waves whispering ancient secrets to those who pause to listen."
+    },
+    {
+      "id": "FRM-02",
+      "category": "form",
+      "name": "Two sentences exactly",
+      "passed": true,
+      "duration_ms": 3188,
+      "checks": [
+        {
+          "name": "sentence_count_2_2",
+          "passed": true,
+          "detail": "2 sentences (target: 2-2)"
+        }
+      ],
+      "output_preview": "The father's weathered hands guided his son's small fingers around the fishing rod, showing him how to cast the line into the still morning water. As they sat side by side on the wooden dock, the boy learned that patience was just as important as the perfect cast."
+    },
+    {
+      "id": "FRM-03",
+      "category": "form",
+      "name": "One paragraph, complex topic",
+      "passed": true,
+      "duration_ms": 10473,
+      "checks": [
+        {
+          "name": "paragraph_count_1_1",
+          "passed": true,
+          "detail": "1 paragraphs (target: 1-1)"
+        }
+      ],
+      "output_preview": "Democracies fail when citizens abandon their vigilance, trading the hard work of self-governance for the false comfort of strongmen who promise simple solutions to complex problems. The slow erosion begins with apathy and polarization, as people retreat into echo chambers and view political opponent"
+    },
+    {
+      "id": "FRM-04",
+      "category": "form",
+      "name": "Three sentences maximum",
+      "passed": true,
+      "duration_ms": 3330,
+      "checks": [
+        {
+          "name": "sentence_count_1_3",
+          "passed": true,
+          "detail": "3 sentences (target: 1-3)"
+        }
+      ],
+      "output_preview": "A good apology acknowledges specific wrongdoing without excuses or deflection, taking full responsibility for the harm caused. It expresses genuine remorse and empathy for how your actions affected the other person. Finally, it includes a commitment to change the behavior and, when possible, offers "
+    },
+    {
+      "id": "FRM-05",
+      "category": "form",
+      "name": "Short form under 50 words",
+      "passed": true,
+      "duration_ms": 3088,
+      "checks": [
+        {
+          "name": "word_count_5_50",
+          "passed": true,
+          "detail": "46 words (target: 5-50)"
+        }
+      ],
+      "output_preview": "Ambition burns like a restless flame, pushing us beyond comfort into unknown territories. It whispers of possibilities, demanding sacrifice and perseverance. Some call it obsession; others, purpose. But in its purest form, ambition is simply the refusal to accept that our best days lie behind us."
+    },
+    {
+      "id": "FRM-06",
+      "category": "form",
+      "name": "Exactly two paragraphs",
+      "passed": true,
+      "duration_ms": 10742,
+      "checks": [
+        {
+          "name": "paragraph_count_2_2",
+          "passed": true,
+          "detail": "2 paragraphs (target: 2-2)"
+        }
+      ],
+      "output_preview": "Being alone is a physical state of solitude, a simple absence of other people in one's immediate environment. It can be a deliberate choice, a peaceful retreat from the noise and demands of social interaction. Many people actively seek moments of aloneness to recharge, reflect, or engage in activiti"
+    },
+    {
+      "id": "FRM-07",
+      "category": "form",
+      "name": "Aphorism (1-2 sentences)",
+      "passed": true,
+      "duration_ms": 2038,
+      "checks": [
+        {
+          "name": "sentence_count_1_2",
+          "passed": true,
+          "detail": "1 sentences (target: 1-2)"
+        }
+      ],
+      "output_preview": "Power reveals character; it does not corrupt it."
+    },
+    {
+      "id": "FRM-08",
+      "category": "form",
+      "name": "Under 100 words, emotional topic",
+      "passed": true,
+      "duration_ms": 6452,
+      "checks": [
+        {
+          "name": "word_count_10_100",
+          "passed": true,
+          "detail": "83 words (target: 10-100)"
+        }
+      ],
+      "output_preview": "The house still smells like her coffee. I catch myself reaching for the phone to call, then remember. Her sweater hangs on the chair where she left it three weeks ago. Everyone says it gets easier, but they don't mention the grocery store ambushes\u2014seeing her favorite crackers and crying in aisle sev"
+    },
+    {
+      "id": "FRM-09",
+      "category": "form",
+      "name": "Single thought constraint",
+      "passed": true,
+      "duration_ms": 1763,
+      "checks": [
+        {
+          "name": "sentence_count_1_3",
+          "passed": true,
+          "detail": "1 sentences (target: 1-3)"
+        },
+        {
+          "name": "paragraph_count_1_1",
+          "passed": true,
+          "detail": "1 paragraphs (target: 1-1)"
+        }
+      ],
+      "output_preview": "Fear is the only honest emotion\u2014useful in its raw truth yet paralyzing in its grip, revealing both our salvation and our cage."
+    },
+    {
+      "id": "FRM-10",
+      "category": "form",
+      "name": "Five sentences, no more",
+      "passed": true,
+      "duration_ms": 4378,
+      "checks": [
+        {
+          "name": "sentence_count_5_5",
+          "passed": true,
+          "detail": "5 sentences (target: 5-5)"
+        }
+      ],
+      "output_preview": "Silence offers a sanctuary from the relentless noise of modern life, allowing our minds to rest and reset. In quiet moments, we often discover our deepest insights and most creative solutions emerge naturally. The absence of sound creates space for genuine listening\u2014to ourselves, to others, and to t"
+    },
+    {
+      "id": "SUB-01",
+      "category": "subject",
+      "name": "Literal fiction: children in woods",
+      "passed": false,
+      "duration_ms": 15530,
+      "checks": [
+        {
+          "name": "subject_present",
+          "passed": false,
+          "detail": "Missing: ['children', 'woods', 'witch']"
+        },
+        {
+          "name": "no_performative_opener",
+          "passed": true,
+          "detail": "Clean"
+        }
+      ],
+      "output_preview": "The trees pressed closer as Emma pulled her little brother's hand. \"We should have found the trail by now,\" she whispered.\n\n\"I'm hungry,\" Max whined, dragging his feet through the fallen leaves.\n\n\"I know. Me too.\" Emma's stomach had been growling for hours. The autumn sun was already low, painting e"
+    },
+    {
+      "id": "SUB-02",
+      "category": "subject",
+      "name": "Literal fiction: ghost in a lighthouse",
+      "passed": false,
+      "duration_ms": 30457,
+      "checks": [
+        {
+          "name": "subject_present",
+          "passed": false,
+          "detail": "Missing: ['ghost']"
+        },
+        {
+          "name": "no_performative_opener",
+          "passed": true,
+          "detail": "Clean"
+        }
+      ],
+      "output_preview": "The lighthouse keeper's logbook was found open to its final entry: \"She comes with the fog.\"\n\nMarcus had dismissed the warning when he took the job. Blackrock Light needed a keeper, and he needed the solitude. The previous three keepers had abandoned their posts within months, mumbling about shadows"
+    },
+    {
+      "id": "SUB-03",
+      "category": "subject",
+      "name": "Literal fiction: dragon",
+      "passed": true,
+      "duration_ms": 20184,
+      "checks": [
+        {
+          "name": "subject_present",
+          "passed": true,
+          "detail": "All present"
+        },
+        {
+          "name": "no_performative_opener",
+          "passed": true,
+          "detail": "Clean"
+        }
+      ],
+      "output_preview": "In the shadow of Mount Whisper lived Erasmus, a dragon unlike any other. While his kin filled their lairs with glittering gold and precious gems, Erasmus collected something far more valuable: secrets.\n\nHis cave overflowed with whispered confessions, hidden truths, and unspoken desires. Each secret "
+    },
+    {
+      "id": "SUB-04",
+      "category": "subject",
+      "name": "No technology substitution",
+      "passed": true,
+      "duration_ms": 20366,
+      "checks": [
+        {
+          "name": "subject_present",
+          "passed": true,
+          "detail": "All present"
+        },
+        {
+          "name": "no_performative_opener",
+          "passed": true,
+          "detail": "Clean"
+        }
+      ],
+      "output_preview": "The scratching started three nights ago.\n\nEmma pulled her princess blanket up to her chin, squeezing her eyes shut as the familiar sound echoed from beneath her bed. Long, deliberate scratches, like fingernails on wood. Her parents didn't believe her. \"Old houses make noises,\" they said. \"The radiat"
+    },
+    {
+      "id": "SUB-05",
+      "category": "subject",
+      "name": "Literal historical scene",
+      "passed": false,
+      "duration_ms": 18629,
+      "checks": [
+        {
+          "name": "subject_present",
+          "passed": false,
+          "detail": "Missing: ['soldier']"
+        },
+        {
+          "name": "no_performative_opener",
+          "passed": true,
+          "detail": "Clean"
+        }
+      ],
+      "output_preview": "The fire crackled between them, casting shadows that danced across their weathered faces. Martinez stirred the beans in his mess tin with a bent spoon, while Thompson picked at a piece of hardtack, trying to find a soft spot.\n\n\"My wife sends these in every package,\" Thompson said, pulling out a smal"
+    },
+    {
+      "id": "SUB-06",
+      "category": "subject",
+      "name": "Animal fable, not allegory",
+      "passed": true,
+      "duration_ms": 17107,
+      "checks": [
+        {
+          "name": "subject_present",
+          "passed": true,
+          "detail": "All present"
+        },
+        {
+          "name": "no_performative_opener",
+          "passed": true,
+          "detail": "Clean"
+        }
+      ],
+      "output_preview": "The Fox and the Bear's Winter Store\n\nAs autumn's final leaves fell to the forest floor, Bear proudly surveyed his cave, now brimming with nuts, berries, and honeycombs he had gathered for the long winter ahead. Fox, passing by with an empty stomach and an emptier den, caught sight of the magnificent"
+    },
+    {
+      "id": "SUB-07",
+      "category": "subject",
+      "name": "Supernatural horror, literal",
+      "passed": true,
+      "duration_ms": 34607,
+      "checks": [
+        {
+          "name": "subject_present",
+          "passed": true,
+          "detail": "All present"
+        },
+        {
+          "name": "no_performative_opener",
+          "passed": true,
+          "detail": "Clean"
+        }
+      ],
+      "output_preview": "The coffee mug slipped from Margaret's fingers, shattering against the kitchen floor in a cascade of ceramic and lukewarm brew. She stood frozen, her heart hammering against her ribs as the familiar baritone drifted up through the floorboards.\n\n\"Margaret... Margaret, can you hear me?\"\n\nIt was David'"
+    },
+    {
+      "id": "SUB-08",
+      "category": "subject",
+      "name": "Fairy tale setting",
+      "passed": true,
+      "duration_ms": 20477,
+      "checks": [
+        {
+          "name": "subject_present",
+          "passed": true,
+          "detail": "All present"
+        },
+        {
+          "name": "no_performative_opener",
+          "passed": true,
+          "detail": "Clean"
+        }
+      ],
+      "output_preview": "Princess Elara pressed her face against the cold stone window, watching the great serpent coil around the base of her tower for the thousandth time. Its scales shimmered like oil on water\u2014purple, green, black\u2014as it moved in its endless patrol. Twenty years she had been here, twenty years since her f"
+    },
+    {
+      "id": "SUB-09",
+      "category": "subject",
+      "name": "Specific objects in scene",
+      "passed": true,
+      "duration_ms": 21622,
+      "checks": [
+        {
+          "name": "subject_present",
+          "passed": true,
+          "detail": "All present"
+        },
+        {
+          "name": "no_performative_opener",
+          "passed": true,
+          "detail": "Clean"
+        }
+      ],
+      "output_preview": "The fluorescent lights hummed over the meat case as Margaret pointed at the ribeye in the far corner. \"That one, please. The marbled one.\"\n\nFrank, the butcher, reached in with his thick fingers and lifted the cut onto the scale. \"Beautiful piece. Two and a quarter pounds.\"\n\n\"Perfect.\" Margaret watch"
+    },
+    {
+      "id": "SUB-10",
+      "category": "subject",
+      "name": "No essay substitution for fiction",
+      "passed": true,
+      "duration_ms": 34184,
+      "checks": [
+        {
+          "name": "subject_present",
+          "passed": true,
+          "detail": "All present"
+        },
+        {
+          "name": "no_performative_opener",
+          "passed": true,
+          "detail": "Clean"
+        },
+        {
+          "name": "no_meta_commentary",
+          "passed": true,
+          "detail": "Clean"
+        }
+      ],
+      "output_preview": "The grandfather clock in the Whitmore Public Library chimed twelve times, each note echoing through the empty halls like a funeral bell. Sarah looked up from her desk, rubbing her tired eyes. She'd promised herself she'd leave by ten, but the restoration work on the 18th-century manuscripts couldn't"
+    },
+    {
+      "id": "REG-01",
+      "category": "register",
+      "name": "Vernacular register",
+      "passed": true,
+      "duration_ms": 15497,
+      "checks": [
+        {
+          "name": "no_banned_phrases",
+          "passed": true,
+          "detail": "Clean"
+        },
+        {
+          "name": "no_meta_commentary",
+          "passed": true,
+          "detail": "Clean"
+        }
+      ],
+      "output_preview": "Money's always tight. You work forty hours, sometimes more, and the check's gone before you know it. Rent takes half. Gas and electric take their cut. Food costs more every week.\n\nThe car breaks down, that's three hundred bucks you don't have. Kid gets sick, that's a doctor bill. Water heater goes o"
+    },
+    {
+      "id": "REG-02",
+      "category": "register",
+      "name": "Formal academic register",
+      "passed": true,
+      "duration_ms": 9856,
+      "checks": [
+        {
+          "name": "no_banned_phrases",
+          "passed": true,
+          "detail": "Clean"
+        },
+        {
+          "name": "no_meta_commentary",
+          "passed": true,
+          "detail": "Clean"
+        }
+      ],
+      "output_preview": "The concept of justice, as we must acknowledge from the outset, resists any singular or uncontested definition, presenting instead a constellation of competing theoretical frameworks that have evolved through centuries of philosophical discourse. When we examine Rawls's veil of ignorance alongside N"
+    },
+    {
+      "id": "REG-03",
+      "category": "register",
+      "name": "No preamble",
+      "passed": true,
+      "duration_ms": 15810,
+      "checks": [
+        {
+          "name": "no_meta_commentary",
+          "passed": true,
+          "detail": "Clean"
+        },
+        {
+          "name": "no_performative_opener",
+          "passed": true,
+          "detail": "Clean"
+        }
+      ],
+      "output_preview": "The letter arrived on a Tuesday morning, its familiar handwriting making my hands tremble before I even opened it. Sarah's looping script, the same one that had filled love notes and birthday cards for fifteen years, now carried words that cut deeper than any blade.\n\n\"I've been seeing Michael for si"
+    },
+    {
+      "id": "REG-04",
+      "category": "register",
+      "name": "Sparse prose",
+      "passed": true,
+      "duration_ms": 13471,
+      "checks": [
+        {
+          "name": "no_banned_phrases",
+          "passed": true,
+          "detail": "Clean"
+        }
+      ],
+      "output_preview": "The bell rang. Fighters touched gloves. They circled. Martinez jabbed. Thompson blocked. Thompson threw a cross. It missed.\n\nMartinez moved left. He jabbed twice. One landed. Thompson grunted. He stepped back. Martinez followed.\n\nThompson swung. Martinez ducked. He countered. The punch connected. Th"
+    },
+    {
+      "id": "REG-05",
+      "category": "register",
+      "name": "End on image, not reflection",
+      "passed": true,
+      "duration_ms": 9047,
+      "checks": [
+        {
+          "name": "no_banned_phrases",
+          "passed": true,
+          "detail": "Clean"
+        }
+      ],
+      "output_preview": "The alarm shrieked through the darkness at 3:47 AM, but by then smoke had already begun seeping under bedroom doors like ghostly fingers. Within minutes, the kitchen erupted in orange fury, flames licking up curtains and racing across the ceiling with terrifying hunger. The family stumbled through h"
+    },
+    {
+      "id": "REG-06",
+      "category": "register",
+      "name": "No moralizing",
+      "passed": true,
+      "duration_ms": 17885,
+      "checks": [
+        {
+          "name": "no_meta_commentary",
+          "passed": true,
+          "detail": "Clean"
+        },
+        {
+          "name": "no_banned_phrases",
+          "passed": true,
+          "detail": "Clean"
+        }
+      ],
+      "output_preview": "Marcus studied the museum's security footage for six months before making his move. The Degas bronze dancer stood in the corner of the third-floor gallery, protected by laser grids and pressure sensors that he'd mapped down to the millimeter.\n\nOn a Thursday night in November, he entered through the "
+    },
+    {
+      "id": "REG-07",
+      "category": "register",
+      "name": "Dry tone",
+      "passed": true,
+      "duration_ms": 16511,
+      "checks": [
+        {
+          "name": "no_banned_phrases",
+          "passed": true,
+          "detail": "Clean"
+        }
+      ],
+      "output_preview": "The church was half full. Gerald Pemberton's service began at two o'clock as scheduled. The organist played something appropriate.\n\nHis daughter read from Ecclesiastes. Her voice carried well enough. The microphone wasn't necessary, but she used it anyway. She returned to her seat when finished.\n\nTh"
+    },
+    {
+      "id": "REG-08",
+      "category": "register",
+      "name": "First person, unreliable",
+      "passed": true,
+      "duration_ms": 8937,
+      "checks": [
+        {
+          "name": "no_meta_commentary",
+          "passed": true,
+          "detail": "Clean"
+        },
+        {
+          "name": "no_performative_opener",
+          "passed": true,
+          "detail": "Clean"
+        }
+      ],
+      "output_preview": "I definitely didn't go out last night - just stayed in and watched Netflix like I told you I would. The scratch on my car? That was already there from last week when I parked at the grocery store. And before you ask, the reason Jake texted asking if I made it home okay was because he was worried abo"
+    },
+    {
+      "id": "REG-09",
+      "category": "register",
+      "name": "Child's voice",
+      "passed": true,
+      "duration_ms": 5725,
+      "checks": [
+        {
+          "name": "sentence_count_2_4",
+          "passed": true,
+          "detail": "3 sentences (target: 2-4)"
+        },
+        {
+          "name": "no_banned_phrases",
+          "passed": true,
+          "detail": "Clean"
+        }
+      ],
+      "output_preview": "The white stuff is falling from the sky like tiny cold feathers and it makes everything look like my mom put frosting on the whole world! When I catch some on my tongue it disappears and tastes like really cold water, and my big sister says we can make a snowman if it keeps coming down. I want to st"
+    },
+    {
+      "id": "REG-10",
+      "category": "register",
+      "name": "Telegram brevity",
+      "passed": false,
+      "duration_ms": 8370,
+      "checks": [
+        {
+          "name": "no_banned_phrases",
+          "passed": true,
+          "detail": "Clean"
+        },
+        {
+          "name": "word_count_5_80",
+          "passed": false,
+          "detail": "98 words (target: 5-80)"
+        }
+      ],
+      "output_preview": "CEASEFIRE EFFECTIVE MIDNIGHT STOP\n\nGENERALS MEET NEUTRAL ZONE STOP HANDSHAKES EXCHANGED STOP PAPERS SIGNED STOP\n\nGUNS SILENT STOP SOLDIERS EMERGE TRENCHES STOP SOME WEEP STOP SOME LAUGH STOP MOST STARE STOP\n\nBORDER REDRAWN STOP PRISONERS RELEASED TOMORROW STOP FAMILIES WAITING STATIONS STOP\n\nCITIES "
+    },
+    {
+      "id": "FIC-01",
+      "category": "fiction",
+      "name": "Show don't tell",
+      "passed": true,
+      "duration_ms": 6591,
+      "checks": [
+        {
+          "name": "no_meta_commentary",
+          "passed": true,
+          "detail": "Clean"
+        }
+      ],
+      "output_preview": "Maria's hands trembled as she gripped the doorknob, her palm slick with sweat against the cold brass. Her heart hammered against her ribs like a caged bird desperate for escape. She pressed her ear to the door, straining to hear footsteps in the hallway beyond, but the blood rushing in her ears drow"
+    },
+    {
+      "id": "FIC-02",
+      "category": "fiction",
+      "name": "Scene, not summary",
+      "passed": true,
+      "duration_ms": 22819,
+      "checks": [
+        {
+          "name": "no_meta_commentary",
+          "passed": true,
+          "detail": "Clean"
+        },
+        {
+          "name": "no_performative_opener",
+          "passed": true,
+          "detail": "Clean"
+        }
+      ],
+      "output_preview": "The waiter set down their plates with practiced cheer. \"The salmon for you, and the risotto for the lady. Can I get you anything else?\"\n\n\"We're fine,\" Marcus said, not looking up.\n\nThe silence stretched between them like pulled taffy. Sarah pushed a mushroom around her plate, watching the cream sauc"
+    },
+    {
+      "id": "FIC-03",
+      "category": "fiction",
+      "name": "The turn",
+      "passed": true,
+      "duration_ms": 10559,
+      "checks": [
+        {
+          "name": "word_count_30_150",
+          "passed": true,
+          "detail": "149 words (target: 30-150)"
+        },
+        {
+          "name": "no_performative_opener",
+          "passed": true,
+          "detail": "Clean"
+        }
+      ],
+      "output_preview": "The brass key had lived in Grandmother's jewelry box for sixty years. No one knew what it opened.\n\nAfter the funeral, Sarah found it tucked between pearl necklaces and tarnished rings. She almost tossed it in the donation pile, but something made her pocket it instead.\n\nWeeks later, clearing out the"
+    },
+    {
+      "id": "FIC-04",
+      "category": "fiction",
+      "name": "End on image",
+      "passed": true,
+      "duration_ms": 16870,
+      "checks": [
+        {
+          "name": "no_performative_opener",
+          "passed": true,
+          "detail": "Clean"
+        },
+        {
+          "name": "no_banned_phrases",
+          "passed": true,
+          "detail": "Clean"
+        }
+      ],
+      "output_preview": "Harold's knees protested as he lowered himself onto the damp grass, but he ignored them. Sixty-three years of marriage had taught him which complaints deserved attention and which didn't.\n\n\"Morning, sweetheart,\" he said, brushing pine needles from the granite. \"Brought your favorite again.\"\n\nHe unwr"
+    },
+    {
+      "id": "FIC-05",
+      "category": "fiction",
+      "name": "Withholding in horror",
+      "passed": true,
+      "duration_ms": 18643,
+      "checks": [
+        {
+          "name": "no_performative_opener",
+          "passed": true,
+          "detail": "Clean"
+        },
+        {
+          "name": "subject_present",
+          "passed": true,
+          "detail": "All present"
+        }
+      ],
+      "output_preview": "The refrigerator hummed too loudly in the kitchen, its motor straining against something Sarah couldn't identify. She stood in the hallway, one hand pressed against the wall, listening. The house had been making sounds all evening\u2014not the familiar settling of old wood or the tick of expanding pipes,"
+    },
+    {
+      "id": "FIC-06",
+      "category": "fiction",
+      "name": "Dialogue carries subtext",
+      "passed": true,
+      "duration_ms": 11735,
+      "checks": [
+        {
+          "name": "no_meta_commentary",
+          "passed": true,
+          "detail": "Clean"
+        },
+        {
+          "name": "no_performative_opener",
+          "passed": true,
+          "detail": "Clean"
+        }
+      ],
+      "output_preview": "\"How was school today?\" Mother asked, not looking up from her laptop.\n\n\"Fine,\" Jake said, dropping his backpack by the door with unnecessary force.\n\n\"That's good to hear.\" She typed another email. \"Mrs. Chen called earlier. Said you're doing wonderfully in chemistry.\"\n\n\"Yeah, it's going great.\" He o"
+    },
+    {
+      "id": "FIC-07",
+      "category": "fiction",
+      "name": "Domestic detail grounds fiction",
+      "passed": true,
+      "duration_ms": 8827,
+      "checks": [
+        {
+          "name": "no_performative_opener",
+          "passed": true,
+          "detail": "Clean"
+        },
+        {
+          "name": "no_meta_commentary",
+          "passed": true,
+          "detail": "Clean"
+        }
+      ],
+      "output_preview": "The coffee maker's red light blinked in the darkness like a tired eye, its gurgling the only sound competing with the refrigerator's hum. Sarah's bare feet stuck slightly to the cold linoleum with each step, that tacky sensation of yesterday's spilled orange juice she'd been too exhausted to properl"
+    },
+    {
+      "id": "FIC-08",
+      "category": "fiction",
+      "name": "Character want",
+      "passed": true,
+      "duration_ms": 7652,
+      "checks": [
+        {
+          "name": "no_meta_commentary",
+          "passed": true,
+          "detail": "Clean"
+        },
+        {
+          "name": "no_performative_opener",
+          "passed": true,
+          "detail": "Clean"
+        }
+      ],
+      "output_preview": "Marcus pressed his palm against the restaurant window, leaving a smudge on the glass as he watched the other line cooks through the kitchen's service window. Their whites were pristine, their movements precise as they plated dishes he could name by smell alone\u2014the char on the ribeye, the brown butte"
+    },
+    {
+      "id": "FIC-09",
+      "category": "fiction",
+      "name": "Time pressure",
+      "passed": true,
+      "duration_ms": 21183,
+      "checks": [
+        {
+          "name": "no_performative_opener",
+          "passed": true,
+          "detail": "Clean"
+        }
+      ],
+      "output_preview": "The timer glowed red. Fifty-nine seconds.\n\nSarah's fingers hovered over the keypad. Six digits. Six digits to save them or doom them. Her throat constricted. Fifty-five seconds.\n\nBehind the reinforced door, Marcus was bleeding. Dying. The code would open it\u2014but it would also release the contaminated"
+    },
+    {
+      "id": "FIC-10",
+      "category": "fiction",
+      "name": "Fable structure",
+      "passed": true,
+      "duration_ms": 10857,
+      "checks": [
+        {
+          "name": "word_count_30_200",
+          "passed": true,
+          "detail": "185 words (target: 30-200)"
+        },
+        {
+          "name": "no_performative_opener",
+          "passed": true,
+          "detail": "Clean"
+        }
+      ],
+      "output_preview": "A young crow discovered a piece of cheese on a windowsill. As she grasped it in her beak, an old raven landed beside her.\n\n\"Share half with me,\" croaked the raven, \"and I'll show you where the baker leaves fresh bread every morning.\"\n\nThe crow clutched her prize tighter. Why share when she already h"
+    }
+  ]
+}
